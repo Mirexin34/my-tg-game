@@ -39,6 +39,7 @@ const questsScreen = document.getElementById('questsScreen');
 const upgradesScreen = document.getElementById('upgradesScreen');
 const equipmentScreen = document.getElementById('equipmentScreen');
 const craftScreen = document.getElementById('craftScreen');
+const wheelScreen = document.getElementById('wheelScreen');
 const btnDailyReward = document.getElementById('btnDailyReward');
 const btnAssassin = document.getElementById('btnAssassin');
 const chapterTitle = document.getElementById('chapterTitle');
@@ -46,6 +47,8 @@ const weaponTitle = document.getElementById('weaponTitle');
 const bestSurvivalWaveDisplay = document.getElementById('bestSurvivalWave');
 const energyDisplay = document.getElementById('energyDisplay');
 const partsDisplay = document.getElementById('partsDisplay');
+const wheelResult = document.getElementById('wheelResult');
+const btnSpinWheel = document.getElementById('btnSpinWheel');
 
 const weaponsDatabase = [
     { key: 'stick', name: "Ржавая палка", damage: 1.0, range: 220, fireRate: 1.2, color: "#8b4513" },
@@ -87,7 +90,8 @@ let savedData = JSON.parse(localStorage.getItem('arenaDeathSave')) || {
     eqWeapon: false, eqArmor: false, eqRing: false,
     bestSurvivalWave: 0,
     energy: 20, lastEnergyTime: Date.now(),
-    parts: 0, craftMagLvl: 0, craftRangeLvl: 0, craftDmgLvl: 0
+    parts: 0, craftMagLvl: 0, craftRangeLvl: 0, craftDmgLvl: 0,
+    lastWheelSpin: 0
 };
 let gold = savedData.gold || 0; let gems = savedData.gems || 0; let totalKills = savedData.totalKills || 0; let quest1Claimed = savedData.quest1Claimed || false;
 let maxWave = savedData.maxWave || 1; let quest2Claimed = savedData.quest2Claimed || false; let bossesKilled = savedData.bossesKilled || 0; let quest3Claimed = savedData.quest3Claimed || false;
@@ -101,6 +105,7 @@ let parts = savedData.parts || 0;
 let craftMagLvl = savedData.craftMagLvl || 0;
 let craftRangeLvl = savedData.craftRangeLvl || 0;
 let craftDmgLvl = savedData.craftDmgLvl || 0;
+let lastWheelSpin = savedData.lastWheelSpin || 0;
 
 const MAX_ENERGY = 20;
 const ENERGY_COST = 5;
@@ -109,7 +114,7 @@ function saveData() {
     localStorage.setItem('arenaDeathSave', JSON.stringify({ 
         gold, gems, totalKills, quest1Claimed, maxWave, quest2Claimed, bossesKilled, quest3Claimed, upgHealth, upgDamage, lastDailyReward, assassinUnlocked, accLevel, accXP, accMaxXP,
         eqWeapon, eqArmor, eqRing, bestSurvivalWave, energy, lastEnergyTime,
-        parts, craftMagLvl, craftRangeLvl, craftDmgLvl
+        parts, craftMagLvl, craftRangeLvl, craftDmgLvl, lastWheelSpin
     }));
     updateUI();
 }
@@ -146,7 +151,16 @@ function updateUI() {
     document.getElementById('accountLevelDisplay').innerText = accLevel;
     bestSurvivalWaveDisplay.innerText = bestSurvivalWave;
     
-    // Крафт UI
+    // Рулетка UI
+    const now = Date.now();
+    if (now - lastWheelSpin >= 86400000) {
+        btnSpinWheel.innerText = "КРУТИТЬ (Бесплатно)";
+        btnSpinWheel.style.background = "#ff00ff";
+    } else {
+        btnSpinWheel.innerText = "Крутить (Стоит 3 💎)";
+        btnSpinWheel.style.background = gems >= 3 ? "#ff00ff" : "#555";
+    }
+
     document.getElementById('craftMagLvl').innerText = craftMagLvl;
     const btnCM = document.getElementById('btnCraftMag');
     if (craftMagLvl >= 3) { btnCM.innerText = "МАКС."; btnCM.disabled = true; btnCM.style.background = "#555"; }
@@ -186,7 +200,6 @@ function updateUI() {
         }
     }
     
-    const now = Date.now();
     if (now - lastDailyReward >= 86400000) { btnDailyReward.innerText = "🎁 ЗАБРАТЬ (+100 💰)"; btnDailyReward.style.background = "#17a2b8"; btnDailyReward.disabled = false; } 
     else { btnDailyReward.innerText = "🎁 ПРИХОДИ ЗАВТРА"; btnDailyReward.style.background = "#555"; btnDailyReward.disabled = true; }
 
@@ -214,7 +227,41 @@ updateUI();
 updateChapterUI();
 updateWeaponUI();
 
-// Кнопки крафта
+// Логика Рулетки
+btnSpinWheel.addEventListener('click', () => {
+    const now = Date.now();
+    let isFree = (now - lastWheelSpin >= 86400000);
+    
+    if (!isFree && gems < 3) {
+        alert("Не хватает алмазов (нужно 3 💎)!");
+        return;
+    }
+    
+    if (!isFree) {
+        gems -= 3;
+    }
+    lastWheelSpin = now;
+
+    // Рандомная награда
+    const rewards = [
+        { type: 'gold', amount: 150, text: "+150 Золота 💰" },
+        { type: 'gold', amount: 300, text: "+300 Золота 💰" },
+        { type: 'gems', amount: 5, text: "+5 Алмазов 💎" },
+        { type: 'parts', amount: 5, text: "+5 Деталей ⚙️" },
+        { type: 'energy', amount: 10, text: "+10 Энергии ⚡" }
+    ];
+    let prize = rewards[Math.floor(Math.random() * rewards.length)];
+
+    if (prize.type === 'gold') gold += prize.amount;
+    else if (prize.type === 'gems') gems += prize.amount;
+    else if (prize.type === 'parts') parts += prize.amount;
+    else if (prize.type === 'energy') energy = Math.min(MAX_ENERGY, energy + prize.amount);
+
+    saveData();
+    wheelResult.innerText = `🎉 Вы выиграли:\n${prize.text}`;
+    updateUI();
+});
+
 document.getElementById('btnCraftMag').addEventListener('click', () => {
     if (parts >= 5 && gold >= 200 && craftMagLvl < 3) { parts -= 5; gold -= 200; craftMagLvl++; saveData(); updateUI(); }
 });
@@ -238,6 +285,8 @@ document.getElementById('btnEquipment').addEventListener('click', () => { mainMe
 document.getElementById('btnBackFromEquipment').addEventListener('click', () => { equipmentScreen.style.display = 'none'; mainMenu.style.display = 'flex'; });
 document.getElementById('btnCraft').addEventListener('click', () => { mainMenu.style.display = 'none'; craftScreen.style.display = 'flex'; updateUI(); });
 document.getElementById('btnBackFromCraft').addEventListener('click', () => { craftScreen.style.display = 'none'; mainMenu.style.display = 'flex'; });
+document.getElementById('btnWheel').addEventListener('click', () => { mainMenu.style.display = 'none'; wheelScreen.style.display = 'flex'; updateUI(); });
+document.getElementById('btnBackFromWheel').addEventListener('click', () => { wheelScreen.style.display = 'none'; mainMenu.style.display = 'flex'; });
 
 document.getElementById('btnBuyWeapon').addEventListener('click', () => { if (gold >= 300 && !eqWeapon) { gold -= 300; eqWeapon = true; saveData(); } });
 document.getElementById('btnBuyArmor').addEventListener('click', () => { if (gold >= 400 && !eqArmor) { gold -= 400; eqArmor = true; saveData(); } });
@@ -298,7 +347,6 @@ function startGame(heroClass, survival) {
     player.speed = baseSpeed + ringBonus;
     
     let selectedGun = weaponsDatabase[currentWeaponIndex];
-    // Применяем крафт (рожок ускоряет стрельбу, прицел увеличивает дальность, усиленные пули — урон)
     player.attackRate = selectedGun.fireRate + (craftMagLvl * 0.4);
     player.weaponRange = selectedGun.range + (craftRangeLvl * 50);
     player.weaponDamage = selectedGun.damage + (craftDmgLvl * 0.5);
@@ -557,7 +605,7 @@ function update(dt, now) {
                 if (!player.hasPiercing) { projectiles.splice(i, 1); hitSomething = true; } else { p.hitEnemies.push(b); }
                 if (b.hp <= 0) { 
                     spawnParticles(b.x, b.y, '#9932CC'); bosses.splice(j, 1); totalKills++; bossesKilled++; gems += 5; 
-                    parts += 5; // ВЫПАДЕНИЕ 5 ДЕТАЛЕЙ ЗА УБИЙСТВО БОССА!
+                    parts += 5; 
                     spawnFloatingText(b.x, b.y - 60, "+5 Деталей ⚙️!", "#00ff00");
                     addAccountXP(100);
                     gameState = 'win'; endTouch(); 
