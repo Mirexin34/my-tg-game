@@ -15,11 +15,34 @@ const world = { width: 2000, height: 2000 };
 const camera = { x: 0, y: 0 };
 let gameState = 'menu'; 
 
+// --- ЭФФЕКТЫ ---
+let screenShake = 0; // Сила тряски экрана
+let particles = []; // Массив частиц взрыва
+
+function addScreenShake(amount) {
+    screenShake = amount;
+}
+
+function spawnParticles(x, y, color) {
+    for (let i = 0; i < 15; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 200 + 50;
+        particles.push({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 1.0,
+            color: color,
+            size: Math.random() * 4 + 2
+        });
+    }
+}
+
 function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 window.addEventListener('resize', resize);
 resize();
 
-// Элементы интерфейса
 const joystickZone = document.getElementById('joystickZone');
 const joystickBase = document.getElementById('joystickBase');
 const joystickStick = document.getElementById('joystickStick');
@@ -30,16 +53,15 @@ const btnRevive = document.getElementById('btnRevive');
 const btnGiveUp = document.getElementById('btnGiveUp');
 const questsScreen = document.getElementById('questsScreen');
 const upgradesScreen = document.getElementById('upgradesScreen');
-const btnDailyReward = document.getElementById('btnDailyReward'); // Подключаем кнопку
+const btnDailyReward = document.getElementById('btnDailyReward');
 
-// --- СИСТЕМА СОХРАНЕНИЯ И ЭКОНОМИКА ---
 let savedData = JSON.parse(localStorage.getItem('arenaDeathSave')) || { 
     gold: 0, gems: 0, 
     totalKills: 0, quest1Claimed: false,
     maxWave: 1, quest2Claimed: false,
     bossesKilled: 0, quest3Claimed: false,
     upgHealth: 0, upgDamage: 0,
-    lastDailyReward: 0 // Память о последней награде
+    lastDailyReward: 0 
 };
 let gold = savedData.gold || 0;
 let gems = savedData.gems || 0;
@@ -66,7 +88,6 @@ function updateUI() {
     document.getElementById('goldDisplay').innerText = gold;
     document.getElementById('gemDisplay').innerText = gems;
     
-    // Проверка ежедневной награды (24 часа = 86400000 миллисекунд)
     const now = Date.now();
     if (now - lastDailyReward >= 86400000) {
         btnDailyReward.innerText = "🎁 ЗАБРАТЬ (+100 💰)";
@@ -108,12 +129,11 @@ function updateUI() {
 }
 updateUI();
 
-// Логика нажатия на Ежедневную награду
 btnDailyReward.addEventListener('click', () => {
     const now = Date.now();
     if (now - lastDailyReward >= 86400000) {
         gold += 100;
-        lastDailyReward = now; // Запоминаем время
+        lastDailyReward = now; 
         saveData();
     }
 });
@@ -153,8 +173,8 @@ function spawnFloatingText(x, y, text, color) { floatingTexts.push({ x, y, text,
 function startGame(heroClass) {
     mainMenu.style.display = 'none'; gameOverScreen.style.display = 'none'; gameState = 'playing';
     
-    enemies = []; projectiles = []; items = []; bosses = []; enemyProjectiles = []; obstacles = []; floatingTexts = [];
-    wave = 1; enemiesInWave = 5; spawnedEnemies = 0; hasRevived = false; 
+    enemies = []; projectiles = []; items = []; bosses = []; enemyProjectiles = []; obstacles = []; floatingTexts = []; particles = [];
+    wave = 1; enemiesInWave = 5; spawnedEnemies = 0; hasRevived = false; screenShake = 0;
     
     player.level = 1; player.xp = 0; player.maxXP = 5; player.buffTimer = 0;
     player.x = world.width / 2; player.y = world.height / 2; player.invulnerableTimer = 0;
@@ -293,10 +313,22 @@ function update(dt, now) {
 
     if (player.invulnerableTimer > 0) player.invulnerableTimer -= dt;
     if (player.buffTimer > 0) player.buffTimer -= dt; 
+    if (screenShake > 0) screenShake -= dt * 30; // Затухание тряски экрана
+    if (screenShake < 0) screenShake = 0;
 
     for (let i = floatingTexts.length - 1; i >= 0; i--) {
         floatingTexts[i].life -= dt; floatingTexts[i].y -= 30 * dt;
         if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1);
+    }
+
+    // Обновление частиц
+    for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].x += particles[i].vx * dt;
+        particles[i].y += particles[i].vy * dt;
+        particles[i].life -= dt * 2.0; // Быстро исчезают
+        if (particles[i].life <= 0) {
+            particles.splice(i, 1);
+        }
     }
 
     if (bosses.length === 0) { 
@@ -349,6 +381,7 @@ function update(dt, now) {
         if (dist < player.radius + e.radius && player.invulnerableTimer <= 0) {
             player.hp -= 1; player.invulnerableTimer = 1;
             spawnFloatingText(player.x, player.y - 20, "-1", "#ff0000");
+            addScreenShake(10); // Трясем экран
             if (player.hp <= 0) { triggerGameOver(); }
         }
     }
@@ -362,6 +395,7 @@ function update(dt, now) {
         if (dist < player.radius + b.radius && player.invulnerableTimer <= 0) { 
             player.hp -= 2; player.invulnerableTimer = 1; 
             spawnFloatingText(player.x, player.y - 20, "-2", "#ff0000");
+            addScreenShake(15);
             if (player.hp <= 0) { triggerGameOver(); }
         }
         
@@ -387,6 +421,7 @@ function update(dt, now) {
         if (Math.hypot(p.x - player.x, p.y - player.y) < p.radius + player.radius && player.invulnerableTimer <= 0) {
             player.hp -= p.damage; player.invulnerableTimer = 1; 
             spawnFloatingText(player.x, player.y - 20, `-${p.damage}`, "#ff0000");
+            addScreenShake(10);
             enemyProjectiles.splice(i, 1);
             if (player.hp <= 0) { triggerGameOver(); }
         }
@@ -407,7 +442,10 @@ function update(dt, now) {
                 e.hp -= p.damage; 
                 spawnFloatingText(e.x, e.y - 20, p.damage.toFixed(1), "#ffffff");
                 projectiles.splice(i, 1); hit = true;
-                if (e.hp <= 0) { generateDrop(e.x, e.y); enemies.splice(j, 1); totalKills++; saveData(); }
+                if (e.hp <= 0) { 
+                    spawnParticles(e.x, e.y, e.type === 'ranged' ? '#ff8c00' : '#ff4a4a'); // Эффект взрыва
+                    generateDrop(e.x, e.y); enemies.splice(j, 1); totalKills++; saveData(); 
+                }
                 break;
             }
         }
@@ -418,7 +456,10 @@ function update(dt, now) {
                 b.hp -= p.damage; 
                 spawnFloatingText(b.x, b.y - 40, p.damage.toFixed(1), "#ffffff");
                 projectiles.splice(i, 1);
-                if (b.hp <= 0) { bosses.splice(j, 1); totalKills++; bossesKilled++; saveData(); gameState = 'win'; endTouch(); }
+                if (b.hp <= 0) { 
+                    spawnParticles(b.x, b.y, '#9932CC');
+                    bosses.splice(j, 1); totalKills++; bossesKilled++; saveData(); gameState = 'win'; endTouch(); 
+                }
                 break;
             }
         }
@@ -436,7 +477,12 @@ function draw() {
     if (gameState === 'menu') return; 
 
     ctx.fillStyle = '#1e1e24'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.save(); ctx.translate(-camera.x, -camera.y);
+    ctx.save(); 
+    
+    // Применяем тряску экрана
+    let shakeX = (Math.random() - 0.5) * screenShake;
+    let shakeY = (Math.random() - 0.5) * screenShake;
+    ctx.translate(-camera.x + shakeX, -camera.y + shakeY);
 
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; ctx.lineWidth = 1; ctx.beginPath();
     for (let i = 0; i <= world.width; i += 40) { ctx.moveTo(i, 0); ctx.lineTo(i, world.height); }
@@ -453,6 +499,16 @@ function draw() {
         ctx.beginPath(); ctx.arc(item.x, item.y, item.radius, 0, Math.PI * 2); 
         if (item.type === 'xp') ctx.fillStyle = '#00ffff'; else if (item.type === 'hp') ctx.fillStyle = '#00ff00'; else if (item.type === 'buff') ctx.fillStyle = '#ffa500'; 
         ctx.fill(); 
+    }
+
+    // Отрисовка частиц взрыва
+    for (let p of particles) {
+        ctx.globalAlpha = p.life;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
     }
 
     for (let e of enemies) {
