@@ -8,9 +8,22 @@
     <link rel="stylesheet" href="styles.css">
     <script>
         window.Telegram.WebApp.expand();
-        window.Telegram.WebApp.setHeaderColor('#1e1e24');
-        window.Telegram.WebApp.setBackgroundColor('#1e1e24');
+        window.Telegram.WebApp.setHeaderColor('#1a1a24');
+        window.Telegram.WebApp.setBackgroundColor('#1a1a24');
     </script>
+    <style>
+        body { margin: 0; padding: 0; background: #1a1a24; font-family: sans-serif; overflow: hidden; user-select: none; }
+        .screen { display: none; width: 100vw; height: 100vh; flex-direction: column; overflow-y: auto; padding-top: 60px; padding-bottom: 80px; box-sizing: border-box; }
+        .navBtn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: none; border: none; font-size: 11px; font-weight: bold; cursor: pointer; color: #777; transition: 0.2s; }
+        .navBtn.active { color: #ffd700; transform: scale(1.1); }
+        .eq-slot { width: 60px; height: 60px; background: #2a2a35; border: 2px solid #555; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; position: relative; cursor: pointer; }
+        .inv-item { width: 100%; aspect-ratio: 1; background: #333; border: 2px solid #555; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; position: relative; }
+        .rarity-bg-normal { background: linear-gradient(135deg, #444, #222); border-color: #aaa; }
+        .rarity-bg-rare { background: linear-gradient(135deg, #4169e1, #00008b); border-color: #00bfff; }
+        .rarity-bg-epic { background: linear-gradient(135deg, #9370db, #4b0082); border-color: #da70d6; }
+        .rarity-bg-legendary { background: linear-gradient(135deg, #ffd700, #ff8c00); border-color: #ffff00; }
+        .stat-badge { position: absolute; bottom: 2px; right: 4px; font-size: 10px; font-weight: bold; color: white; background: rgba(0,0,0,0.7); padding: 1px 4px; border-radius: 4px; }
+    </style>
 </head>
 <body>
     <div id="app">
@@ -18,117 +31,101 @@
         <div id="topBar" style="position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; z-index: 40; pointer-events: none;">
             <div style="display: flex; align-items: center; gap: 8px;">
                 <div style="background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; color: #00ff00; font-weight: bold; border: 1px solid #32cd32; font-size: 12px;">
-                    ⚡ <span id="energyDisplay">30</span>/<span id="maxEnergyDisplay">30</span>
+                    ⚡ <span id="energyDisplay">30</span>/30
                 </div>
                 <div style="background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; color: #ffd700; font-weight: bold; border: 1px solid #ffd700; font-size: 12px;">
-                    🟡 <span id="goldDisplay">453.4K</span>
+                    🟡 <span id="goldDisplay">0</span>
                 </div>
                 <div style="background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; color: #00ffff; font-weight: bold; border: 1px solid #00ffff; font-size: 12px;">
                     💎 <span id="gemDisplay">1969</span>
                 </div>
             </div>
-            <button id="btnSettings" style="background: rgba(0,0,0,0.6); border: 1px solid #555; color: #fff; border-radius: 50%; width: 32px; height: 32px; font-weight: bold; pointer-events: auto; cursor: pointer;">⚙️</button>
         </div>
 
-        <canvas id="gameCanvas"></canvas>
-        <div id="joystickZone">
-            <div id="joystickBase">
-                <div id="joystickStick"></div>
-            </div>
-        </div>
-        
-        <!-- ЭКРАН 1: ЛОББИ (Главная) -->
-        <div id="lobbyScreen" class="screen" style="display: flex; flex-direction: column; justify-content: space-between; padding: 60px 15px 80px 15px; box-sizing: border-box;">
-            <!-- Профиль и опыт -->
-            <div style="display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.4); padding: 8px 12px; border-radius: 12px; border: 1px solid #444; width: fit-content;">
-                <div style="width: 40px; height: 40px; background: #555; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px;">🧙‍♂️</div>
+        <!-- ЭКРАН 1: ЛОББИ -->
+        <div id="lobbyScreen" class="screen" style="display: flex; background: url('https://img.freepik.com/free-vector/dark-hexagonal-background-with-gradient-color_79603-1409.jpg') center/cover;">
+            <div style="display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.7); padding: 8px 12px; border-radius: 12px; border: 1px solid #444; width: fit-content; margin: 0 15px;">
+                <div style="width: 40px; height: 40px; background: #555; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px;">🐱</div>
                 <div>
-                    <div style="color: #fff; font-size: 13px; font-weight: bold;">Мерексин (ур. <span id="accountLevelDisplay">58</span>)[cite: 4]</div>
-                    <div style="color: #00ff00; font-size: 11px;">⚔️ БМ: <span id="bmDisplay">235,9K</span>[cite: 4]</div>
+                    <div style="color: #fff; font-size: 13px; font-weight: bold;">Агент (ур. <span id="accountLevelDisplay">1</span>)</div>
+                    <div style="color: #00ff00; font-size: 11px;">⚔️ БМ: <span id="bmDisplay">100</span></div>
                 </div>
             </div>
 
-            <!-- Центральный персонаж и кнопка старта битвы -->
-            <div style="text-align: center; margin: auto;">
-                <div style="font-size: 18px; color: #ffea00; font-weight: bold; margin-bottom: 15px;">ЭТАП <span id="stageDisplay">081</span>[cite: 4]</div>
-                <button id="btnStartBattle" style="background: linear-gradient(135deg, #ffd700, #ff8c00); color: #000; border: none; padding: 15px 40px; border-radius: 30px; font-size: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(255,140,0,0.5);">
-                    В БОЙ ⚔️
-                </button>
+            <div style="margin: auto; text-align: center;">
+                <div style="font-size: 18px; color: #ffea00; font-weight: bold; margin-bottom: 15px; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">ЭТАП <span id="stageDisplay">1</span></div>
+                <button id="btnStartBattle" style="background: linear-gradient(135deg, #ffd700, #ff8c00); color: #000; border: none; padding: 15px 50px; border-radius: 30px; font-size: 22px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(255,140,0,0.5);">В БОЙ ⚔️</button>
+                <div style="margin-top: 10px; color: #aaa; font-size: 12px;">Стоимость: 5 ⚡</div>
             </div>
         </div>
 
-        <!-- ЭКРАН 2: МАГАЗИН И СУНДУКИ (ГАЧА) -->
-        <div id="shopScreen" class="screen" style="display: none; flex-direction: column; padding: 60px 15px 80px 15px; box-sizing: border-box; overflow-y: auto;">
+        <!-- ЭКРАН 2: МАГАЗИН (ГАЧА) -->
+        <div id="shopScreen" class="screen" style="display: none; padding: 60px 15px; background: #1a1a24;">
             <h2 style="color: #ffd700; text-align: center; margin-bottom: 15px;">МАГАЗИН СУНДУКОВ</h2>
             
-            <!-- Сундук S-Gear -->
-            <div style="background: #2a2a35; border: 2px solid #9932CC; border-radius: 14px; padding: 15px; margin-bottom: 15px; color: #fff; text-align: center;">
-                <div style="font-weight: bold; font-size: 16px; color: #da70d6; margin-bottom: 5px;">Сундук S-Gear[cite: 21]</div>
-                <div style="font-size: 12px; color: #aaa; margin-bottom: 10px;">Может дать S Epic снаряжение[cite: 21]</div>
+            <div style="background: linear-gradient(180deg, #3a1c71, #d76d77); border: 2px solid #ff8c00; border-radius: 14px; padding: 15px; margin-bottom: 15px; text-align: center;">
+                <div style="font-weight: bold; font-size: 18px; color: #fff; margin-bottom: 5px;">Сундук S-Gear</div>
+                <div style="font-size: 12px; color: #ffd700; margin-bottom: 15px;">Гарантированно ЭПИЧЕСКОЕ за 10 открытий!</div>
                 <div style="display: flex; gap: 10px; justify-content: center;">
-                    <button class="gachaBtn" onclick="openChest('s_single')" style="background: #4682b4; color:#fff; border:none; padding:8px 15px; border-radius:8px; font-weight:bold; cursor:pointer;">Нарисуй x1<br>💎 400[cite: 21]</button>
-                    <button class="gachaBtn" onclick="openChest('s_multi')" style="background: #9932CC; color:#fff; border:none; padding:8px 15px; border-radius:8px; font-weight:bold; cursor:pointer;">Нарисуй x10<br>💎 4000[cite: 21]</button>
+                    <button onclick="openChest(1)" style="flex:1; background: #28a745; color:#fff; border:none; padding:10px; border-radius:8px; font-weight:bold;">Открыть x1<br>💎 300</button>
+                    <button onclick="openChest(10)" style="flex:1; background: #ff00ff; color:#fff; border:none; padding:10px; border-radius:8px; font-weight:bold;">Открыть x10<br>💎 2700</button>
                 </div>
             </div>
-
-            <!-- Золотой сундук -->
-            <div style="background: #2a2a35; border: 2px solid #ffd700; border-radius: 14px; padding: 15px; margin-bottom: 15px; color: #fff; text-align: center;">
-                <div style="font-weight: bold; font-size: 16px; color: #ffd700; margin-bottom: 5px;">Золотой Сундук[cite: 21]</div>
-                <div style="font-size: 12px; color: #aaa; margin-bottom: 10px;">Эпическое снаряжение в 10 розыгрышах[cite: 21]</div>
-                <button class="gachaBtn" onclick="openChest('gold')" style="background: #ffd700; color:#000; border:none; padding:8px 25px; border-radius:8px; font-weight:bold; cursor:pointer;">Нарисуй x1<br>💎 300[cite: 21]</button>
+            
+            <!-- Модальное окно результата гачи -->
+            <div id="gachaResult" style="display: none; position: fixed; top:20%; left:10%; right:10%; background:rgba(0,0,0,0.9); border:2px solid #ffd700; border-radius:15px; padding:20px; z-index:100; text-align:center; color:white;">
+                <h3 style="color:#00ff00; margin-top:0;">ПОЛУЧЕНО!</h3>
+                <div id="gachaItemsList" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:20px;"></div>
+                <button onclick="document.getElementById('gachaResult').style.display='none'" style="background:#dc3545; color:#fff; border:none; padding:10px 30px; border-radius:10px; font-weight:bold;">ЗАКРЫТЬ</button>
             </div>
         </div>
 
         <!-- ЭКРАН 3: ЭКИПИРОВКА -->
-        <div id="equipmentScreen" class="screen" style="display: none; flex-direction: column; padding: 60px 15px 80px 15px; box-sizing: border-box; overflow-y: auto;">
-            <h2 style="color: #6f42c1; text-align: center; margin-bottom: 15px;">ЭКИПИРОВКА</h2>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px;">
-                <div class="slot" style="background:#2a2a35; height:70px; border-radius:10px; border:1px solid #444; display:flex; align-items:center; justify-content:center;">🧢 Шлем</div>
-                <div class="slot" style="background:#2a2a35; height:70px; border-radius:10px; border:1px solid #444; display:flex; align-items:center; justify-content:center;">👕 Броня</div>
-                <div class="slot" style="background:#2a2a35; height:70px; border-radius:10px; border:1px solid #444; display:flex; align-items:center; justify-content:center;">💍 Кольцо</div>
+        <div id="equipmentScreen" class="screen" style="display: none; padding: 60px 15px; background: #222233;">
+            <div style="background: linear-gradient(180deg, #4b0082, #1a1a24); border-radius: 20px; padding: 20px; text-align: center; margin-bottom: 15px;">
+                <h3 style="color:#fff; margin:0 0 15px 0;">ОБОРУДОВАТЬ</h3>
+                
+                <!-- Персонаж и слоты вокруг него -->
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 10px;">
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <div id="slot-helmet" class="eq-slot" onclick="unequip('helmet')"><span style="color:#777; font-size:12px;">Шлем</span></div>
+                        <div id="slot-armor" class="eq-slot" onclick="unequip('armor')"><span style="color:#777; font-size:12px;">Броня</span></div>
+                    </div>
+                    
+                    <div style="width: 120px; height: 160px; background: url('https://cdn3d.iconscout.com/3d/premium/thumb/ninja-5353597-4468694.png') center/contain no-repeat;"></div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <div id="slot-ring" class="eq-slot" onclick="unequip('ring')"><span style="color:#777; font-size:12px;">Кольцо</span></div>
+                        <div id="slot-boots" class="eq-slot" onclick="unequip('boots')"><span style="color:#777; font-size:12px;">Обувь</span></div>
+                    </div>
+                </div>
+
+                <!-- Блок статов ATK и HP[cite: 18] -->
+                <div style="display: flex; justify-content: center; gap: 30px; margin-top: 20px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 20px;">
+                    <div style="color: #fff; font-size: 14px;">⚔️ ATK: <span id="statAtk" style="font-weight:bold; color:#fff;">100</span></div>
+                    <div style="color: #fff; font-size: 14px;">❤️ HP: <span id="statHp" style="font-weight:bold; color:#fff;">500</span></div>
+                </div>
             </div>
-            <div style="background: rgba(0,0,0,0.5); padding: 15px; border-radius: 12px; text-align: center; color: #fff;">
-                <div>Сила Атаки (ATK): <span style="color:#00ff00; font-weight:bold;">21,5K</span>[cite: 18]</div>
-                <div>Защита / HP: <span style="color:#ff4a4a; font-weight:bold;">77,7K</span>[cite: 18]</div>
+
+            <!-- Сетка инвентаря[cite: 18] -->
+            <div style="background: #1e1e2c; padding: 15px; border-radius: 20px; flex-grow: 1;">
+                <div style="color: #aaa; font-size: 12px; margin-bottom: 10px; text-align: center;">НАЖМИТЕ НА ПРЕДМЕТ, ЧТОБЫ НАДЕТЬ</div>
+                <div id="inventoryGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+                    <!-- Предметы инвентаря генерируются JS -->
+                </div>
             </div>
         </div>
 
-        <!-- ЭКРАН 4: НАВЫКИ -->
-        <div id="skillsScreen" class="screen" style="display: none; flex-direction: column; padding: 60px 15px 80px 15px; box-sizing: border-box; overflow-y: auto;">
-            <h2 style="color: #00ffff; text-align: center; margin-bottom: 15px;">НАВЫКИ И УМЕНИЯ</h2>
-            <div style="text-align: center; color: #aaa; font-size: 14px;">Здесь будут отображаться пассивные и активные боевые способности вашего агента.</div>
-        </div>
-
-        <!-- ЭКРАН 5: СОБЫТИЯ / РЕЙТИНГ -->
-        <div id="eventsScreen" class="screen" style="display: none; flex-direction: column; padding: 60px 15px 80px 15px; box-sizing: border-box; overflow-y: auto;">
-            <h2 style="color: #ff00ff; text-align: center; margin-bottom: 15px;">РЕЙТИНГ СЕРВЕРА</h2>
-            <div style="background: #2a2a35; padding: 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; color:#fff;">
-                <span>🥇 1. deuxcouteau</span> <strong style="color:#ffd700;">183 этапа</strong>[cite: 10]
-            </div>
-            <div style="background: #2a2a35; padding: 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; color:#fff;">
-                <span>🥈 2. jgnet2b</span> <strong style="color:#ffd700;">178 этапов</strong>[cite: 10]
-            </div>
-            <div style="background: #2a2a35; padding: 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; color:#fff;">
-                <span>🥉 3. iksdi</span> <strong style="color:#ffd700;">173 этапа</strong>[cite: 10]
-            </div>
-        </div>
-
-        <!-- НИЖНЯЯ ПАНЕЛЬ НАВИГАЦИИ (ТАББАР) -->
-        <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 65px; background: rgba(26,26,36,0.95); border-top: 1px solid #333; display: flex; justify-content: space-around; align-items: center; z-index: 50;">
-            <button class="navBtn active" onclick="switchTab('shopScreen', this)" style="background:none; border:none; color:#ffd700; font-size:11px; font-weight:bold; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px;">
-                <span style="font-size:20px;">🛒</span> Магазин
+        <!-- НИЖНЯЯ ПАНЕЛЬ НАВИГАЦИИ -->
+        <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 70px; background: #161622; border-top: 1px solid #333; display: flex; z-index: 50;">
+            <button class="navBtn" onclick="switchTab('shopScreen', this)">
+                <span style="font-size:24px; margin-bottom:4px;">🛒</span> Магазин
             </button>
-            <button class="navBtn" onclick="switchTab('equipmentScreen', this)" style="background:none; border:none; color:#aaa; font-size:11px; font-weight:bold; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px;">
-                <span style="font-size:20px;">🛡️</span> Экипировка
+            <button class="navBtn" onclick="switchTab('equipmentScreen', this)">
+                <span style="font-size:24px; margin-bottom:4px;">🎒</span> Экипировка
             </button>
-            <button class="navBtn" onclick="switchTab('lobbyScreen', this)" style="background:none; border:none; color:#aaa; font-size:11px; font-weight:bold; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px;">
-                <span style="font-size:20px;">⚔️</span> Лобби
-            </button>
-            <button class="navBtn" onclick="switchTab('skillsScreen', this)" style="background:none; border:none; color:#aaa; font-size:11px; font-weight:bold; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px;">
-                <span style="font-size:20px;">⚡</span> Навыки
-            </button>
-            <button class="navBtn" onclick="switchTab('eventsScreen', this)" style="background:none; border:none; color:#aaa; font-size:11px; font-weight:bold; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px;">
-                <span style="font-size:20px;">🏆</span> Рейтинг
+            <button class="navBtn active" onclick="switchTab('lobbyScreen', this)" style="color:#ffd700;">
+                <span style="font-size:24px; margin-bottom:4px;">⚔️</span> Лобби
             </button>
         </div>
     </div>

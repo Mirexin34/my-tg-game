@@ -1,162 +1,189 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
-try { tg.disableVerticalSwipes(); tg.setHeaderColor('#1e1e24'); tg.setBackgroundColor('#1e1e24'); } catch(e) {}
+try { tg.disableVerticalSwipes(); tg.setHeaderColor('#1a1a24'); tg.setBackgroundColor('#1a1a24'); } catch(e) {}
 
 document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
 
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-
-const world = { width: 1600, height: 1600 };
-const camera = { x: 0, y: 0 };
-let gameState = 'menu'; 
-
-let screenShake = 0; 
-let particles = []; 
-
-function addScreenShake(amount) { screenShake = amount; }
-function spawnParticles(x, y, color) {
-    for (let i = 0; i < 15; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const speed = Math.random() * 200 + 50;
-        particles.push({ x: x, y: y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, life: 1.0, color: color, size: Math.random() * 4 + 2 });
-    }
-}
-
-// Переключение экранов по нижнему таббару
+// Переключение табов
 function switchTab(screenId, btnElement) {
     document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
     document.getElementById(screenId).style.display = 'flex';
-    
-    document.querySelectorAll('.navBtn').forEach(b => b.style.color = '#aaa');
+    document.querySelectorAll('.navBtn').forEach(b => { b.classList.remove('active'); b.style.color = '#777'; });
+    btnElement.classList.add('active');
     btnElement.style.color = '#ffd700';
+    if (screenId === 'equipmentScreen') renderInventory();
+}
 
-    if (screenId === 'lobbyScreen') {
-        canvas.style.display = 'none';
-        gameState = 'menu';
-    } else {
-        canvas.style.display = 'none';
-        gameState = 'menu';
+// --- БАЗА ПРЕДМЕТОВ (ГАЧА) ---
+const itemDatabase = [
+    { id: 'h1', type: 'helmet', name: 'Обычный шлем', rarity: 'normal', icon: '🧢', hp: 100, atk: 0 },
+    { id: 'h2', type: 'helmet', name: 'Редкий шлем', rarity: 'rare', icon: '⛑️', hp: 300, atk: 10 },
+    { id: 'h3', type: 'helmet', name: 'ЭПИК Шлем', rarity: 'epic', icon: '🪖', hp: 800, atk: 50 },
+    
+    { id: 'a1', type: 'armor', name: 'Обычная броня', rarity: 'normal', icon: '👕', hp: 200, atk: 0 },
+    { id: 'a2', type: 'armor', name: 'Редкая броня', rarity: 'rare', icon: '🦺', hp: 500, atk: 20 },
+    { id: 'a3', type: 'armor', name: 'ЭПИК Броня', rarity: 'epic', icon: '🧥', hp: 1200, atk: 80 },
+    
+    { id: 'r1', type: 'ring', name: 'Обычное кольцо', rarity: 'normal', icon: '💍', hp: 0, atk: 50 },
+    { id: 'r2', type: 'ring', name: 'Редкое кольцо', rarity: 'rare', icon: '💎', hp: 0, atk: 150 },
+    { id: 'r3', type: 'ring', name: 'ЭПИК Кольцо', rarity: 'epic', icon: '💠', hp: 200, atk: 400 },
+    
+    { id: 'b1', type: 'boots', name: 'Обычная обувь', rarity: 'normal', icon: '👞', hp: 50, atk: 0 },
+    { id: 'b2', type: 'boots', name: 'Редкая обувь', rarity: 'rare', icon: '👟', hp: 150, atk: 15 },
+    { id: 'b3', type: 'boots', name: 'ЭПИК Обувь', rarity: 'epic', icon: '🥾', hp: 400, atk: 60 }
+];
+
+// Загрузка сохранений
+let savedData = JSON.parse(localStorage.getItem('spekterSave')) || { 
+    gems: 1969, gold: 453400, energy: 30, accountLevel: 1, stage: 1,
+    inventory: [], // Массив ID предметов
+    equipped: { helmet: null, armor: null, ring: null, boots: null },
+    pityCounter: 0 // Счетчик до гарантированного эпика
+};
+
+function saveData() {
+    localStorage.setItem('spekterSave', JSON.stringify(savedData));
+    updateTopBar();
+}
+
+function updateTopBar() {
+    document.getElementById('gemDisplay').innerText = savedData.gems;
+    document.getElementById('goldDisplay').innerText = (savedData.gold / 1000).toFixed(1) + 'K';
+    document.getElementById('energyDisplay').innerText = savedData.energy;
+    document.getElementById('accountLevelDisplay').innerText = savedData.accountLevel;
+    document.getElementById('stageDisplay').innerText = savedData.stage;
+}
+
+// --- ЛОГИКА ГАЧИ (СУНДУКИ) ---
+function openChest(amount) {
+    let cost = amount === 1 ? 300 : 2700;
+    if (savedData.gems < cost) { alert("Недостаточно алмазов!"); return; }
+    
+    savedData.gems -= cost;
+    let pulledItems = [];
+    
+    for (let i = 0; i < amount; i++) {
+        savedData.pityCounter++;
+        let rarityRoll = Math.random();
+        let targetRarity = 'normal';
+        
+        // Шансы выпадения
+        if (savedData.pityCounter >= 10) { targetRarity = 'epic'; savedData.pityCounter = 0; } // Гарант
+        else if (rarityRoll < 0.05) targetRarity = 'epic'; // 5% шанс
+        else if (rarityRoll < 0.25) targetRarity = 'rare'; // 20% шанс
+        
+        // Фильтруем базу по выпавшей редкости
+        let possibleItems = itemDatabase.filter(item => item.rarity === targetRarity);
+        let randomItem = possibleItems[Math.floor(Math.random() * possibleItems.length)];
+        
+        // Даем предмету уникальный ID (UID), чтобы в инвентаре могли лежать одинаковые вещи
+        let itemInstance = { uid: Date.now() + Math.random(), id: randomItem.id };
+        savedData.inventory.push(itemInstance);
+        pulledItems.push(randomItem);
+    }
+    
+    saveData();
+    showGachaResult(pulledItems);
+}
+
+function showGachaResult(items) {
+    const container = document.getElementById('gachaItemsList');
+    container.innerHTML = '';
+    items.forEach(item => {
+        let div = document.createElement('div');
+        div.className = `inv-item rarity-bg-${item.rarity}`;
+        div.style.width = '60px'; div.style.height = '60px'; div.style.fontSize = '30px';
+        div.innerHTML = item.icon;
+        container.appendChild(div);
+    });
+    document.getElementById('gachaResult').style.display = 'block';
+    renderInventory();
+}
+
+// --- ЛОГИКА ЭКИПИРОВКИ ---
+function getItemData(itemId) { return itemDatabase.find(i => i.id === itemId); }
+
+function calculateStats() {
+    let baseAtk = 100 + (savedData.accountLevel * 10);
+    let baseHp = 500 + (savedData.accountLevel * 50);
+    
+    Object.values(savedData.equipped).forEach(itemId => {
+        if (itemId) {
+            let data = getItemData(itemId);
+            baseAtk += data.atk; baseHp += data.hp;
+        }
+    });
+    
+    document.getElementById('statAtk').innerText = baseAtk;
+    document.getElementById('statHp').innerText = baseHp;
+    document.getElementById('bmDisplay').innerText = baseAtk + baseHp;
+}
+
+function renderInventory() {
+    const grid = document.getElementById('inventoryGrid');
+    grid.innerHTML = '';
+    
+    // Отрисовка надетых вещей в слотах
+    ['helmet', 'armor', 'ring', 'boots'].forEach(type => {
+        const slot = document.getElementById(`slot-${type}`);
+        if (savedData.equipped[type]) {
+            let data = getItemData(savedData.equipped[type]);
+            slot.className = `eq-slot rarity-bg-${data.rarity}`;
+            slot.innerHTML = `${data.icon}<div class="stat-badge">УР.1</div>`;
+        } else {
+            slot.className = 'eq-slot';
+            let placeholders = { helmet: '🧢', armor: '👕', ring: '💍', boots: '👞' };
+            slot.innerHTML = `<span style="color:#555;">${placeholders[type]}</span>`;
+        }
+    });
+
+    // Отрисовка предметов в рюкзаке
+    savedData.inventory.forEach(invItem => {
+        let data = getItemData(invItem.id);
+        let div = document.createElement('div');
+        div.className = `inv-item rarity-bg-${data.rarity}`;
+        div.innerHTML = `${data.icon}<div class="stat-badge">ATK+${data.atk}</div>`;
+        
+        div.onclick = () => equipItem(invItem.uid, data.type);
+        grid.appendChild(div);
+    });
+    
+    calculateStats();
+}
+
+function equipItem(uid, type) {
+    // 1. Найти предмет в инвентаре
+    let itemIndex = savedData.inventory.findIndex(i => i.uid === uid);
+    if (itemIndex === -1) return;
+    let itemToEquip = savedData.inventory[itemIndex];
+    
+    // 2. Если слот уже занят - снять старую вещь обратно в инвентарь
+    if (savedData.equipped[type]) {
+        savedData.inventory.push({ uid: Date.now(), id: savedData.equipped[type] });
+    }
+    
+    // 3. Надеть новую и удалить из инвентаря
+    savedData.equipped[type] = itemToEquip.id;
+    savedData.inventory.splice(itemIndex, 1);
+    
+    saveData();
+    renderInventory();
+}
+
+function unequip(type) {
+    if (savedData.equipped[type]) {
+        savedData.inventory.push({ uid: Date.now(), id: savedData.equipped[type] });
+        savedData.equipped[type] = null;
+        saveData();
+        renderInventory();
     }
 }
 
-// Открытие сундуков (Гача-механика)
-function openChest(type) {
-    let cost = type === 's_single' ? 400 : (type === 's_multi' ? 4000 : 300);
-    let gems = 1969; // Текущие алмазы из сохранения
-    
-    let saved = JSON.parse(localStorage.getItem('spekterSave')) || { gems: 1969, gold: 453400 };
-    if (saved.gems < cost) {
-        alert("Недостаточно алмазов (💎)!");
-        return;
-    }
-    saved.gems -= cost;
-    localStorage.setItem('spekterSave', JSON.stringify(saved));
-    
-    document.getElementById('gemDisplay').innerText = saved.gems;
-    alert(`🎉 Успешно открыт сундук! Вы получили редкое снаряжение!`);
-}
+// Инициализация при старте
+updateTopBar();
+calculateStats();
 
-function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-window.addEventListener('resize', resize);
-resize();
-
-// Запуск битвы из лобби
+// Заглушка для кнопки "В БОЙ"
 document.getElementById('btnStartBattle').addEventListener('click', () => {
-    document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
-    canvas.style.display = 'block';
-    startGame();
+    alert("Графический движок боя скоро будет перенесен в этот новый интерфейс! А пока - выбивайте Эпики в Магазине!");
 });
-
-let player = { x: 800, y: 800, radius: 14, speed: 220, hp: 10, maxHp: 10, weaponRange: 450, weaponDamage: 2.0 };
-let enemies = [];
-let projectiles = [];
-let obstacles = [];
-
-function startGame() {
-    gameState = 'playing';
-    player.x = world.width / 2;
-    player.y = world.height / 2;
-    enemies = [];
-    projectiles = [];
-    obstacles = [];
-
-    for(let i=0; i<15; i++) {
-        obstacles.push({ x: Math.random() * world.width, y: Math.random() * world.height, radius: 30 });
-    }
-    for(let i=0; i<5; i++) {
-        spawnEnemy();
-    }
-}
-
-function spawnEnemy() {
-    const angle = Math.random() * Math.PI * 2;
-    let ex = player.x + Math.cos(angle) * 400;
-    let ey = player.y + Math.sin(angle) * 400;
-    enemies.push({ x: ex, y: ey, radius: 15, hp: 5, speed: 120 });
-}
-
-let lastTime = performance.now();
-function gameLoop(timestamp) {
-    let dt = (timestamp - lastTime) / 1000; lastTime = timestamp; if (dt > 0.1) dt = 0.016; 
-    if (gameState === 'playing') {
-        update(dt);
-        draw();
-    }
-    requestAnimationFrame(gameLoop);
-}
-
-function update(dt) {
-    // Простая логика движения и стрельбы для теста арены
-    if (enemies.length === 0) {
-        for(let i=0; i<5; i++) spawnEnemy();
-    }
-
-    for(let e of enemies) {
-        let dx = player.x - e.x, dy = player.y - e.y, dist = Math.hypot(dx, dy);
-        if (dist > 1) {
-            e.x += (dx / dist) * e.speed * dt;
-            e.y += (dy / dist) * e.speed * dt;
-        }
-        if (dist < player.radius + e.radius) {
-            player.hp -= dt;
-            if (player.hp <= 0) {
-                gameState = 'menu';
-                document.getElementById('lobbyScreen').style.display = 'flex';
-                canvas.style.display = 'none';
-                alert("Потрачено! Возврат в лобби.");
-            }
-        }
-    }
-}
-
-function draw() {
-    ctx.fillStyle = '#1e1e24';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.save();
-    camera.x = player.x - canvas.width / 2;
-    camera.y = player.y - canvas.height / 2;
-    ctx.translate(-camera.x, -camera.y);
-
-    // Сетка арены
-    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i <= world.width; i += 40) {
-        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, world.height); ctx.stroke();
-    }
-
-    // Враги
-    for(let e of enemies) {
-        ctx.fillStyle = '#ff4a4a';
-        ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); ctx.fill();
-    }
-
-    // Игрок
-    ctx.fillStyle = '#4682b4';
-    ctx.fillRect(player.x - player.radius, player.y - player.radius, player.radius * 2, player.radius * 2);
-
-    ctx.restore();
-}
-
-requestAnimationFrame((timestamp) => { lastTime = timestamp; requestAnimationFrame(gameLoop); });
