@@ -3,35 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TMA Action-Roguelike</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <title>Арена смерти</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Главное меню -->
-    <div id="mainMenu">
-        <h1>ВЫБЕРИ ГЕРОЯ</h1>
-        <button class="heroBtn" id="btnTank">
-            ТАНК<br><span>Медленный, 10 Жизней</span>
-        </button>
-        <button class="heroBtn" id="btnAssassin">
-            УБИЙЦА<br><span>Быстрый, Пулемет, 3 Жизни</span>
-        </button>
-    </div>
-
-    <canvas id="gameCanvas"></canvas>
-    
-    <div id="joystickZone">
-        <div id="joystickBase">
-            <div id="joystickStick"></div>
+    <div id="app">
+        <!-- Сюда подгружается игра -->
+        <canvas id="gameCanvas"></canvas>
+        <div id="joystickZone">
+            <div id="joystickBase">
+                <div id="joystickStick"></div>
+            </div>
         </div>
-    </div>
+        
+        <!-- Главное меню выбора героя -->
+        <div id="mainMenu">
+            <h1>ВЫБЕРИ ГЕРОЯ</h1>
+            <button class="heroBtn" id="btnTank">
+                ТАНК
+                <span>Медленный, 10 Жизней</span>
+            </button>
+            <button class="heroBtn" id="btnAssassin">
+                УБИЙЦА
+                <span>Быстрый, Пулемет, 3 Жизни</span>
+            </button>
+        </div>
 
-    <div id="levelUpScreen">
-        <h2>Новый Уровень!</h2>
-        <button class="perkBtn" id="perkBtn0"></button>
-        <button class="perkBtn" id="perkBtn1"></button>
-        <button class="perkBtn" id="perkBtn2"></button>
+        <!-- Экран повышения уровня -->
+        <div id="levelUpScreen">
+            <h2>ВЫБЕРИ УЛУЧШЕНИЕ</h2>
+            <div id="perksContainer"></div>
+        </div>
     </div>
 
     <script src="game.js"></script>
