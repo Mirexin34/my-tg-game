@@ -15,12 +15,13 @@ body, html {
     position: fixed;
     background-color: #1e1e24;
     touch-action: none;
+    -webkit-touch-callout: none; /* Блокировка системных меню iOS */
 }
 
 #app {
     width: 100vw;
     height: 100vh;
-    height: 100dvh; /* Специально для iOS */
+    height: 100dvh;
     position: absolute;
     top: 0;
     left: 0;
@@ -80,12 +81,15 @@ body, html {
     color: #ffea00;
     margin-bottom: 40px;
     font-size: 32px;
+    text-align: center;
+    width: 100%;
 }
 
 .heroBtn {
     width: 80%;
+    max-width: 350px;
     padding: 20px;
-    margin: 15px;
+    margin: 15px auto;
     font-size: 22px;
     background: #9932CC;
     color: white;
@@ -93,6 +97,8 @@ body, html {
     border-radius: 12px;
     cursor: pointer;
     font-weight: bold;
+    text-align: center;
+    display: block;
 }
 
 .heroBtn span {
@@ -113,7 +119,7 @@ body, html {
     width: 100vw;
     height: 100vh;
     height: 100dvh;
-    background: rgba(0,0,0,0.85);
+    background: rgba(0,0,0,0.9);
     display: none;
     flex-direction: column;
     justify-content: center;
@@ -126,20 +132,24 @@ body, html {
     margin-bottom: 30px;
     font-size: 32px;
     text-align: center;
+    width: 100%;
 }
 
-/* Центрируем блок с кнопками улучшений */
+/* Жесткое центрирование кнопок улучшений для iOS */
 #perksContainer {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     width: 100%;
+    margin: 0 auto;
 }
 
 .perkBtn {
     width: 80%;
+    max-width: 350px;
     padding: 20px;
-    margin: 10px 0;
+    margin: 10px auto;
     font-size: 18px;
     background: #0088cc;
     color: white;
@@ -149,6 +159,7 @@ body, html {
     font-weight: bold;
     z-index: 25;
     text-align: center;
+    display: block;
 }
 
 .perkBtn:active {
