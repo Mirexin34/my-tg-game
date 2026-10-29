@@ -1,10 +1,6 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
-try {
-    tg.disableVerticalSwipes();
-    tg.setHeaderColor('#1e1e24');
-    tg.setBackgroundColor('#1e1e24');
-} catch(e) {}
+try { tg.disableVerticalSwipes(); tg.setHeaderColor('#1e1e24'); tg.setBackgroundColor('#1e1e24'); } catch(e) {}
 
 document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
 
@@ -19,7 +15,6 @@ let screenShake = 0;
 let particles = []; 
 
 function addScreenShake(amount) { screenShake = amount; }
-
 function spawnParticles(x, y, color) {
     for (let i = 0; i < 15; i++) {
         const angle = Math.random() * Math.PI * 2;
@@ -44,37 +39,16 @@ const questsScreen = document.getElementById('questsScreen');
 const upgradesScreen = document.getElementById('upgradesScreen');
 const btnDailyReward = document.getElementById('btnDailyReward');
 const btnAssassin = document.getElementById('btnAssassin');
-const assassinPriceDiv = document.getElementById('assassinPrice');
 
-// --- СИСТЕМА СОХРАНЕНИЯ ---
 let savedData = JSON.parse(localStorage.getItem('arenaDeathSave')) || { 
-    gold: 0, gems: 0, 
-    totalKills: 0, quest1Claimed: false,
-    maxWave: 1, quest2Claimed: false,
-    bossesKilled: 0, quest3Claimed: false,
-    upgHealth: 0, upgDamage: 0,
-    lastDailyReward: 0,
-    assassinUnlocked: false 
+    gold: 0, gems: 0, totalKills: 0, quest1Claimed: false, maxWave: 1, quest2Claimed: false, bossesKilled: 0, quest3Claimed: false, upgHealth: 0, upgDamage: 0, lastDailyReward: 0, assassinUnlocked: false 
 };
-let gold = savedData.gold || 0;
-let gems = savedData.gems || 0;
-let totalKills = savedData.totalKills || 0;
-let quest1Claimed = savedData.quest1Claimed || false;
-let maxWave = savedData.maxWave || 1;
-let quest2Claimed = savedData.quest2Claimed || false;
-let bossesKilled = savedData.bossesKilled || 0;
-let quest3Claimed = savedData.quest3Claimed || false;
-let upgHealth = savedData.upgHealth || 0;
-let upgDamage = savedData.upgDamage || 0;
-let lastDailyReward = savedData.lastDailyReward || 0;
-let assassinUnlocked = savedData.assassinUnlocked || false;
+let gold = savedData.gold || 0; let gems = savedData.gems || 0; let totalKills = savedData.totalKills || 0; let quest1Claimed = savedData.quest1Claimed || false;
+let maxWave = savedData.maxWave || 1; let quest2Claimed = savedData.quest2Claimed || false; let bossesKilled = savedData.bossesKilled || 0; let quest3Claimed = savedData.quest3Claimed || false;
+let upgHealth = savedData.upgHealth || 0; let upgDamage = savedData.upgDamage || 0; let lastDailyReward = savedData.lastDailyReward || 0; let assassinUnlocked = savedData.assassinUnlocked || false;
 
 function saveData() {
-    localStorage.setItem('arenaDeathSave', JSON.stringify({ 
-        gold, gems, totalKills, quest1Claimed, 
-        maxWave, quest2Claimed, bossesKilled, quest3Claimed,
-        upgHealth, upgDamage, lastDailyReward, assassinUnlocked
-    }));
+    localStorage.setItem('arenaDeathSave', JSON.stringify({ gold, gems, totalKills, quest1Claimed, maxWave, quest2Claimed, bossesKilled, quest3Claimed, upgHealth, upgDamage, lastDailyReward, assassinUnlocked }));
     updateUI();
 }
 
@@ -83,94 +57,61 @@ function updateUI() {
     document.getElementById('gemDisplay').innerText = gems;
     
     if (assassinUnlocked) {
-        btnAssassin.style.background = "#9932CC";
-        btnAssassin.style.borderColor = "#fff";
-        btnAssassin.innerHTML = `УБИЙЦА (Открыт)<span>Быстрый, Пулемет, 3 Жизни</span>`;
+        btnAssassin.style.background = "#9932CC"; btnAssassin.style.borderColor = "#fff"; btnAssassin.innerHTML = `УБИЙЦА (Открыт)<span>Быстрый, Пулемет, 3 Жизни</span>`;
     } else {
         if (gems >= 15) {
-            btnAssassin.style.background = "#28a745"; 
-            btnAssassin.style.borderColor = "#2eb84d";
+            btnAssassin.style.background = "#28a745"; btnAssassin.style.borderColor = "#2eb84d";
             btnAssassin.innerHTML = `🔒 КУПИТЬ УБИЙЦУ<span>Быстрый, Пулемет, 3 Жизни</span><div style="margin-top: 8px; color: #fff; font-weight: bold;">Нажми, чтобы купить за 15 💎</div>`;
         } else {
-            btnAssassin.style.background = "#555"; 
-            btnAssassin.style.borderColor = "#777";
+            btnAssassin.style.background = "#555"; btnAssassin.style.borderColor = "#777";
             btnAssassin.innerHTML = `🔒 УБИЙЦА<span>Быстрый, Пулемет, 3 Жизни</span><div style="margin-top: 8px; color: #00ffff; font-weight: bold;">Цена: 15 💎</div>`;
         }
     }
     
     const now = Date.now();
-    if (now - lastDailyReward >= 86400000) {
-        btnDailyReward.innerText = "🎁 ЗАБРАТЬ (+100 💰)"; btnDailyReward.style.background = "#17a2b8"; btnDailyReward.disabled = false;
-    } else {
-        btnDailyReward.innerText = "🎁 ПРИХОДИ ЗАВТРА"; btnDailyReward.style.background = "#555"; btnDailyReward.disabled = true;
-    }
+    if (now - lastDailyReward >= 86400000) { btnDailyReward.innerText = "🎁 ЗАБРАТЬ (+100 💰)"; btnDailyReward.style.background = "#17a2b8"; btnDailyReward.disabled = false; } 
+    else { btnDailyReward.innerText = "🎁 ПРИХОДИ ЗАВТРА"; btnDailyReward.style.background = "#555"; btnDailyReward.disabled = true; }
 
     document.getElementById('questKillsProgress').innerText = Math.min(totalKills, 10);
     const btnQ1 = document.getElementById('btnClaimQuest1');
-    if (quest1Claimed) { btnQ1.innerText = "ВЫПОЛНЕНО"; btnQ1.style.background = "#28a745"; btnQ1.disabled = true; } 
-    else if (totalKills >= 10) { btnQ1.innerText = "ЗАБРАТЬ 50 💰"; btnQ1.style.background = "#ff8c00"; btnQ1.disabled = false; } 
-    else { btnQ1.innerText = "+50 💰"; btnQ1.style.background = "#555"; btnQ1.disabled = true; }
+    if (quest1Claimed) { btnQ1.innerText = "ВЫПОЛНЕНО"; btnQ1.style.background = "#28a745"; btnQ1.disabled = true; } else if (totalKills >= 10) { btnQ1.innerText = "ЗАБРАТЬ 50 💰"; btnQ1.style.background = "#ff8c00"; btnQ1.disabled = false; } else { btnQ1.innerText = "+50 💰"; btnQ1.style.background = "#555"; btnQ1.disabled = true; }
 
     document.getElementById('questWaveProgress').innerText = Math.min(maxWave, 5);
     const btnQ2 = document.getElementById('btnClaimQuest2');
-    if (quest2Claimed) { btnQ2.innerText = "ВЫПОЛНЕНО"; btnQ2.style.background = "#28a745"; btnQ2.disabled = true; } 
-    else if (maxWave >= 5) { btnQ2.innerText = "ЗАБРАТЬ 100 💰"; btnQ2.style.background = "#ff8c00"; btnQ2.disabled = false; } 
-    else { btnQ2.innerText = "+100 💰"; btnQ2.style.background = "#555"; btnQ2.disabled = true; }
+    if (quest2Claimed) { btnQ2.innerText = "ВЫПОЛНЕНО"; btnQ2.style.background = "#28a745"; btnQ2.disabled = true; } else if (maxWave >= 5) { btnQ2.innerText = "ЗАБРАТЬ 100 💰"; btnQ2.style.background = "#ff8c00"; btnQ2.disabled = false; } else { btnQ2.innerText = "+100 💰"; btnQ2.style.background = "#555"; btnQ2.disabled = true; }
 
     document.getElementById('questBossProgress').innerText = Math.min(bossesKilled, 1);
     const btnQ3 = document.getElementById('btnClaimQuest3');
-    if (quest3Claimed) { btnQ3.innerText = "ВЫПОЛНЕНО"; btnQ3.style.background = "#28a745"; btnQ3.disabled = true; } 
-    else if (bossesKilled >= 1) { btnQ3.innerText = "ЗАБРАТЬ 200 💰"; btnQ3.style.background = "#ff8c00"; btnQ3.disabled = false; } 
-    else { btnQ3.innerText = "+200 💰"; btnQ3.style.background = "#555"; btnQ3.disabled = true; }
+    if (quest3Claimed) { btnQ3.innerText = "ВЫПОЛНЕНО"; btnQ3.style.background = "#28a745"; btnQ3.disabled = true; } else if (bossesKilled >= 1) { btnQ3.innerText = "ЗАБРАТЬ 200 💰"; btnQ3.style.background = "#ff8c00"; btnQ3.disabled = false; } else { btnQ3.innerText = "+200 💰"; btnQ3.style.background = "#555"; btnQ3.disabled = true; }
 
     document.getElementById('upgHealthLevel').innerText = upgHealth;
     const btnUpgHealth = document.getElementById('btnBuyHealth');
-    if (upgHealth >= 5) { btnUpgHealth.innerText = "МАКС."; btnUpgHealth.style.background = "#28a745"; btnUpgHealth.disabled = true; }
-    else { btnUpgHealth.innerText = "100 💰"; btnUpgHealth.disabled = gold < 100; btnUpgHealth.style.background = gold >= 100 ? "#ff8c00" : "#555"; }
+    if (upgHealth >= 5) { btnUpgHealth.innerText = "МАКС."; btnUpgHealth.style.background = "#28a745"; btnUpgHealth.disabled = true; } else { btnUpgHealth.innerText = "100 💰"; btnUpgHealth.disabled = gold < 100; btnUpgHealth.style.background = gold >= 100 ? "#ff8c00" : "#555"; }
 
     document.getElementById('upgDamageLevel').innerText = upgDamage;
     const btnUpgDamage = document.getElementById('btnBuyDamage');
-    if (upgDamage >= 5) { btnUpgDamage.innerText = "МАКС."; btnUpgDamage.style.background = "#28a745"; btnUpgDamage.disabled = true; }
-    else { btnUpgDamage.innerText = "150 💰"; btnUpgDamage.disabled = gold < 150; btnUpgDamage.style.background = gold >= 150 ? "#ff8c00" : "#555"; }
+    if (upgDamage >= 5) { btnUpgDamage.innerText = "МАКС."; btnUpgDamage.style.background = "#28a745"; btnUpgDamage.disabled = true; } else { btnUpgDamage.innerText = "150 💰"; btnUpgDamage.disabled = gold < 150; btnUpgDamage.style.background = gold >= 150 ? "#ff8c00" : "#555"; }
 }
 updateUI();
 
-btnDailyReward.addEventListener('click', () => {
-    const now = Date.now();
-    if (now - lastDailyReward >= 86400000) { gold += 100; lastDailyReward = now; saveData(); }
-});
-
+btnDailyReward.addEventListener('click', () => { const now = Date.now(); if (now - lastDailyReward >= 86400000) { gold += 100; lastDailyReward = now; saveData(); } });
 document.getElementById('btnQuests').addEventListener('click', () => { mainMenu.style.display = 'none'; questsScreen.style.display = 'flex'; updateUI(); });
 document.getElementById('btnBackFromQuests').addEventListener('click', () => { questsScreen.style.display = 'none'; mainMenu.style.display = 'flex'; });
 document.getElementById('btnUpgrades').addEventListener('click', () => { mainMenu.style.display = 'none'; upgradesScreen.style.display = 'flex'; updateUI(); });
 document.getElementById('btnBackFromUpgrades').addEventListener('click', () => { upgradesScreen.style.display = 'none'; mainMenu.style.display = 'flex'; });
-
 document.getElementById('btnClaimQuest1').addEventListener('click', () => { if (totalKills >= 10 && !quest1Claimed) { gold += 50; quest1Claimed = true; saveData(); } });
 document.getElementById('btnClaimQuest2').addEventListener('click', () => { if (maxWave >= 5 && !quest2Claimed) { gold += 100; quest2Claimed = true; saveData(); } });
 document.getElementById('btnClaimQuest3').addEventListener('click', () => { if (bossesKilled >= 1 && !quest3Claimed) { gold += 200; quest3Claimed = true; saveData(); } });
-
 document.getElementById('btnBuyHealth').addEventListener('click', () => { if (gold >= 100 && upgHealth < 5) { gold -= 100; upgHealth++; saveData(); } });
 document.getElementById('btnBuyDamage').addEventListener('click', () => { if (gold >= 150 && upgDamage < 5) { gold -= 150; upgDamage++; saveData(); } });
-
 document.getElementById('btnTank').addEventListener('click', () => startGame('tank'));
-
-btnAssassin.addEventListener('click', () => {
-    if (assassinUnlocked) { startGame('assassin'); } 
-    else if (gems >= 15) { gems -= 15; assassinUnlocked = true; saveData(); }
-});
+btnAssassin.addEventListener('click', () => { if (assassinUnlocked) { startGame('assassin'); } else if (gems >= 15) { gems -= 15; assassinUnlocked = true; saveData(); } });
 
 let hasRevived = false;
-
 btnRevive.addEventListener('click', () => {
-    if (gold >= 50 && !hasRevived) {
-        gold -= 50; saveData(); hasRevived = true;
-        player.hp = player.maxHp; player.invulnerableTimer = 3; 
-        gameOverScreen.style.display = 'none'; gameState = 'playing';
-    }
+    if (gold >= 50 && !hasRevived) { gold -= 50; saveData(); hasRevived = true; player.hp = player.maxHp; player.invulnerableTimer = 3; gameOverScreen.style.display = 'none'; gameState = 'playing'; }
 });
-
 btnGiveUp.addEventListener('click', () => { gameOverScreen.style.display = 'none'; showMenu(); });
-
 function showMenu() { gameState = 'menu'; mainMenu.style.display = 'flex'; updateUI(); }
 
 let floatingTexts = [];
@@ -178,20 +119,15 @@ function spawnFloatingText(x, y, text, color) { floatingTexts.push({ x, y, text,
 
 function startGame(heroClass) {
     mainMenu.style.display = 'none'; gameOverScreen.style.display = 'none'; gameState = 'playing';
-    
     enemies = []; projectiles = []; items = []; bosses = []; enemyProjectiles = []; obstacles = []; floatingTexts = []; particles = [];
     wave = 1; enemiesInWave = 5; spawnedEnemies = 0; hasRevived = false; screenShake = 0;
     
     player.level = 1; player.xp = 0; player.maxXP = 5; player.buffTimer = 0;
     player.x = world.width / 2; player.y = world.height / 2; player.invulnerableTimer = 0;
-
-    // Сброс активных перков на старте игры
-    player.hasMultiShot = false;
-    player.hasPiercing = false;
+    player.hasMultiShot = false; player.hasPiercing = false;
 
     let baseHp = heroClass === 'tank' ? 10 : 3;
-    player.maxHp = baseHp + upgHealth; 
-    player.hp = player.maxHp;
+    player.maxHp = baseHp + upgHealth; player.hp = player.maxHp;
     
     if (heroClass === 'tank') { player.speed = 140; player.attackRate = 1.5; player.color = '#0088cc'; } 
     else if (heroClass === 'assassin') { player.speed = 280; player.attackRate = 4.0; player.color = '#ff00ff'; }
@@ -212,64 +148,38 @@ function triggerGameOver() {
     }
 }
 
-const input = { x: 0, y: 0, isMoving: false };
-const joystickCenter = { x: 0, y: 0 };
-const MAX_JOYSTICK_RADIUS = 50;
+const input = { x: 0, y: 0, isMoving: false }; const joystickCenter = { x: 0, y: 0 }; const MAX_JOYSTICK_RADIUS = 50;
 
 joystickZone.addEventListener('touchstart', (e) => {
     if (gameState !== 'playing') return;
-    const touch = e.changedTouches[0]; input.isMoving = true;
-    joystickCenter.x = touch.clientX; joystickCenter.y = touch.clientY;
-    joystickBase.style.display = 'block'; joystickBase.style.left = `${joystickCenter.x}px`; joystickBase.style.top = `${joystickCenter.y}px`;
-    joystickStick.style.transform = `translate(-50%, -50%)`;
+    const touch = e.changedTouches[0]; input.isMoving = true; joystickCenter.x = touch.clientX; joystickCenter.y = touch.clientY;
+    joystickBase.style.display = 'block'; joystickBase.style.left = `${joystickCenter.x}px`; joystickBase.style.top = `${joystickCenter.y}px`; joystickStick.style.transform = `translate(-50%, -50%)`;
 });
-
 joystickZone.addEventListener('touchmove', (e) => {
     if (!input.isMoving || gameState !== 'playing') return;
-    const touch = e.changedTouches[0];
-    let dx = touch.clientX - joystickCenter.x, dy = touch.clientY - joystickCenter.y;
-    const distance = Math.hypot(dx, dy);
+    const touch = e.changedTouches[0]; let dx = touch.clientX - joystickCenter.x, dy = touch.clientY - joystickCenter.y; const distance = Math.hypot(dx, dy);
     if (distance > MAX_JOYSTICK_RADIUS) { dx = (dx / distance) * MAX_JOYSTICK_RADIUS; dy = (dy / distance) * MAX_JOYSTICK_RADIUS; }
-    joystickStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-    input.x = dx / MAX_JOYSTICK_RADIUS; input.y = dy / MAX_JOYSTICK_RADIUS;
+    joystickStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`; input.x = dx / MAX_JOYSTICK_RADIUS; input.y = dy / MAX_JOYSTICK_RADIUS;
 });
-
 const endTouch = () => { input.isMoving = false; input.x = 0; input.y = 0; joystickBase.style.display = 'none'; };
-joystickZone.addEventListener('touchend', endTouch);
-joystickZone.addEventListener('touchcancel', endTouch);
+joystickZone.addEventListener('touchend', endTouch); joystickZone.addEventListener('touchcancel', endTouch);
 
-// Добавляем новые переменные для перков в объект игрока
-const player = { x: 0, y: 0, radius: 12, speed: 200, attackRate: 2.5, lastAttackTime: 0, hp: 5, maxHp: 5, invulnerableTimer: 0, level: 1, xp: 0, maxXP: 5, buffTimer: 0, color: '#0088cc', hasMultiShot: false, hasPiercing: false };
+const player = { x: 0, y: 0, radius: 14, speed: 200, attackRate: 2.5, lastAttackTime: 0, hp: 5, maxHp: 5, invulnerableTimer: 0, level: 1, xp: 0, maxXP: 5, buffTimer: 0, color: '#0088cc', hasMultiShot: false, hasPiercing: false };
 
 let enemies = []; let projectiles = []; let items = []; let bosses = []; let enemyProjectiles = []; let obstacles = [];
 let wave = 1; let enemiesInWave = 5; let spawnedEnemies = 0;
 
-// ОБНОВЛЕННЫЙ СПИСОК ПЕРКОВ (Добавлены Мульти-выстрел и Пробивание)
 const availablePerks = [
-    { name: "+1 Макс. Здоровье", action: () => { player.maxHp++; player.hp++; } },
-    { name: "Скорость бега", action: () => { player.speed += 40; } },
-    { name: "Скорость стрельбы", action: () => { player.attackRate += 0.7; } },
-    { name: "Полное исцеление", action: () => { player.hp = player.maxHp; } },
-    { name: "Двойной выстрел", action: () => { player.hasMultiShot = true; } },
-    { name: "Пробивание врагов", action: () => { player.hasPiercing = true; } }
+    { name: "+1 Макс. Здоровье", action: () => { player.maxHp++; player.hp++; } }, { name: "Скорость бега", action: () => { player.speed += 40; } },
+    { name: "Скорость стрельбы", action: () => { player.attackRate += 0.7; } }, { name: "Полное исцеление", action: () => { player.hp = player.maxHp; } },
+    { name: "Двойной выстрел", action: () => { player.hasMultiShot = true; } }, { name: "Пробивание врагов", action: () => { player.hasPiercing = true; } }
 ];
 
 function triggerLevelUp() {
-    gameState = 'levelup'; endTouch(); 
-    player.level++; player.xp -= player.maxXP; player.maxXP = Math.floor(player.maxXP * 1.5); 
-    
-    // Фильтруем список (чтобы перки не выпадали повторно, если уже взяты)
-    let filteredPerks = availablePerks.filter(p => {
-        if (p.name === "Двойной выстрел" && player.hasMultiShot) return false;
-        if (p.name === "Пробивание врагов" && player.hasPiercing) return false;
-        return true;
-    });
-
-    let shuffled = filteredPerks.sort(() => 0.5 - Math.random());
-    let currentPerks = shuffled.slice(0, 3);
-    
+    gameState = 'levelup'; endTouch(); player.level++; player.xp -= player.maxXP; player.maxXP = Math.floor(player.maxXP * 1.5); 
+    let filteredPerks = availablePerks.filter(p => { if (p.name === "Двойной выстрел" && player.hasMultiShot) return false; if (p.name === "Пробивание врагов" && player.hasPiercing) return false; return true; });
+    let shuffled = filteredPerks.sort(() => 0.5 - Math.random()); let currentPerks = shuffled.slice(0, 3);
     const container = document.getElementById('perksContainer'); container.innerHTML = '';
-    
     for (let i = 0; i < currentPerks.length; i++) {
         const btn = document.createElement('button'); btn.className = 'perkBtn'; btn.innerText = currentPerks[i].name;
         btn.onclick = () => { currentPerks[i].action(); levelUpScreen.style.display = 'none'; gameState = 'playing'; };
@@ -280,18 +190,23 @@ function triggerLevelUp() {
 
 let timeSinceLastSpawn = 0; const SPAWN_INTERVAL = 1.2;
 function spawnEnemy() {
-    const angle = Math.random() * Math.PI * 2;
-    const distance = Math.max(canvas.width, canvas.height) / 2 + 100;
-    let spawnX = Math.max(20, Math.min(world.width - 20, player.x + Math.cos(angle) * distance));
-    let spawnY = Math.max(20, Math.min(world.height - 20, player.y + Math.sin(angle) * distance));
+    const angle = Math.random() * Math.PI * 2; const distance = Math.max(canvas.width, canvas.height) / 2 + 100;
+    let spawnX = Math.max(20, Math.min(world.width - 20, player.x + Math.cos(angle) * distance)); let spawnY = Math.max(20, Math.min(world.height - 20, player.y + Math.sin(angle) * distance));
     
-    let isRanged = Math.random() < 0.3; 
-    enemies.push({ x: spawnX, y: spawnY, radius: 15, hp: 3 + (wave * 0.5), speed: isRanged ? 90 : 120 + (wave * 5), type: isRanged ? 'ranged' : 'melee', lastAttackTime: 0 });
+    let rand = Math.random();
+    let type = 'melee'; let speed = 120 + (wave * 5); let hp = 3 + (wave * 0.5);
+
+    // Новая логика появления умных врагов
+    if (wave > 1 && rand < 0.2) { type = 'ranged'; speed = 90; }
+    else if (wave > 2 && rand >= 0.2 && rand < 0.4) { type = 'jumper'; speed = 150; hp = hp * 0.8; }
+    else if (wave > 3 && rand >= 0.4 && rand < 0.5) { type = 'necromancer'; speed = 70; hp = hp * 1.5; }
+
+    enemies.push({ x: spawnX, y: spawnY, radius: 15, hp: hp, speed: speed, type: type, lastAttackTime: 0, dashTimer: 0, spawnTimer: 0 });
 }
 
 function spawnBoss() { 
     let bossMaxHp = 40 + (wave * 2);
-    bosses.push({ x: player.x + 400, y: player.y - 400, radius: 40, hp: bossMaxHp, maxHp: bossMaxHp, speed: 70, attackRate: 1, lastAttackTime: 0, specialTimer: 0 }); 
+    bosses.push({ x: player.x + 400, y: player.y - 400, radius: 45, hp: bossMaxHp, maxHp: bossMaxHp, speed: 70, attackRate: 1, lastAttackTime: 0, specialTimer: 0 }); 
 }
 
 function handleAttack(now) {
@@ -306,19 +221,11 @@ function handleAttack(now) {
     if (nearestTarget) {
         const dx = nearestTarget.x - player.x, dy = nearestTarget.y - player.y, dist = Math.hypot(dx, dy);
         let finalDamage = 1 * (1 + (upgDamage * 0.1));
-        
-        // Базовая пуля
         projectiles.push({ x: player.x, y: player.y, vx: (dx / dist) * 500, vy: (dy / dist) * 500, radius: 4, damage: finalDamage, hitEnemies: [] });
-        
-        // Логика двойного выстрела (Мульти-выстрел)
         if (player.hasMultiShot) {
-            const angle = Math.atan2(dy, dx);
-            const spread = 0.2; // Угол разлета второй пули
-            const vx2 = Math.cos(angle + spread) * 500;
-            const vy2 = Math.sin(angle + spread) * 500;
-            projectiles.push({ x: player.x, y: player.y, vx: vx2, vy: vy2, radius: 4, damage: finalDamage, hitEnemies: [] });
+            const angle = Math.atan2(dy, dx); const spread = 0.2;
+            projectiles.push({ x: player.x, y: player.y, vx: Math.cos(angle + spread) * 500, vy: Math.sin(angle + spread) * 500, radius: 4, damage: finalDamage, hitEnemies: [] });
         }
-        
         player.lastAttackTime = now;
     }
 }
@@ -341,24 +248,17 @@ function update(dt, now) {
 
     if (player.invulnerableTimer > 0) player.invulnerableTimer -= dt;
     if (player.buffTimer > 0) player.buffTimer -= dt; 
-    if (screenShake > 0) screenShake -= dt * 30; 
-    if (screenShake < 0) screenShake = 0;
+    if (screenShake > 0) screenShake -= dt * 30; if (screenShake < 0) screenShake = 0;
 
     for (let i = floatingTexts.length - 1; i >= 0; i--) { floatingTexts[i].life -= dt; floatingTexts[i].y -= 30 * dt; if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1); }
-
-    for (let i = particles.length - 1; i >= 0; i--) {
-        particles[i].x += particles[i].vx * dt; particles[i].y += particles[i].vy * dt; particles[i].life -= dt * 2.0; 
-        if (particles[i].life <= 0) particles.splice(i, 1);
-    }
+    for (let i = particles.length - 1; i >= 0; i--) { particles[i].x += particles[i].vx * dt; particles[i].y += particles[i].vy * dt; particles[i].life -= dt * 2.0; if (particles[i].life <= 0) particles.splice(i, 1); }
 
     if (bosses.length === 0) { 
         timeSinceLastSpawn += dt;
         if (spawnedEnemies < enemiesInWave && timeSinceLastSpawn >= SPAWN_INTERVAL) { spawnEnemy(); spawnedEnemies++; timeSinceLastSpawn = 0; }
         if (spawnedEnemies >= enemiesInWave && enemies.length === 0) {
-            wave++;
-            if (wave > maxWave) { maxWave = wave; saveData(); } 
-            if (wave % 5 === 0) spawnBoss(); 
-            else { enemiesInWave += 3; spawnedEnemies = 0; }
+            wave++; if (wave > maxWave) { maxWave = wave; saveData(); } 
+            if (wave % 5 === 0) spawnBoss(); else { enemiesInWave += 3; spawnedEnemies = 0; }
         }
     } else if (bosses.length === 0 && enemies.length === 0) { wave++; enemiesInWave += 3; spawnedEnemies = 0; }
 
@@ -382,22 +282,30 @@ function update(dt, now) {
     for (let i = enemies.length - 1; i >= 0; i--) {
         let e = enemies[i]; const dx = player.x - e.x, dy = player.y - e.y, dist = Math.hypot(dx, dy);
         
-        if (e.type === 'melee') {
+        // Логика поведения мобов
+        if (e.type === 'melee' || e.type === 'minion') {
             if (dist > 0) { e.x += (dx / dist) * e.speed * dt; e.y += (dy / dist) * e.speed * dt; }
         } else if (e.type === 'ranged') {
             if (dist > 350) { e.x += (dx / dist) * e.speed * dt; e.y += (dy / dist) * e.speed * dt; } 
-            else {
-                if ((now - e.lastAttackTime) / 1000 >= 2.5) { 
-                    enemyProjectiles.push({ x: e.x, y: e.y, vx: (dx / dist) * 250, vy: (dy / dist) * 250, radius: 6, damage: 1 }); e.lastAttackTime = now;
-                }
+            else { if ((now - e.lastAttackTime) / 1000 >= 2.5) { enemyProjectiles.push({ x: e.x, y: e.y, vx: (dx / dist) * 250, vy: (dy / dist) * 250, radius: 6, damage: 1 }); e.lastAttackTime = now; } }
+        } else if (e.type === 'jumper') {
+            e.dashTimer += dt;
+            if (e.dashTimer < 2) { e.x += (dx / dist) * (e.speed * 0.2) * dt; e.y += (dy / dist) * (e.speed * 0.2) * dt; } // медленно идет
+            else if (e.dashTimer < 2.5) { e.x += (dx / dist) * (e.speed * 3.5) * dt; e.y += (dy / dist) * (e.speed * 3.5) * dt; } // рывок
+            else { e.dashTimer = 0; }
+        } else if (e.type === 'necromancer') {
+            if (dist < 450) { e.x -= (dx / dist) * e.speed * dt; e.y -= (dy / dist) * e.speed * dt; } // убегает
+            e.spawnTimer += dt;
+            if (e.spawnTimer > 4) { // рождает миньона
+                e.spawnTimer = 0;
+                enemies.push({ x: e.x + 20, y: e.y + 20, radius: 10, hp: 1, speed: 180, type: 'minion', lastAttackTime: 0, dashTimer: 0, spawnTimer: 0 });
             }
         }
         
         resolveObstacleCollision(e);
 
         if (dist < player.radius + e.radius && player.invulnerableTimer <= 0) {
-            player.hp -= 1; player.invulnerableTimer = 1;
-            spawnFloatingText(player.x, player.y - 20, "-1", "#ff0000"); addScreenShake(10);
+            player.hp -= 1; player.invulnerableTimer = 1; spawnFloatingText(player.x, player.y - 20, "-1", "#ff0000"); addScreenShake(10);
             if (player.hp <= 0) { triggerGameOver(); }
         }
     }
@@ -408,20 +316,14 @@ function update(dt, now) {
         resolveObstacleCollision(b);
         
         if (dist < player.radius + b.radius && player.invulnerableTimer <= 0) { 
-            player.hp -= 2; player.invulnerableTimer = 1; 
-            spawnFloatingText(player.x, player.y - 20, "-2", "#ff0000"); addScreenShake(15);
+            player.hp -= 2; player.invulnerableTimer = 1; spawnFloatingText(player.x, player.y - 20, "-2", "#ff0000"); addScreenShake(15);
             if (player.hp <= 0) { triggerGameOver(); }
         }
         
-        if ((now - b.lastAttackTime) / 1000 >= 1 / b.attackRate) { 
-            enemyProjectiles.push({ x: b.x, y: b.y, vx: (dx / dist) * 300, vy: (dy / dist) * 300, radius: 8, damage: 1 }); b.lastAttackTime = now; 
-        }
+        if ((now - b.lastAttackTime) / 1000 >= 1 / b.attackRate) { enemyProjectiles.push({ x: b.x, y: b.y, vx: (dx / dist) * 300, vy: (dy / dist) * 300, radius: 8, damage: 1 }); b.lastAttackTime = now; }
 
         b.specialTimer += dt;
-        if (b.specialTimer >= 5) {
-            b.specialTimer = 0;
-            for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) { enemyProjectiles.push({ x: b.x, y: b.y, vx: Math.cos(a) * 200, vy: Math.sin(a) * 200, radius: 8, damage: 1 }); }
-        }
+        if (b.specialTimer >= 5) { b.specialTimer = 0; for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) { enemyProjectiles.push({ x: b.x, y: b.y, vx: Math.cos(a) * 200, vy: Math.sin(a) * 200, radius: 8, damage: 1 }); } }
     }
 
     for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
@@ -430,8 +332,7 @@ function update(dt, now) {
         if (hitObstacle || p.x < 0 || p.x > world.width || p.y < 0 || p.y > world.height) { enemyProjectiles.splice(i, 1); continue; }
         
         if (Math.hypot(p.x - player.x, p.y - player.y) < p.radius + player.radius && player.invulnerableTimer <= 0) {
-            player.hp -= p.damage; player.invulnerableTimer = 1; 
-            spawnFloatingText(player.x, player.y - 20, `-${p.damage}`, "#ff0000"); addScreenShake(10); enemyProjectiles.splice(i, 1);
+            player.hp -= p.damage; player.invulnerableTimer = 1; spawnFloatingText(player.x, player.y - 20, `-${p.damage}`, "#ff0000"); addScreenShake(10); enemyProjectiles.splice(i, 1);
             if (player.hp <= 0) { triggerGameOver(); }
         }
     }
@@ -445,45 +346,22 @@ function update(dt, now) {
         if (hitObstacle || p.x < 0 || p.x > world.width || p.y < 0 || p.y > world.height) { projectiles.splice(i, 1); continue; }
         
         let hitSomething = false;
-        
         for (let j = enemies.length - 1; j >= 0; j--) {
             let e = enemies[j];
-            // Проверка попадания. Если есть перк Пробивания - проверяем, не попадали ли мы уже в этого врага
             if (Math.hypot(p.x - e.x, p.y - e.y) < p.radius + e.radius && !p.hitEnemies.includes(e)) {
                 e.hp -= p.damage; spawnFloatingText(e.x, e.y - 20, p.damage.toFixed(1), "#ffffff"); 
-                
-                // Если нет пробивания - пуля исчезает
-                if (!player.hasPiercing) {
-                    projectiles.splice(i, 1); hitSomething = true;
-                } else {
-                    // Если есть пробивание - запоминаем врага, чтобы не бить его дважды за один кадр
-                    p.hitEnemies.push(e);
-                }
-
-                if (e.hp <= 0) { 
-                    spawnParticles(e.x, e.y, e.type === 'ranged' ? '#ff8c00' : '#ff4a4a'); 
-                    generateDrop(e.x, e.y); enemies.splice(j, 1); totalKills++; saveData(); 
-                }
+                if (!player.hasPiercing) { projectiles.splice(i, 1); hitSomething = true; } else { p.hitEnemies.push(e); }
+                if (e.hp <= 0) { spawnParticles(e.x, e.y, e.type === 'ranged' ? '#ff8c00' : (e.type === 'jumper' ? '#00ced1' : '#ff4a4a')); generateDrop(e.x, e.y); enemies.splice(j, 1); totalKills++; saveData(); }
                 if (hitSomething) break;
             }
         }
         if (hitSomething) continue;
-        
         for (let j = bosses.length - 1; j >= 0; j--) {
             let b = bosses[j];
             if (Math.hypot(p.x - b.x, p.y - b.y) < p.radius + b.radius && !p.hitEnemies.includes(b)) {
                 b.hp -= p.damage; spawnFloatingText(b.x, b.y - 40, p.damage.toFixed(1), "#ffffff"); 
-                
-                if (!player.hasPiercing) {
-                    projectiles.splice(i, 1); hitSomething = true;
-                } else {
-                    p.hitEnemies.push(b);
-                }
-
-                if (b.hp <= 0) { 
-                    spawnParticles(b.x, b.y, '#9932CC');
-                    bosses.splice(j, 1); totalKills++; bossesKilled++; gems += 5; saveData(); gameState = 'win'; endTouch(); 
-                }
+                if (!player.hasPiercing) { projectiles.splice(i, 1); hitSomething = true; } else { p.hitEnemies.push(b); }
+                if (b.hp <= 0) { spawnParticles(b.x, b.y, '#9932CC'); bosses.splice(j, 1); totalKills++; bossesKilled++; gems += 5; saveData(); gameState = 'win'; endTouch(); }
                 if (hitSomething) break;
             }
         }
@@ -502,7 +380,6 @@ function draw() {
 
     ctx.fillStyle = '#1e1e24'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.save(); 
-    
     let shakeX = (Math.random() - 0.5) * screenShake; let shakeY = (Math.random() - 0.5) * screenShake;
     ctx.translate(-camera.x + shakeX, -camera.y + shakeY);
 
@@ -522,20 +399,62 @@ function draw() {
 
     for (let p of particles) { ctx.globalAlpha = p.life; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); ctx.globalAlpha = 1.0; }
 
+    // НОВАЯ ОТРИСОВКА ВРАГОВ С ГЛАЗАМИ
     for (let e of enemies) {
-        ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); ctx.fillStyle = e.type === 'ranged' ? '#ff8c00' : '#ff4a4a'; ctx.fill();
+        ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+        if (e.type === 'ranged') ctx.fillStyle = '#ff8c00';
+        else if (e.type === 'jumper') ctx.fillStyle = '#00ced1';
+        else if (e.type === 'necromancer') ctx.fillStyle = '#800080';
+        else if (e.type === 'minion') ctx.fillStyle = '#ff69b4';
+        else ctx.fillStyle = '#ff4a4a'; // melee
+        ctx.fill();
+
+        // Глаза врагам
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(e.x - 5, e.y - 3, 3, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(e.x + 5, e.y - 3, 3, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.arc(e.x - 5, e.y - 3, 1.5, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(e.x + 5, e.y - 3, 1.5, 0, Math.PI*2); ctx.fill();
+
         ctx.fillStyle = '#fff'; ctx.fillRect(e.x - 15, e.y - 25, 30, 4);
         ctx.fillStyle = '#00ff00'; ctx.fillRect(e.x - 15, e.y - 25, 30 * (e.hp / (3 + (wave * 0.5))), 4);
     }
 
-    for (let b of bosses) { ctx.beginPath(); ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2); ctx.fillStyle = '#9932CC'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke(); }
+    // НОВЫЙ БОСС (РОМБ С КРАСНЫМИ ГЛАЗАМИ)
+    for (let b of bosses) { 
+        ctx.fillStyle = '#9932CC';
+        ctx.beginPath();
+        ctx.moveTo(b.x, b.y - b.radius); ctx.lineTo(b.x + b.radius, b.y); ctx.lineTo(b.x, b.y + b.radius); ctx.lineTo(b.x - b.radius, b.y);
+        ctx.closePath(); ctx.fill();
+        ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
+        
+        ctx.fillStyle = '#ff0000'; // Красные глаза
+        ctx.beginPath(); ctx.arc(b.x - 12, b.y - 5, 6, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(b.x + 12, b.y - 5, 6, 0, Math.PI*2); ctx.fill();
+    }
+
     for (let p of projectiles) { ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fillStyle = '#ffea00'; ctx.fill(); }
     for (let p of enemyProjectiles) { ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fillStyle = '#ff0000'; ctx.fill(); }
 
+    // НОВАЯ ОТРИСОВКА ИГРОКА (КВАДРАТ ИЛИ ТРЕУГОЛЬНИК)
     if (player.invulnerableTimer <= 0 || Math.floor(player.invulnerableTimer * 10) % 2 === 0) {
-        ctx.beginPath(); ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-        if (player.buffTimer > 0) ctx.fillStyle = '#ffa500'; else ctx.fillStyle = player.invulnerableTimer > 0 ? '#ffffff' : player.color; 
-        ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
+        ctx.fillStyle = player.buffTimer > 0 ? '#ffa500' : (player.invulnerableTimer > 0 ? '#ffffff' : player.color);
+        ctx.lineWidth = 2; ctx.strokeStyle = '#fff';
+
+        if (player.color === '#0088cc') { 
+            // Танк - Квадрат
+            ctx.fillRect(player.x - player.radius, player.y - player.radius, player.radius * 2, player.radius * 2);
+            ctx.strokeRect(player.x - player.radius, player.y - player.radius, player.radius * 2, player.radius * 2);
+        } else { 
+            // Убийца - Треугольник
+            ctx.beginPath();
+            ctx.moveTo(player.x, player.y - player.radius - 5);
+            ctx.lineTo(player.x - player.radius - 2, player.y + player.radius);
+            ctx.lineTo(player.x + player.radius + 2, player.y + player.radius);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+        }
     }
 
     for (let ft of floatingTexts) { ctx.globalAlpha = ft.life; ctx.fillStyle = ft.color; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(ft.text, ft.x, ft.y); ctx.globalAlpha = 1.0; }
