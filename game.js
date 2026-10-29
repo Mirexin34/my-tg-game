@@ -41,6 +41,7 @@ const equipmentScreen = document.getElementById('equipmentScreen');
 const craftScreen = document.getElementById('craftScreen');
 const wheelScreen = document.getElementById('wheelScreen');
 const shelterScreen = document.getElementById('shelterScreen');
+const leaderboardScreen = document.getElementById('leaderboardScreen');
 const btnDailyReward = document.getElementById('btnDailyReward');
 const btnAssassin = document.getElementById('btnAssassin');
 const chapterTitle = document.getElementById('chapterTitle');
@@ -49,6 +50,10 @@ const bestSurvivalWaveDisplay = document.getElementById('bestSurvivalWave');
 const energyDisplay = document.getElementById('energyDisplay');
 const partsDisplay = document.getElementById('partsDisplay');
 const bmDisplay = document.getElementById('bmDisplay');
+const lbBM = document.getElementById('lbBM');
+const lbLevel = document.getElementById('lbLevel');
+const lbKills = document.getElementById('lbKills');
+const lbWave = document.getElementById('lbWave');
 const wheelResult = document.getElementById('wheelResult');
 const btnSpinWheel = document.getElementById('btnSpinWheel');
 
@@ -115,7 +120,6 @@ let shelterArmoryLvl = savedData.shelterArmoryLvl || 0;
 const MAX_ENERGY = 20;
 const ENERGY_COST = 5;
 
-// Расчет Боевой Мощи (БМ)
 function calculateBM() {
     let base = 100;
     let gearBM = (eqWeapon ? 150 : 0) + (eqArmor ? 200 : 0) + (eqRing ? 120 : 0);
@@ -167,19 +171,21 @@ function updateUI() {
     bmDisplay.innerText = calculateBM();
     document.getElementById('accountLevelDisplay').innerText = accLevel;
     bestSurvivalWaveDisplay.innerText = bestSurvivalWave;
+
+    // Экран статистики и рейтинга
+    lbBM.innerText = calculateBM();
+    lbLevel.innerText = accLevel;
+    lbKills.innerText = totalKills;
+    lbWave.innerText = `${bestSurvivalWave} волн`;
     
-    // Убежище UI
-    document.getElementById('shelterGymLvl').innerText = shelterGymLvl;
     const btnGym = document.getElementById('btnShelterGym');
     if (shelterGymLvl >= 5) { btnGym.innerText = "МАКС."; btnGym.disabled = true; btnGym.style.background = "#555"; }
     else { let cost = 200 * (shelterGymLvl + 1); btnGym.innerText = `${cost} 💰`; btnGym.disabled = gold < cost; btnGym.style.background = gold >= cost ? "#ff8c00" : "#555"; }
 
-    document.getElementById('shelterArmoryLvl').innerText = shelterArmoryLvl;
     const btnArm = document.getElementById('btnShelterArmory');
     if (shelterArmoryLvl >= 5) { btnArm.innerText = "МАКС."; btnArm.disabled = true; btnArm.style.background = "#555"; }
     else { let cost = 300 * (shelterArmoryLvl + 1); btnArm.innerText = `${cost} 💰`; btnArm.disabled = gold < cost; btnArm.style.background = gold >= cost ? "#ff8c00" : "#555"; }
 
-    // Рулетка UI
     const now = Date.now();
     if (now - lastWheelSpin >= 86400000) {
         btnSpinWheel.innerText = "КРУТИТЬ (Бесплатно)";
@@ -255,7 +261,6 @@ updateUI();
 updateChapterUI();
 updateWeaponUI();
 
-// Прокачка в Убежище
 document.getElementById('btnShelterGym').addEventListener('click', () => {
     let cost = 200 * (shelterGymLvl + 1);
     if (gold >= cost && shelterGymLvl < 5) { gold -= cost; shelterGymLvl++; saveData(); updateUI(); }
@@ -265,7 +270,6 @@ document.getElementById('btnShelterArmory').addEventListener('click', () => {
     if (gold >= cost && shelterArmoryLvl < 5) { gold -= cost; shelterArmoryLvl++; saveData(); updateUI(); }
 });
 
-// Рулетка
 btnSpinWheel.addEventListener('click', () => {
     const now = Date.now();
     let isFree = (now - lastWheelSpin >= 86400000);
@@ -319,6 +323,8 @@ document.getElementById('btnWheel').addEventListener('click', () => { mainMenu.s
 document.getElementById('btnBackFromWheel').addEventListener('click', () => { wheelScreen.style.display = 'none'; mainMenu.style.display = 'flex'; });
 document.getElementById('btnShelter').addEventListener('click', () => { mainMenu.style.display = 'none'; shelterScreen.style.display = 'flex'; updateUI(); });
 document.getElementById('btnBackFromShelter').addEventListener('click', () => { shelterScreen.style.display = 'none'; mainMenu.style.display = 'flex'; });
+document.getElementById('btnLeaderboard').addEventListener('click', () => { mainMenu.style.display = 'none'; leaderboardScreen.style.display = 'flex'; updateUI(); });
+document.getElementById('btnBackFromLeaderboard').addEventListener('click', () => { leaderboardScreen.style.display = 'none'; mainMenu.style.display = 'flex'; });
 
 document.getElementById('btnBuyWeapon').addEventListener('click', () => { if (gold >= 300 && !eqWeapon) { gold -= 300; eqWeapon = true; saveData(); } });
 document.getElementById('btnBuyArmor').addEventListener('click', () => { if (gold >= 400 && !eqArmor) { gold -= 400; eqArmor = true; saveData(); } });
@@ -373,14 +379,14 @@ function startGame(heroClass, survival) {
 
     let armorBonus = eqArmor ? 2 : 0;
     let ringBonus = eqRing ? 30 : 0;
-    let shelterHpBonus = shelterGymLvl * 1; // Убежище дает доп ХП
+    let shelterHpBonus = shelterGymLvl * 1;
 
     player.maxHp = baseHp + upgHealth + armorBonus + shelterHpBonus; 
     player.hp = player.maxHp;
     player.speed = baseSpeed + ringBonus;
     
     let selectedGun = weaponsDatabase[currentWeaponIndex];
-    let shelterDmgBonus = shelterArmoryLvl * 0.2; // Убежище дает бонус к урону
+    let shelterDmgBonus = shelterArmoryLvl * 0.2;
 
     player.attackRate = selectedGun.fireRate + (craftMagLvl * 0.4);
     player.weaponRange = selectedGun.range + (craftRangeLvl * 50);
