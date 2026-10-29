@@ -54,7 +54,7 @@ let savedData = JSON.parse(localStorage.getItem('arenaDeathSave')) || {
     bossesKilled: 0, quest3Claimed: false,
     upgHealth: 0, upgDamage: 0,
     lastDailyReward: 0,
-    assassinUnlocked: false // Сохранение разблокировки героя
+    assassinUnlocked: false 
 };
 let gold = savedData.gold || 0;
 let gems = savedData.gems || 0;
@@ -82,18 +82,17 @@ function updateUI() {
     document.getElementById('goldDisplay').innerText = gold;
     document.getElementById('gemDisplay').innerText = gems;
     
-    // Логика кнопки Убийцы
     if (assassinUnlocked) {
         btnAssassin.style.background = "#9932CC";
         btnAssassin.style.borderColor = "#fff";
         btnAssassin.innerHTML = `УБИЙЦА (Открыт)<span>Быстрый, Пулемет, 3 Жизни</span>`;
     } else {
         if (gems >= 15) {
-            btnAssassin.style.background = "#28a745"; // Зеленая, если хватает алмазов
+            btnAssassin.style.background = "#28a745"; 
             btnAssassin.style.borderColor = "#2eb84d";
             btnAssassin.innerHTML = `🔒 КУПИТЬ УБИЙЦУ<span>Быстрый, Пулемет, 3 Жизни</span><div style="margin-top: 8px; color: #fff; font-weight: bold;">Нажми, чтобы купить за 15 💎</div>`;
         } else {
-            btnAssassin.style.background = "#555"; // Серая, если не хватает
+            btnAssassin.style.background = "#555"; 
             btnAssassin.style.borderColor = "#777";
             btnAssassin.innerHTML = `🔒 УБИЙЦА<span>Быстрый, Пулемет, 3 Жизни</span><div style="margin-top: 8px; color: #00ffff; font-weight: bold;">Цена: 15 💎</div>`;
         }
@@ -155,15 +154,9 @@ document.getElementById('btnBuyDamage').addEventListener('click', () => { if (go
 
 document.getElementById('btnTank').addEventListener('click', () => startGame('tank'));
 
-// Покупка и выбор Убийцы
 btnAssassin.addEventListener('click', () => {
-    if (assassinUnlocked) {
-        startGame('assassin');
-    } else if (gems >= 15) {
-        gems -= 15;
-        assassinUnlocked = true;
-        saveData();
-    }
+    if (assassinUnlocked) { startGame('assassin'); } 
+    else if (gems >= 15) { gems -= 15; assassinUnlocked = true; saveData(); }
 });
 
 let hasRevived = false;
@@ -191,6 +184,10 @@ function startGame(heroClass) {
     
     player.level = 1; player.xp = 0; player.maxXP = 5; player.buffTimer = 0;
     player.x = world.width / 2; player.y = world.height / 2; player.invulnerableTimer = 0;
+
+    // Сброс активных перков на старте игры
+    player.hasMultiShot = false;
+    player.hasPiercing = false;
 
     let baseHp = heroClass === 'tank' ? 10 : 3;
     player.maxHp = baseHp + upgHealth; 
@@ -241,26 +238,39 @@ const endTouch = () => { input.isMoving = false; input.x = 0; input.y = 0; joyst
 joystickZone.addEventListener('touchend', endTouch);
 joystickZone.addEventListener('touchcancel', endTouch);
 
-const player = { x: 0, y: 0, radius: 12, speed: 200, attackRate: 2.5, lastAttackTime: 0, hp: 5, maxHp: 5, invulnerableTimer: 0, level: 1, xp: 0, maxXP: 5, buffTimer: 0, color: '#0088cc' };
+// Добавляем новые переменные для перков в объект игрока
+const player = { x: 0, y: 0, radius: 12, speed: 200, attackRate: 2.5, lastAttackTime: 0, hp: 5, maxHp: 5, invulnerableTimer: 0, level: 1, xp: 0, maxXP: 5, buffTimer: 0, color: '#0088cc', hasMultiShot: false, hasPiercing: false };
+
 let enemies = []; let projectiles = []; let items = []; let bosses = []; let enemyProjectiles = []; let obstacles = [];
 let wave = 1; let enemiesInWave = 5; let spawnedEnemies = 0;
 
+// ОБНОВЛЕННЫЙ СПИСОК ПЕРКОВ (Добавлены Мульти-выстрел и Пробивание)
 const availablePerks = [
     { name: "+1 Макс. Здоровье", action: () => { player.maxHp++; player.hp++; } },
     { name: "Скорость бега", action: () => { player.speed += 40; } },
     { name: "Скорость стрельбы", action: () => { player.attackRate += 0.7; } },
-    { name: "Полное исцеление", action: () => { player.hp = player.maxHp; } }
+    { name: "Полное исцеление", action: () => { player.hp = player.maxHp; } },
+    { name: "Двойной выстрел", action: () => { player.hasMultiShot = true; } },
+    { name: "Пробивание врагов", action: () => { player.hasPiercing = true; } }
 ];
 
 function triggerLevelUp() {
     gameState = 'levelup'; endTouch(); 
     player.level++; player.xp -= player.maxXP; player.maxXP = Math.floor(player.maxXP * 1.5); 
-    let shuffled = availablePerks.sort(() => 0.5 - Math.random());
+    
+    // Фильтруем список (чтобы перки не выпадали повторно, если уже взяты)
+    let filteredPerks = availablePerks.filter(p => {
+        if (p.name === "Двойной выстрел" && player.hasMultiShot) return false;
+        if (p.name === "Пробивание врагов" && player.hasPiercing) return false;
+        return true;
+    });
+
+    let shuffled = filteredPerks.sort(() => 0.5 - Math.random());
     let currentPerks = shuffled.slice(0, 3);
     
     const container = document.getElementById('perksContainer'); container.innerHTML = '';
     
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < currentPerks.length; i++) {
         const btn = document.createElement('button'); btn.className = 'perkBtn'; btn.innerText = currentPerks[i].name;
         btn.onclick = () => { currentPerks[i].action(); levelUpScreen.style.display = 'none'; gameState = 'playing'; };
         container.appendChild(btn);
@@ -296,7 +306,19 @@ function handleAttack(now) {
     if (nearestTarget) {
         const dx = nearestTarget.x - player.x, dy = nearestTarget.y - player.y, dist = Math.hypot(dx, dy);
         let finalDamage = 1 * (1 + (upgDamage * 0.1));
-        projectiles.push({ x: player.x, y: player.y, vx: (dx / dist) * 500, vy: (dy / dist) * 500, radius: 4, damage: finalDamage });
+        
+        // Базовая пуля
+        projectiles.push({ x: player.x, y: player.y, vx: (dx / dist) * 500, vy: (dy / dist) * 500, radius: 4, damage: finalDamage, hitEnemies: [] });
+        
+        // Логика двойного выстрела (Мульти-выстрел)
+        if (player.hasMultiShot) {
+            const angle = Math.atan2(dy, dx);
+            const spread = 0.2; // Угол разлета второй пули
+            const vx2 = Math.cos(angle + spread) * 500;
+            const vy2 = Math.sin(angle + spread) * 500;
+            projectiles.push({ x: player.x, y: player.y, vx: vx2, vy: vy2, radius: 4, damage: finalDamage, hitEnemies: [] });
+        }
+        
         player.lastAttackTime = now;
     }
 }
@@ -422,30 +444,47 @@ function update(dt, now) {
         let hitObstacle = obstacles.some(obs => Math.hypot(p.x - obs.x, p.y - obs.y) < p.radius + obs.radius);
         if (hitObstacle || p.x < 0 || p.x > world.width || p.y < 0 || p.y > world.height) { projectiles.splice(i, 1); continue; }
         
-        let hit = false;
+        let hitSomething = false;
+        
         for (let j = enemies.length - 1; j >= 0; j--) {
             let e = enemies[j];
-            if (Math.hypot(p.x - e.x, p.y - e.y) < p.radius + e.radius) {
-                e.hp -= p.damage; spawnFloatingText(e.x, e.y - 20, p.damage.toFixed(1), "#ffffff"); projectiles.splice(i, 1); hit = true;
+            // Проверка попадания. Если есть перк Пробивания - проверяем, не попадали ли мы уже в этого врага
+            if (Math.hypot(p.x - e.x, p.y - e.y) < p.radius + e.radius && !p.hitEnemies.includes(e)) {
+                e.hp -= p.damage; spawnFloatingText(e.x, e.y - 20, p.damage.toFixed(1), "#ffffff"); 
+                
+                // Если нет пробивания - пуля исчезает
+                if (!player.hasPiercing) {
+                    projectiles.splice(i, 1); hitSomething = true;
+                } else {
+                    // Если есть пробивание - запоминаем врага, чтобы не бить его дважды за один кадр
+                    p.hitEnemies.push(e);
+                }
+
                 if (e.hp <= 0) { 
                     spawnParticles(e.x, e.y, e.type === 'ranged' ? '#ff8c00' : '#ff4a4a'); 
                     generateDrop(e.x, e.y); enemies.splice(j, 1); totalKills++; saveData(); 
                 }
-                break;
+                if (hitSomething) break;
             }
         }
-        if (hit) continue;
+        if (hitSomething) continue;
+        
         for (let j = bosses.length - 1; j >= 0; j--) {
             let b = bosses[j];
-            if (Math.hypot(p.x - b.x, p.y - b.y) < p.radius + b.radius) {
-                b.hp -= p.damage; spawnFloatingText(b.x, b.y - 40, p.damage.toFixed(1), "#ffffff"); projectiles.splice(i, 1);
+            if (Math.hypot(p.x - b.x, p.y - b.y) < p.radius + b.radius && !p.hitEnemies.includes(b)) {
+                b.hp -= p.damage; spawnFloatingText(b.x, b.y - 40, p.damage.toFixed(1), "#ffffff"); 
+                
+                if (!player.hasPiercing) {
+                    projectiles.splice(i, 1); hitSomething = true;
+                } else {
+                    p.hitEnemies.push(b);
+                }
+
                 if (b.hp <= 0) { 
                     spawnParticles(b.x, b.y, '#9932CC');
-                    bosses.splice(j, 1); totalKills++; bossesKilled++; 
-                    gems += 5; // Выдаем 5 алмазов за босса!
-                    saveData(); gameState = 'win'; endTouch(); 
+                    bosses.splice(j, 1); totalKills++; bossesKilled++; gems += 5; saveData(); gameState = 'win'; endTouch(); 
                 }
-                break;
+                if (hitSomething) break;
             }
         }
     }
