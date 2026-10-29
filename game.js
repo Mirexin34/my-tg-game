@@ -43,8 +43,8 @@ const btnAssassin = document.getElementById('btnAssassin');
 const chapterTitle = document.getElementById('chapterTitle');
 const weaponTitle = document.getElementById('weaponTitle');
 const bestSurvivalWaveDisplay = document.getElementById('bestSurvivalWave');
+const energyDisplay = document.getElementById('energyDisplay');
 
-// --- БАЗА ОРУЖИЯ ---
 const weaponsDatabase = [
     { key: 'stick', name: "Ржавая палка", damage: 1.0, range: 220, fireRate: 1.2, color: "#8b4513" },
     { key: 'pistol', name: "Пистолет", damage: 2.0, range: 400, fireRate: 2.0, color: "#4682b4" },
@@ -60,9 +60,7 @@ document.getElementById('btnNextWeapon').addEventListener('click', () => {
     currentWeaponIndex = (currentWeaponIndex + 1) % weaponsDatabase.length;
     updateWeaponUI();
 });
-function updateWeaponUI() {
-    weaponTitle.innerText = weaponsDatabase[currentWeaponIndex].name;
-}
+function updateWeaponUI() { weaponTitle.innerText = weaponsDatabase[currentWeaponIndex].name; }
 
 const chapters = [
     { id: 0, name: "Глава 1: Руины", bg: "#1e1e24", grid: "rgba(255, 255, 255, 0.05)", border: "#ffea00", enemyMult: 1.0 },
@@ -85,7 +83,8 @@ let savedData = JSON.parse(localStorage.getItem('arenaDeathSave')) || {
     gold: 0, gems: 0, totalKills: 0, quest1Claimed: false, maxWave: 1, quest2Claimed: false, bossesKilled: 0, quest3Claimed: false, upgHealth: 0, upgDamage: 0, lastDailyReward: 0, assassinUnlocked: false,
     accLevel: 1, accXP: 0, accMaxXP: 100,
     eqWeapon: false, eqArmor: false, eqRing: false,
-    bestSurvivalWave: 0
+    bestSurvivalWave: 0,
+    energy: 20, lastEnergyTime: Date.now()
 };
 let gold = savedData.gold || 0; let gems = savedData.gems || 0; let totalKills = savedData.totalKills || 0; let quest1Claimed = savedData.quest1Claimed || false;
 let maxWave = savedData.maxWave || 1; let quest2Claimed = savedData.quest2Claimed || false; let bossesKilled = savedData.bossesKilled || 0; let quest3Claimed = savedData.quest3Claimed || false;
@@ -93,15 +92,33 @@ let upgHealth = savedData.upgHealth || 0; let upgDamage = savedData.upgDamage ||
 let accLevel = savedData.accLevel || 1; let accXP = savedData.accXP || 0; let accMaxXP = savedData.accMaxXP || 100;
 let eqWeapon = savedData.eqWeapon || false; let eqArmor = savedData.eqArmor || false; let eqRing = savedData.eqRing || false;
 let bestSurvivalWave = savedData.bestSurvivalWave || 0;
-let isSurvivalMode = false;
+let energy = savedData.energy !== undefined ? savedData.energy : 20;
+let lastEnergyTime = savedData.lastEnergyTime || Date.now();
+
+const MAX_ENERGY = 20;
+const ENERGY_COST = 5;
 
 function saveData() {
     localStorage.setItem('arenaDeathSave', JSON.stringify({ 
         gold, gems, totalKills, quest1Claimed, maxWave, quest2Claimed, bossesKilled, quest3Claimed, upgHealth, upgDamage, lastDailyReward, assassinUnlocked, accLevel, accXP, accMaxXP,
-        eqWeapon, eqArmor, eqRing, bestSurvivalWave
+        eqWeapon, eqArmor, eqRing, bestSurvivalWave, energy, lastEnergyTime
     }));
     updateUI();
 }
+
+// Проверка восстановления энергии со временем (1 энергия каждые 3 минуты = 180000 мс)
+function checkEnergyRegen() {
+    const now = Date.now();
+    const diff = now - lastEnergyTime;
+    const regenInterval = 180000; 
+    if (energy < MAX_ENERGY && diff >= regenInterval) {
+        let added = Math.floor(diff / regenInterval);
+        energy = Math.min(MAX_ENERGY, energy + added);
+        lastEnergyTime = now - (diff % regenInterval);
+        saveData();
+    }
+}
+setInterval(checkEnergyRegen, 10000); // проверяем каждые 10 секунд
 
 function addAccountXP(amount) {
     accXP += amount;
@@ -114,8 +131,10 @@ function addAccountXP(amount) {
 }
 
 function updateUI() {
+    checkEnergyRegen();
     document.getElementById('goldDisplay').innerText = gold;
     document.getElementById('gemDisplay').innerText = gems;
+    energyDisplay.innerText = energy;
     document.getElementById('accountLevelDisplay').innerText = accLevel;
     bestSurvivalWaveDisplay.innerText = bestSurvivalWave;
     
@@ -171,6 +190,18 @@ updateUI();
 updateChapterUI();
 updateWeaponUI();
 
+// Покупка энергии за кристаллы
+document.getElementById('btnBuyEnergy').addEventListener('click', () => {
+    if (gems >= 5) {
+        gems -= 5;
+        energy = Math.min(MAX_ENERGY, energy + 10);
+        saveData();
+        spawnFloatingText(canvas.width / 2, canvas.height / 2, "+10 Энергии!", "#ff4500");
+    } else {
+        alert("Не хватает алмазов (нужно 5 💎)");
+    }
+});
+
 btnDailyReward.addEventListener('click', () => { const now = Date.now(); if (now - lastDailyReward >= 86400000) { gold += 100; lastDailyReward = now; saveData(); } });
 document.getElementById('btnQuests').addEventListener('click', () => { mainMenu.style.display = 'none'; questsScreen.style.display = 'flex'; updateUI(); });
 document.getElementById('btnBackFromQuests').addEventListener('click', () => { questsScreen.style.display = 'none'; mainMenu.style.display = 'flex'; });
@@ -189,12 +220,26 @@ document.getElementById('btnClaimQuest3').addEventListener('click', () => { if (
 document.getElementById('btnBuyHealth').addEventListener('click', () => { if (gold >= 100 && upgHealth < 5) { gold -= 100; upgHealth++; saveData(); } });
 document.getElementById('btnBuyDamage').addEventListener('click', () => { if (gold >= 150 && upgDamage < 5) { gold -= 150; upgDamage++; saveData(); } });
 
-document.getElementById('btnTank').addEventListener('click', () => startGame('tank', false));
-document.getElementById('btnSurvival').addEventListener('click', () => startGame('tank', true));
+// Проверка энергии перед стартом игры
+document.getElementById('btnTank').addEventListener('click', () => {
+    if (energy < ENERGY_COST) { alert("Недостаточно энергии! Подождите восстановления или купите за кристаллы."); return; }
+    energy -= ENERGY_COST; saveData();
+    startGame('tank', false);
+});
+document.getElementById('btnSurvival').addEventListener('click', () => {
+    if (energy < ENERGY_COST) { alert("Недостаточно энергии! Подождите восстановления или купите за кристаллы."); return; }
+    energy -= ENERGY_COST; saveData();
+    startGame('tank', true);
+});
 
 btnAssassin.addEventListener('click', () => {
-    if (assassinUnlocked) { startGame('assassin', false); } 
-    else if (gems >= 15) { gems -= 15; assassinUnlocked = true; saveData(); }
+    if (energy < ENERGY_COST) { alert("Недостаточно энергии!"); return; }
+    if (assassinUnlocked) { 
+        energy -= ENERGY_COST; saveData();
+        startGame('assassin', false); 
+    } 
+    else if (gems >= 15) { gems -= 15; assassinUnlocked = true; saveData(); alert("Убийца разблокирован!"); }
+    else { alert("Не хватает алмазов на покупку Убийцы!"); }
 });
 
 let hasRevived = false;
@@ -206,6 +251,8 @@ function showMenu() { gameState = 'menu'; mainMenu.style.display = 'flex'; updat
 
 let floatingTexts = [];
 function spawnFloatingText(x, y, text, color) { floatingTexts.push({ x, y, text, color, life: 1.0 }); }
+
+let isSurvivalMode = false;
 
 function startGame(heroClass, survival) {
     mainMenu.style.display = 'none'; gameOverScreen.style.display = 'none'; gameState = 'playing';
@@ -227,7 +274,6 @@ function startGame(heroClass, survival) {
     player.hp = player.maxHp;
     player.speed = baseSpeed + ringBonus;
     
-    // Берем выбранное игроком оружие из меню
     let selectedGun = weaponsDatabase[currentWeaponIndex];
     player.attackRate = selectedGun.fireRate;
     player.weaponRange = selectedGun.range;
@@ -245,7 +291,11 @@ function startGame(heroClass, survival) {
 function triggerGameOver() {
     gameState = 'gameover'; endTouch(); gameOverScreen.style.display = 'flex';
     if (isSurvivalMode) {
-        if (wave > bestSurvivalWave) { bestSurvivalWave = wave; saveData(); }
+        let bestSurvivalWave = savedData.bestSurvivalWave || 0;
+        if (wave > bestSurvivalWave) {
+            savedData.bestSurvivalWave = wave;
+            saveData();
+        }
     }
     if (hasRevived) { btnRevive.style.display = 'none'; } 
     else {
