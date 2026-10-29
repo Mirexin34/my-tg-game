@@ -19,6 +19,7 @@ function resize() { canvas.width = window.innerWidth; canvas.height = window.inn
 window.addEventListener('resize', resize);
 resize();
 
+// Элементы интерфейса
 const joystickZone = document.getElementById('joystickZone');
 const joystickBase = document.getElementById('joystickBase');
 const joystickStick = document.getElementById('joystickStick');
@@ -27,6 +28,61 @@ const mainMenu = document.getElementById('mainMenu');
 const gameOverScreen = document.getElementById('gameOverScreen');
 const btnRevive = document.getElementById('btnRevive');
 const btnGiveUp = document.getElementById('btnGiveUp');
+const questsScreen = document.getElementById('questsScreen');
+
+// --- СИСТЕМА СОХРАНЕНИЯ И ЭКОНОМИКА ---
+let savedData = JSON.parse(localStorage.getItem('arenaDeathSave')) || { gold: 0, gems: 0, totalKills: 0, quest1Claimed: false };
+let gold = savedData.gold || 0;
+let gems = savedData.gems || 0;
+let totalKills = savedData.totalKills || 0;
+let quest1Claimed = savedData.quest1Claimed || false;
+
+function saveData() {
+    localStorage.setItem('arenaDeathSave', JSON.stringify({ gold, gems, totalKills, quest1Claimed }));
+    updateUI();
+}
+
+function updateUI() {
+    document.getElementById('goldDisplay').innerText = gold;
+    document.getElementById('gemDisplay').innerText = gems;
+    document.getElementById('questKillsProgress').innerText = Math.min(totalKills, 10);
+
+    const btnClaim = document.getElementById('btnClaimQuest1');
+    if (quest1Claimed) {
+        btnClaim.innerText = "ВЫПОЛНЕНО";
+        btnClaim.style.background = "#28a745";
+        btnClaim.disabled = true;
+    } else if (totalKills >= 10) {
+        btnClaim.innerText = "ЗАБРАТЬ 50 💰";
+        btnClaim.style.background = "#ff8c00";
+        btnClaim.disabled = false;
+    } else {
+        btnClaim.innerText = "+50 💰";
+        btnClaim.style.background = "#555";
+        btnClaim.disabled = true;
+    }
+}
+updateUI(); // Обновляем интерфейс при старте
+
+// --- НАВИГАЦИЯ ПО МЕНЮ ---
+document.getElementById('btnQuests').addEventListener('click', () => {
+    mainMenu.style.display = 'none';
+    questsScreen.style.display = 'flex';
+    updateUI();
+});
+
+document.getElementById('btnBackToMenu').addEventListener('click', () => {
+    questsScreen.style.display = 'none';
+    mainMenu.style.display = 'flex';
+});
+
+document.getElementById('btnClaimQuest1').addEventListener('click', () => {
+    if (totalKills >= 10 && !quest1Claimed) {
+        gold += 50;
+        quest1Claimed = true;
+        saveData();
+    }
+});
 
 let hasRevived = false;
 
@@ -34,11 +90,15 @@ document.getElementById('btnTank').addEventListener('click', () => startGame('ta
 document.getElementById('btnAssassin').addEventListener('click', () => startGame('assassin'));
 
 btnRevive.addEventListener('click', () => {
-    hasRevived = true;
-    player.hp = player.maxHp;
-    player.invulnerableTimer = 3; 
-    gameOverScreen.style.display = 'none';
-    gameState = 'playing';
+    if (gold >= 50 && !hasRevived) {
+        gold -= 50;
+        saveData();
+        hasRevived = true;
+        player.hp = player.maxHp;
+        player.invulnerableTimer = 3; 
+        gameOverScreen.style.display = 'none';
+        gameState = 'playing';
+    }
 });
 
 btnGiveUp.addEventListener('click', () => {
@@ -49,6 +109,7 @@ btnGiveUp.addEventListener('click', () => {
 function showMenu() {
     gameState = 'menu';
     mainMenu.style.display = 'flex';
+    updateUI();
 }
 
 function startGame(heroClass) {
@@ -72,7 +133,6 @@ function startGame(heroClass) {
         player.speed = 280; player.attackRate = 4.0; player.color = '#ff00ff'; 
     }
 
-    // Создаем препятствия (камни), избегая центра, где спавнится игрок
     for(let i = 0; i < 20; i++) {
         let ox = Math.random() * world.width;
         let oy = Math.random() * world.height;
@@ -90,6 +150,16 @@ function triggerGameOver() {
         btnRevive.style.display = 'none';
     } else {
         btnRevive.style.display = 'block';
+        btnRevive.innerText = `ВОСКРЕСНУТЬ (50 💰)`;
+        if (gold >= 50) {
+            btnRevive.style.background = '#28a745';
+            btnRevive.style.opacity = '1';
+            btnRevive.disabled = false;
+        } else {
+            btnRevive.style.background = '#555';
+            btnRevive.style.opacity = '0.5';
+            btnRevive.disabled = true;
+        }
     }
 }
 
@@ -158,7 +228,7 @@ function spawnEnemy() {
     let spawnX = Math.max(20, Math.min(world.width - 20, player.x + Math.cos(angle) * distance));
     let spawnY = Math.max(20, Math.min(world.height - 20, player.y + Math.sin(angle) * distance));
     
-    let isRanged = Math.random() < 0.3; // 30% шанс на стрелка
+    let isRanged = Math.random() < 0.3; 
     enemies.push({ 
         x: spawnX, y: spawnY, radius: 15, 
         hp: 3 + (wave * 0.5), 
@@ -186,7 +256,6 @@ function handleAttack(now) {
     }
 }
 
-// Физика столкновений с камнями
 function resolveObstacleCollision(entity) {
     for (let obs of obstacles) {
         const dx = entity.x - obs.x;
@@ -251,7 +320,7 @@ function update(dt, now) {
             if (dist > 350) { 
                 e.x += (dx / dist) * e.speed * dt; e.y += (dy / dist) * e.speed * dt; 
             } else {
-                if ((now - e.lastAttackTime) / 1000 >= 2.5) { // Выстрел раз в 2.5 секунды
+                if ((now - e.lastAttackTime) / 1000 >= 2.5) { 
                     enemyProjectiles.push({ x: e.x, y: e.y, vx: (dx / dist) * 250, vy: (dy / dist) * 250, radius: 6, damage: 1 });
                     e.lastAttackTime = now;
                 }
@@ -279,7 +348,6 @@ function update(dt, now) {
         if ((now - b.lastAttackTime) / 1000 >= 1 / b.attackRate) { enemyProjectiles.push({ x: b.x, y: b.y, vx: (dx / dist) * 300, vy: (dy / dist) * 300, radius: 8, damage: 1 }); b.lastAttackTime = now; }
     }
 
-    // Снаряды врагов (с проверкой камней)
     for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
         let p = enemyProjectiles[i]; p.x += p.vx * dt; p.y += p.vy * dt;
         let hitObstacle = obstacles.some(obs => Math.hypot(p.x - obs.x, p.y - obs.y) < p.radius + obs.radius);
@@ -294,7 +362,6 @@ function update(dt, now) {
     camera.x = Math.max(0, Math.min(world.width - canvas.width, player.x - canvas.width / 2));
     camera.y = Math.max(0, Math.min(world.height - canvas.height, player.y - canvas.height / 2));
 
-    // Снаряды игрока (с проверкой камней)
     for (let i = projectiles.length - 1; i >= 0; i--) {
         let p = projectiles[i]; p.x += p.vx * dt; p.y += p.vy * dt;
         let hitObstacle = obstacles.some(obs => Math.hypot(p.x - obs.x, p.y - obs.y) < p.radius + obs.radius);
@@ -305,7 +372,12 @@ function update(dt, now) {
             let e = enemies[j];
             if (Math.hypot(p.x - e.x, p.y - e.y) < p.radius + e.radius) {
                 e.hp -= p.damage; projectiles.splice(i, 1); hit = true;
-                if (e.hp <= 0) { generateDrop(e.x, e.y); enemies.splice(j, 1); }
+                if (e.hp <= 0) { 
+                    generateDrop(e.x, e.y); 
+                    enemies.splice(j, 1); 
+                    totalKills++; // Считаем убийства
+                    saveData();
+                }
                 break;
             }
         }
@@ -314,7 +386,13 @@ function update(dt, now) {
             let b = bosses[j];
             if (Math.hypot(p.x - b.x, p.y - b.y) < p.radius + b.radius) {
                 b.hp -= p.damage; projectiles.splice(i, 1);
-                if (b.hp <= 0) { bosses.splice(j, 1); gameState = 'win'; endTouch(); }
+                if (b.hp <= 0) { 
+                    bosses.splice(j, 1); 
+                    totalKills++; 
+                    saveData();
+                    gameState = 'win'; 
+                    endTouch(); 
+                }
                 break;
             }
         }
@@ -340,7 +418,6 @@ function draw() {
     ctx.stroke();
     ctx.strokeStyle = '#ffea00'; ctx.lineWidth = 4; ctx.strokeRect(0, 0, world.width, world.height);
 
-    // Отрисовка камней
     for (let obs of obstacles) {
         ctx.beginPath(); ctx.arc(obs.x, obs.y, obs.radius, 0, Math.PI * 2);
         ctx.fillStyle = '#444'; ctx.fill();
@@ -357,7 +434,7 @@ function draw() {
 
     for (let e of enemies) {
         ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); 
-        ctx.fillStyle = e.type === 'ranged' ? '#ff8c00' : '#ff4a4a'; // Оранжевый для стрелков
+        ctx.fillStyle = e.type === 'ranged' ? '#ff8c00' : '#ff4a4a'; 
         ctx.fill();
         ctx.fillStyle = '#fff'; ctx.fillRect(e.x - 15, e.y - 25, 30, 4);
         ctx.fillStyle = '#00ff00'; ctx.fillRect(e.x - 15, e.y - 25, 30 * (e.hp / (3 + (wave * 0.5))), 4);
