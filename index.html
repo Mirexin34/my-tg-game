@@ -23,13 +23,14 @@
         .rarity-bg-epic { background: linear-gradient(135deg, #9370db, #4b0082); border-color: #da70d6; }
         .rarity-bg-legendary { background: linear-gradient(135deg, #ffd700, #ff8c00); border-color: #ffff00; }
         .stat-badge { position: absolute; bottom: 2px; right: 4px; font-size: 10px; font-weight: bold; color: white; background: rgba(0,0,0,0.7); padding: 1px 4px; border-radius: 4px; }
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center; }
-        .modal-content { background: #2a2a35; border: 2px solid #ffea00; border-radius: 20px; padding: 20px; width: 85%; text-align: center; color: white; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center; }
+        .modal-content { background: #2a2a35; border: 2px solid #ffea00; border-radius: 20px; padding: 20px; width: 90%; max-height: 80vh; overflow-y: auto; text-align: center; color: white; position: relative; }
+        .event-btn { background: linear-gradient(135deg, #ff00ff, #8a2be2); color: white; border: none; padding: 12px; border-radius: 12px; font-weight: bold; width: 100%; font-size: 16px; cursor: pointer; box-shadow: 0 4px 10px rgba(138,43,226,0.5); }
     </style>
 </head>
 <body>
     <div id="app">
-        <!-- Верхняя панель -->
+        <!-- ВЕРХНЯЯ ПАНЕЛЬ -->
         <div id="topBar" style="position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; z-index: 40; pointer-events: none;">
             <div style="display: flex; align-items: center; gap: 8px;">
                 <div style="background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; color: #00ff00; font-weight: bold; border: 1px solid #32cd32; font-size: 12px;">
@@ -61,6 +62,11 @@
                 <button onclick="switchTab('agencyScreen', null)" style="background: rgba(0,0,0,0.7); color: #00ffff; border: 1px solid #00bcd4; border-radius: 10px; padding: 8px; flex: 1; font-weight: bold;">🏢 Агентство</button>
                 <button onclick="switchTab('questsScreen', null)" style="background: rgba(0,0,0,0.7); color: #ffea00; border: 1px solid #ffd700; border-radius: 10px; padding: 8px; flex: 1; font-weight: bold;">📋 Сезон</button>
             </div>
+            
+            <div style="padding: 0 15px; margin-top: 10px;">
+                <!-- КНОПКА ПАКЕТОВ И СОБЫТИЙ -->
+                <button class="event-btn" onclick="openEventsModal()">🎁 СОБЫТИЯ И ПАКЕТЫ</button>
+            </div>
 
             <div style="margin: auto; text-align: center; width: 100%;">
                 <div style="font-size: 18px; color: #ffea00; font-weight: bold; margin-bottom: 15px;">ЭТАП <span id="stageDisplay">1</span></div>
@@ -77,6 +83,57 @@
             </div>
         </div>
 
+        <!-- МОДАЛКА: СОБЫТИЯ И ПАКЕТЫ (НОВОЕ) -->
+        <div id="eventsModal" class="modal-overlay">
+            <div class="modal-content" style="border-color: #ff00ff;">
+                <button onclick="document.getElementById('eventsModal').style.display='none'" style="position:absolute; top:10px; right:10px; background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:5px; font-weight:bold;">X</button>
+                
+                <h3 style="color:#00ffff; margin-top:0;">ПАКЕТ ДЛЯ НОВИЧКОВ[cite: 7]</h3>
+                <div style="background: #1e1e2c; border: 1px solid #555; border-radius: 10px; padding: 10px; margin-bottom: 20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">
+                        <span style="color:#ffea00; font-weight:bold;">День 1</span>
+                        <span style="color:#aaa; font-size:12px;">1000 💰, 10 ⚙️</span>
+                        <button id="btnBeginner1" onclick="claimBeginner(1)" style="background:#28a745; color:#fff; border:none; padding:5px 10px; border-radius:5px; font-weight:bold; font-size:10px;">Забрать</button>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">
+                        <span style="color:#ffea00; font-weight:bold;">День 2</span>
+                        <span style="color:#aaa; font-size:12px;">Эпик Кольцо 💍</span>
+                        <button id="btnBeginner2" onclick="claimBeginner(2)" style="background:#28a745; color:#fff; border:none; padding:5px 10px; border-radius:5px; font-weight:bold; font-size:10px;">Забрать</button>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="color:#ffea00; font-weight:bold;">День 3</span>
+                        <span style="color:#aaa; font-size:12px;">300 💎</span>
+                        <button id="btnBeginner3" onclick="claimBeginner(3)" style="background:#28a745; color:#fff; border:none; padding:5px 10px; border-radius:5px; font-weight:bold; font-size:10px;">Забрать</button>
+                    </div>
+                </div>
+
+                <h3 style="color:#ffea00; margin-top:0;">ФОНД ПРИКЛЮЧЕНИЙ[cite: 6]</h3>
+                <div style="background: linear-gradient(135deg, #1e3c72, #2a5298); border: 2px solid #00bfff; border-radius: 10px; padding: 10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <span style="font-size:12px; color:#fff;">Премиум Приключение<br>открывает доп. награды!</span>
+                        <button id="btnBuyFund" onclick="buyPremiumFund()" style="background:#ffea00; color:#000; border:none; padding:5px 10px; border-radius:5px; font-weight:bold;">Купить (1000 💎)</button>
+                    </div>
+
+                    <!-- Этап 2 -->
+                    <div style="background:rgba(0,0,0,0.5); padding:8px; border-radius:8px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                        <span style="color:#fff; font-weight:bold;">Этап 2</span>
+                        <div style="display:flex; gap:5px;">
+                            <button id="btnFundFree2" onclick="claimFund('free', 2, 50)" style="background:#555; color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:10px;">Беспл. (50 💎)</button>
+                            <button id="btnFundPrem2" onclick="claimFund('prem', 2, 500)" style="background:#da70d6; color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:10px;">Прем. (500 💎)</button>
+                        </div>
+                    </div>
+                    <!-- Этап 5 -->
+                    <div style="background:rgba(0,0,0,0.5); padding:8px; border-radius:8px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                        <span style="color:#fff; font-weight:bold;">Этап 5</span>
+                        <div style="display:flex; gap:5px;">
+                            <button id="btnFundFree5" onclick="claimFund('free', 5, 100)" style="background:#555; color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:10px;">Беспл. (100 💎)</button>
+                            <button id="btnFundPrem5" onclick="claimFund('prem', 5, 1500)" style="background:#da70d6; color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:10px;">Прем. (1500 💎)</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="sweepModal" class="modal-overlay">
             <div class="modal-content">
                 <h3 style="color:#ffea00; margin-top:0;">БЫСТРАЯ РАЗВЕРТКА</h3>
@@ -88,22 +145,19 @@
             </div>
         </div>
 
-        <!-- 2. МАГАЗИН (ОБНОВЛЕННЫЙ) -->
+        <!-- 2. МАГАЗИН -->
         <div id="shopScreen" class="screen" style="display: none; padding: 20px 15px; background: #1a1a24;">
-            
-            <!-- КАРТЫ ЛЬГОТ (VIP) -->
-            <h3 style="color: #00ffff; text-align: center; margin-top: 0; margin-bottom: 10px;">КАРТЫ ЛЬГОТ[cite: 1]</h3>
+            <h3 style="color: #00ffff; text-align: center; margin-top: 0; margin-bottom: 10px;">КАРТЫ ЛЬГОТ</h3>
             <div style="background: linear-gradient(135deg, #4169e1, #00008b); border: 2px solid #00bfff; border-radius: 14px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
                 <div style="text-align: left;">
-                    <div style="font-weight: bold; font-size: 16px; color: #fff; margin-bottom: 5px;">Серебряная карта[cite: 1]</div>
+                    <div style="font-weight: bold; font-size: 16px; color: #fff; margin-bottom: 5px;">Серебряная карта</div>
                     <div style="font-size: 11px; color: #00ffff;">Ежедневно +50 💎</div>
                     <button id="btnClaimVip" onclick="claimVipDaily()" style="display:none; background: #28a745; color:#fff; border:none; padding:5px 10px; border-radius:5px; font-weight:bold; margin-top:5px; font-size: 10px;">Собрать 💎</button>
                 </div>
                 <button id="btnBuyVip" onclick="buyVip()" style="background: #ffd700; color:#000; border:none; padding:10px 15px; border-radius:8px; font-weight:bold; font-size: 14px;">Купить</button>
             </div>
 
-            <!-- ЕЖЕДНЕВНЫЙ МАГАЗИН -->
-            <h3 style="color: #ffd700; text-align: center; margin-bottom: 10px;">ЕЖЕДНЕВНЫЙ МАГАЗИН[cite: 20]</h3>
+            <h3 style="color: #ffd700; text-align: center; margin-bottom: 10px;">ЕЖЕДНЕВНЫЙ МАГАЗИН</h3>
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px;">
                 <div style="background: #2a2a35; border: 1px solid #444; border-radius: 10px; padding: 10px; text-align: center;">
                     <div style="font-size: 24px; margin-bottom: 5px;">🪖</div>
@@ -122,7 +176,6 @@
                 </div>
             </div>
 
-            <!-- ГАЧА СУНДУКИ -->
             <h3 style="color: #ff00ff; text-align: center; margin-bottom: 10px;">СУНДУКИ</h3>
             <div style="background: linear-gradient(180deg, #d76d77, #3a1c71); border: 2px solid #ff8c00; border-radius: 14px; padding: 15px; margin-bottom: 15px; text-align: center;">
                 <div style="font-weight: bold; font-size: 16px; color: #fff; margin-bottom: 10px;">Сундук S-Gear</div>
