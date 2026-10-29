@@ -24,8 +24,6 @@ const joystickBase = document.getElementById('joystickBase');
 const joystickStick = document.getElementById('joystickStick');
 const levelUpScreen = document.getElementById('levelUpScreen');
 const mainMenu = document.getElementById('mainMenu');
-
-// Подключаем новые кнопки экрана смерти
 const gameOverScreen = document.getElementById('gameOverScreen');
 const btnRevive = document.getElementById('btnRevive');
 const btnGiveUp = document.getElementById('btnGiveUp');
@@ -35,16 +33,14 @@ let hasRevived = false;
 document.getElementById('btnTank').addEventListener('click', () => startGame('tank'));
 document.getElementById('btnAssassin').addEventListener('click', () => startGame('assassin'));
 
-// Логика кнопки воскрешения
 btnRevive.addEventListener('click', () => {
     hasRevived = true;
     player.hp = player.maxHp;
-    player.invulnerableTimer = 3; // 3 секунды неуязвимости
+    player.invulnerableTimer = 3; 
     gameOverScreen.style.display = 'none';
     gameState = 'playing';
 });
 
-// Логика кнопки "Сдаться"
 btnGiveUp.addEventListener('click', () => {
     gameOverScreen.style.display = 'none';
     showMenu();
@@ -60,9 +56,9 @@ function startGame(heroClass) {
     gameOverScreen.style.display = 'none';
     gameState = 'playing';
     
-    enemies = []; projectiles = []; items = []; bosses = []; enemyProjectiles = [];
+    enemies = []; projectiles = []; items = []; bosses = []; enemyProjectiles = []; obstacles = [];
     wave = 1; enemiesInWave = 5; spawnedEnemies = 0;
-    hasRevived = false; // Сбрасываем счетчик воскрешений
+    hasRevived = false; 
     
     player.level = 1; player.xp = 0; player.maxXP = 5; player.buffTimer = 0;
     player.x = world.width / 2; player.y = world.height / 2;
@@ -75,14 +71,21 @@ function startGame(heroClass) {
         player.maxHp = 3; player.hp = 3;
         player.speed = 280; player.attackRate = 4.0; player.color = '#ff00ff'; 
     }
+
+    // Создаем препятствия (камни), избегая центра, где спавнится игрок
+    for(let i = 0; i < 20; i++) {
+        let ox = Math.random() * world.width;
+        let oy = Math.random() * world.height;
+        if (Math.hypot(ox - player.x, oy - player.y) > 200) {
+            obstacles.push({ x: ox, y: oy, radius: 35 });
+        }
+    }
 }
 
-// Функция смерти
 function triggerGameOver() {
     gameState = 'gameover';
     endTouch();
     gameOverScreen.style.display = 'flex';
-    // Если уже воскрешался, прячем кнопку воскрешения
     if (hasRevived) {
         btnRevive.style.display = 'none';
     } else {
@@ -96,7 +99,6 @@ const MAX_JOYSTICK_RADIUS = 50;
 
 joystickZone.addEventListener('touchstart', (e) => {
     if (gameState !== 'playing') return;
-    
     const touch = e.changedTouches[0];
     input.isMoving = true;
     joystickCenter.x = touch.clientX; joystickCenter.y = touch.clientY;
@@ -120,7 +122,7 @@ joystickZone.addEventListener('touchend', endTouch);
 joystickZone.addEventListener('touchcancel', endTouch);
 
 const player = { x: 0, y: 0, radius: 12, speed: 200, attackRate: 2.5, lastAttackTime: 0, hp: 5, maxHp: 5, invulnerableTimer: 0, level: 1, xp: 0, maxXP: 5, buffTimer: 0, color: '#0088cc' };
-let enemies = []; let projectiles = []; let items = []; let bosses = []; let enemyProjectiles = [];
+let enemies = []; let projectiles = []; let items = []; let bosses = []; let enemyProjectiles = []; let obstacles = [];
 let wave = 1; let enemiesInWave = 5; let spawnedEnemies = 0;
 
 const availablePerks = [
@@ -155,8 +157,17 @@ function spawnEnemy() {
     const distance = Math.max(canvas.width, canvas.height) / 2 + 100;
     let spawnX = Math.max(20, Math.min(world.width - 20, player.x + Math.cos(angle) * distance));
     let spawnY = Math.max(20, Math.min(world.height - 20, player.y + Math.sin(angle) * distance));
-    enemies.push({ x: spawnX, y: spawnY, radius: 15, hp: 3 + (wave * 0.5), speed: 120 + (wave * 5) });
+    
+    let isRanged = Math.random() < 0.3; // 30% шанс на стрелка
+    enemies.push({ 
+        x: spawnX, y: spawnY, radius: 15, 
+        hp: 3 + (wave * 0.5), 
+        speed: isRanged ? 90 : 120 + (wave * 5), 
+        type: isRanged ? 'ranged' : 'melee',
+        lastAttackTime: 0
+    });
 }
+
 function spawnBoss() { bosses.push({ x: player.x + 400, y: player.y - 400, radius: 40, hp: 50, maxHp: 50, speed: 70, attackRate: 1, lastAttackTime: 0 }); }
 
 function handleAttack(now) {
@@ -172,6 +183,21 @@ function handleAttack(now) {
         const dx = nearestTarget.x - player.x, dy = nearestTarget.y - player.y, dist = Math.hypot(dx, dy);
         projectiles.push({ x: player.x, y: player.y, vx: (dx / dist) * 500, vy: (dy / dist) * 500, radius: 4, damage: 1 });
         player.lastAttackTime = now;
+    }
+}
+
+// Физика столкновений с камнями
+function resolveObstacleCollision(entity) {
+    for (let obs of obstacles) {
+        const dx = entity.x - obs.x;
+        const dy = entity.y - obs.y;
+        const dist = Math.hypot(dx, dy);
+        const minDist = entity.radius + obs.radius;
+        if (dist < minDist) {
+            const overlap = minDist - dist;
+            entity.x += (dx / dist) * overlap;
+            entity.y += (dy / dist) * overlap;
+        }
     }
 }
 
@@ -203,6 +229,8 @@ function update(dt, now) {
         player.y = Math.max(player.radius, Math.min(world.height - player.radius, player.y));
     } else handleAttack(now);
 
+    resolveObstacleCollision(player);
+
     for (let i = items.length - 1; i >= 0; i--) {
         let item = items[i];
         if (Math.hypot(player.x - item.x, player.y - item.y) < player.radius + item.radius + 30) { 
@@ -216,7 +244,22 @@ function update(dt, now) {
     for (let i = enemies.length - 1; i >= 0; i--) {
         let e = enemies[i];
         const dx = player.x - e.x, dy = player.y - e.y, dist = Math.hypot(dx, dy);
-        if (dist > 0) { e.x += (dx / dist) * e.speed * dt; e.y += (dy / dist) * e.speed * dt; }
+        
+        if (e.type === 'melee') {
+            if (dist > 0) { e.x += (dx / dist) * e.speed * dt; e.y += (dy / dist) * e.speed * dt; }
+        } else if (e.type === 'ranged') {
+            if (dist > 350) { 
+                e.x += (dx / dist) * e.speed * dt; e.y += (dy / dist) * e.speed * dt; 
+            } else {
+                if ((now - e.lastAttackTime) / 1000 >= 2.5) { // Выстрел раз в 2.5 секунды
+                    enemyProjectiles.push({ x: e.x, y: e.y, vx: (dx / dist) * 250, vy: (dy / dist) * 250, radius: 6, damage: 1 });
+                    e.lastAttackTime = now;
+                }
+            }
+        }
+        
+        resolveObstacleCollision(e);
+
         if (dist < player.radius + e.radius && player.invulnerableTimer <= 0) {
             player.hp -= 1; player.invulnerableTimer = 1;
             if (player.hp <= 0) { triggerGameOver(); }
@@ -227,6 +270,8 @@ function update(dt, now) {
         let b = bosses[i];
         const dx = player.x - b.x, dy = player.y - b.y, dist = Math.hypot(dx, dy);
         if (dist > b.radius + player.radius) { b.x += (dx / dist) * b.speed * dt; b.y += (dy / dist) * b.speed * dt; }
+        resolveObstacleCollision(b);
+        
         if (dist < player.radius + b.radius && player.invulnerableTimer <= 0) { 
             player.hp -= 2; player.invulnerableTimer = 1; 
             if (player.hp <= 0) { triggerGameOver(); }
@@ -234,9 +279,12 @@ function update(dt, now) {
         if ((now - b.lastAttackTime) / 1000 >= 1 / b.attackRate) { enemyProjectiles.push({ x: b.x, y: b.y, vx: (dx / dist) * 300, vy: (dy / dist) * 300, radius: 8, damage: 1 }); b.lastAttackTime = now; }
     }
 
+    // Снаряды врагов (с проверкой камней)
     for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
         let p = enemyProjectiles[i]; p.x += p.vx * dt; p.y += p.vy * dt;
-        if (p.x < 0 || p.x > world.width || p.y < 0 || p.y > world.height) { enemyProjectiles.splice(i, 1); continue; }
+        let hitObstacle = obstacles.some(obs => Math.hypot(p.x - obs.x, p.y - obs.y) < p.radius + obs.radius);
+        if (hitObstacle || p.x < 0 || p.x > world.width || p.y < 0 || p.y > world.height) { enemyProjectiles.splice(i, 1); continue; }
+        
         if (Math.hypot(p.x - player.x, p.y - player.y) < p.radius + player.radius && player.invulnerableTimer <= 0) {
             player.hp -= p.damage; player.invulnerableTimer = 1; enemyProjectiles.splice(i, 1);
             if (player.hp <= 0) { triggerGameOver(); }
@@ -246,9 +294,12 @@ function update(dt, now) {
     camera.x = Math.max(0, Math.min(world.width - canvas.width, player.x - canvas.width / 2));
     camera.y = Math.max(0, Math.min(world.height - canvas.height, player.y - canvas.height / 2));
 
+    // Снаряды игрока (с проверкой камней)
     for (let i = projectiles.length - 1; i >= 0; i--) {
         let p = projectiles[i]; p.x += p.vx * dt; p.y += p.vy * dt;
-        if (p.x < 0 || p.x > world.width || p.y < 0 || p.y > world.height) { projectiles.splice(i, 1); continue; }
+        let hitObstacle = obstacles.some(obs => Math.hypot(p.x - obs.x, p.y - obs.y) < p.radius + obs.radius);
+        if (hitObstacle || p.x < 0 || p.x > world.width || p.y < 0 || p.y > world.height) { projectiles.splice(i, 1); continue; }
+        
         let hit = false;
         for (let j = enemies.length - 1; j >= 0; j--) {
             let e = enemies[j];
@@ -289,6 +340,13 @@ function draw() {
     ctx.stroke();
     ctx.strokeStyle = '#ffea00'; ctx.lineWidth = 4; ctx.strokeRect(0, 0, world.width, world.height);
 
+    // Отрисовка камней
+    for (let obs of obstacles) {
+        ctx.beginPath(); ctx.arc(obs.x, obs.y, obs.radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#444'; ctx.fill();
+        ctx.lineWidth = 3; ctx.strokeStyle = '#222'; ctx.stroke();
+    }
+
     for (let item of items) { 
         ctx.beginPath(); ctx.arc(item.x, item.y, item.radius, 0, Math.PI * 2); 
         if (item.type === 'xp') ctx.fillStyle = '#00ffff'; 
@@ -298,7 +356,9 @@ function draw() {
     }
 
     for (let e of enemies) {
-        ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); ctx.fillStyle = '#ff4a4a'; ctx.fill();
+        ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); 
+        ctx.fillStyle = e.type === 'ranged' ? '#ff8c00' : '#ff4a4a'; // Оранжевый для стрелков
+        ctx.fill();
         ctx.fillStyle = '#fff'; ctx.fillRect(e.x - 15, e.y - 25, 30, 4);
         ctx.fillStyle = '#00ff00'; ctx.fillRect(e.x - 15, e.y - 25, 30 * (e.hp / (3 + (wave * 0.5))), 4);
     }
