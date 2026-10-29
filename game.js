@@ -7,7 +7,7 @@ document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { pa
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-const world = { width: 2000, height: 2000 };
+const world = { width: 1600, height: 1600 }; // Немного уменьшили мир для компактности
 const camera = { x: 0, y: 0 };
 let gameState = 'menu'; 
 
@@ -43,7 +43,6 @@ const btnAssassin = document.getElementById('btnAssassin');
 const chapterTitle = document.getElementById('chapterTitle');
 const bestSurvivalWaveDisplay = document.getElementById('bestSurvivalWave');
 
-// --- МИРЫ И ГЛАВЫ ---
 const chapters = [
     { id: 0, name: "Глава 1: Лес", bg: "#1e1e24", grid: "rgba(255, 255, 255, 0.05)", border: "#ffea00", enemyMult: 1.0 },
     { id: 1, name: "Глава 2: Пещера", bg: "#2a1515", grid: "rgba(255, 100, 100, 0.08)", border: "#ff4500", enemyMult: 1.3 },
@@ -61,7 +60,6 @@ document.getElementById('btnNextChapter').addEventListener('click', () => {
 });
 function updateChapterUI() { chapterTitle.innerText = chapters[currentChapterIndex].name; }
 
-// --- СИСТЕМА СОХРАНЕНИЯ И ВЫЖИВАНИЯ ---
 let savedData = JSON.parse(localStorage.getItem('arenaDeathSave')) || { 
     gold: 0, gems: 0, totalKills: 0, quest1Claimed: false, maxWave: 1, quest2Claimed: false, bossesKilled: 0, quest3Claimed: false, upgHealth: 0, upgDamage: 0, lastDailyReward: 0, assassinUnlocked: false,
     accLevel: 1, accXP: 0, accMaxXP: 100,
@@ -74,8 +72,7 @@ let upgHealth = savedData.upgHealth || 0; let upgDamage = savedData.upgDamage ||
 let accLevel = savedData.accLevel || 1; let accXP = savedData.accXP || 0; let accMaxXP = savedData.accMaxXP || 100;
 let eqWeapon = savedData.eqWeapon || false; let eqArmor = savedData.eqArmor || false; let eqRing = savedData.eqRing || false;
 let bestSurvivalWave = savedData.bestSurvivalWave || 0;
-
-let isSurvivalMode = false; // Флаг бесконечного режима
+let isSurvivalMode = false;
 
 function saveData() {
     localStorage.setItem('arenaDeathSave', JSON.stringify({ 
@@ -152,7 +149,6 @@ function updateUI() {
 updateUI();
 updateChapterUI();
 
-// Кнопки меню
 btnDailyReward.addEventListener('click', () => { const now = Date.now(); if (now - lastDailyReward >= 86400000) { gold += 100; lastDailyReward = now; saveData(); } });
 document.getElementById('btnQuests').addEventListener('click', () => { mainMenu.style.display = 'none'; questsScreen.style.display = 'flex'; updateUI(); });
 document.getElementById('btnBackFromQuests').addEventListener('click', () => { questsScreen.style.display = 'none'; mainMenu.style.display = 'flex'; });
@@ -171,7 +167,6 @@ document.getElementById('btnClaimQuest3').addEventListener('click', () => { if (
 document.getElementById('btnBuyHealth').addEventListener('click', () => { if (gold >= 100 && upgHealth < 5) { gold -= 100; upgHealth++; saveData(); } });
 document.getElementById('btnBuyDamage').addEventListener('click', () => { if (gold >= 150 && upgDamage < 5) { gold -= 150; upgDamage++; saveData(); } });
 
-// Запуск обычной игры (Танк) и Бесконечного режима
 document.getElementById('btnTank').addEventListener('click', () => startGame('tank', false));
 document.getElementById('btnSurvival').addEventListener('click', () => startGame('tank', true));
 
@@ -212,23 +207,17 @@ function startGame(heroClass, survival) {
     player.attackRate = heroClass === 'tank' ? 1.5 : 4.0;
     player.color = heroClass === 'tank' ? '#0088cc' : '#ff00ff';
 
-    for(let i = 0; i < 20; i++) {
+    for(let i = 0; i < 15; i++) {
         let ox = Math.random() * world.width; let oy = Math.random() * world.height;
-        if (Math.hypot(ox - player.x, oy - player.y) > 200) obstacles.push({ x: ox, y: oy, radius: 35 });
+        if (Math.hypot(ox - player.x, oy - player.y) > 200) obstacles.push({ x: ox, y: oy, radius: 30 });
     }
 }
 
 function triggerGameOver() {
     gameState = 'gameover'; endTouch(); gameOverScreen.style.display = 'flex';
-    
-    // Проверка и сохранение рекорда выживания
     if (isSurvivalMode) {
-        if (wave > bestSurvivalWave) {
-            bestSurvivalWave = wave;
-            saveData();
-        }
+        if (wave > bestSurvivalWave) { bestSurvivalWave = wave; saveData(); }
     }
-
     if (hasRevived) { btnRevive.style.display = 'none'; } 
     else {
         btnRevive.style.display = 'block'; btnRevive.innerText = `ВОСКРЕСНУТЬ (50 💰)`;
@@ -279,7 +268,7 @@ function triggerLevelUp() {
 
 let timeSinceLastSpawn = 0; const SPAWN_INTERVAL = 1.2;
 function spawnEnemy() {
-    const angle = Math.random() * Math.PI * 2; const distance = Math.max(canvas.width, canvas.height) / 2 + 100;
+    const angle = Math.random() * Math.PI * 2; const distance = Math.max(canvas.width, canvas.height) / 2 + 80;
     let spawnX = Math.max(20, Math.min(world.width - 20, player.x + Math.cos(angle) * distance)); let spawnY = Math.max(20, Math.min(world.height - 20, player.y + Math.sin(angle) * distance));
     
     let mult = chapters[currentChapterIndex].enemyMult;
@@ -296,7 +285,7 @@ function spawnEnemy() {
 function spawnBoss() { 
     let mult = chapters[currentChapterIndex].enemyMult;
     let bossMaxHp = (40 + (wave * 2)) * mult;
-    bosses.push({ x: player.x + 400, y: player.y - 400, radius: 45, hp: bossMaxHp, maxHp: bossMaxHp, speed: 70 * mult, attackRate: 1, lastAttackTime: 0, specialTimer: 0 }); 
+    bosses.push({ x: player.x + 350, y: player.y - 350, radius: 45, hp: bossMaxHp, maxHp: bossMaxHp, speed: 70 * mult, attackRate: 1, lastAttackTime: 0, specialTimer: 0 }); 
 }
 
 function handleAttack(now) {
@@ -305,18 +294,20 @@ function handleAttack(now) {
     if ((now - player.lastAttackTime) / 1000 < 1 / currentRate) return;
 
     let nearestTarget = null, minDist = Infinity;
-    for (let enemy of enemies) { const dist = Math.hypot(enemy.x - player.x, enemy.y - player.y); if (dist < 500 && dist < minDist) { minDist = dist; nearestTarget = enemy; } }
-    for (let boss of bosses) { const dist = Math.hypot(boss.x - player.x, boss.y - player.y); if (dist < 600 && dist < minDist) { minDist = dist; nearestTarget = boss; } }
+    // Ограничиваем дальность прицела/стрельбы (например, только враги в радиусе 450 пикселей)
+    for (let enemy of enemies) { const dist = Math.hypot(enemy.x - player.x, enemy.y - player.y); if (dist < 450 && dist < minDist) { minDist = dist; nearestTarget = enemy; } }
+    for (let boss of bosses) { const dist = Math.hypot(boss.x - player.x, boss.y - player.y); if (dist < 500 && dist < minDist) { minDist = dist; nearestTarget = boss; } }
 
     if (nearestTarget) {
         const dx = nearestTarget.x - player.x, dy = nearestTarget.y - player.y, dist = Math.hypot(dx, dy);
         let weaponBonus = eqWeapon ? 0.5 : 0;
         let finalDamage = (1 + weaponBonus) * (1 + (upgDamage * 0.1));
 
-        projectiles.push({ x: player.x, y: player.y, vx: (dx / dist) * 500, vy: (dy / dist) * 500, radius: 4, damage: finalDamage, hitEnemies: [] });
+        // Ограничиваем дальность полета пуль до 450 пикселей
+        projectiles.push({ x: player.x, y: player.y, vx: (dx / dist) * 450, vy: (dy / dist) * 450, radius: 4, damage: finalDamage, hitEnemies: [], maxDist: 450, traveled: 0 });
         if (player.hasMultiShot) {
             const angle = Math.atan2(dy, dx); const spread = 0.2;
-            projectiles.push({ x: player.x, y: player.y, vx: Math.cos(angle + spread) * 500, vy: Math.sin(angle + spread) * 500, radius: 4, damage: finalDamage, hitEnemies: [] });
+            projectiles.push({ x: player.x, y: player.y, vx: Math.cos(angle + spread) * 450, vy: Math.sin(angle + spread) * 450, radius: 4, damage: finalDamage, hitEnemies: [], maxDist: 450, traveled: 0 });
         }
         player.lastAttackTime = now;
     }
@@ -354,7 +345,6 @@ function update(dt, now) {
                 if (wave > maxWave) { maxWave = wave; saveData(); } 
                 if (wave % 5 === 0) spawnBoss(); else { enemiesInWave += 3; spawnedEnemies = 0; }
             } else {
-                // БЕСКОНЕЧНЫЙ РЕЖИМ: только мобы, боссов нет, волны растут бесконечно
                 enemiesInWave += 2; spawnedEnemies = 0;
             }
         }
@@ -383,15 +373,15 @@ function update(dt, now) {
         if (e.type === 'melee' || e.type === 'minion') {
             if (dist > 0) { e.x += (dx / dist) * e.speed * dt; e.y += (dy / dist) * e.speed * dt; }
         } else if (e.type === 'ranged') {
-            if (dist > 350) { e.x += (dx / dist) * e.speed * dt; e.y += (dy / dist) * e.speed * dt; } 
-            else { if ((now - e.lastAttackTime) / 1000 >= 2.5) { enemyProjectiles.push({ x: e.x, y: e.y, vx: (dx / dist) * 250, vy: (dy / dist) * 250, radius: 6, damage: 1 }); e.lastAttackTime = now; } }
+            if (dist > 300) { e.x += (dx / dist) * e.speed * dt; e.y += (dy / dist) * e.speed * dt; } 
+            else { if ((now - e.lastAttackTime) / 1000 >= 2.5) { enemyProjectiles.push({ x: e.x, y: e.y, vx: (dx / dist) * 200, vy: (dy / dist) * 200, radius: 6, damage: 1 }); e.lastAttackTime = now; } }
         } else if (e.type === 'jumper') {
             e.dashTimer += dt;
             if (e.dashTimer < 2) { e.x += (dx / dist) * (e.speed * 0.2) * dt; e.y += (dy / dist) * (e.speed * 0.2) * dt; }
             else if (e.dashTimer < 2.5) { e.x += (dx / dist) * (e.speed * 3.5) * dt; e.y += (dy / dist) * (e.speed * 3.5) * dt; }
             else { e.dashTimer = 0; }
         } else if (e.type === 'necromancer') {
-            if (dist < 450) { e.x -= (dx / dist) * e.speed * dt; e.y -= (dy / dist) * e.speed * dt; }
+            if (dist < 350) { e.x -= (dx / dist) * e.speed * dt; e.y -= (dy / dist) * e.speed * dt; }
             e.spawnTimer += dt;
             if (e.spawnTimer > 4) {
                 e.spawnTimer = 0;
@@ -417,10 +407,10 @@ function update(dt, now) {
             if (player.hp <= 0) { triggerGameOver(); }
         }
         
-        if ((now - b.lastAttackTime) / 1000 >= 1 / b.attackRate) { enemyProjectiles.push({ x: b.x, y: b.y, vx: (dx / dist) * 300, vy: (dy / dist) * 300, radius: 8, damage: 1 }); b.lastAttackTime = now; }
+        if ((now - b.lastAttackTime) / 1000 >= 1 / b.attackRate) { enemyProjectiles.push({ x: b.x, y: b.y, vx: (dx / dist) * 250, vy: (dy / dist) * 250, radius: 8, damage: 1 }); b.lastAttackTime = now; }
 
         b.specialTimer += dt;
-        if (b.specialTimer >= 5) { b.specialTimer = 0; for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) { enemyProjectiles.push({ x: b.x, y: b.y, vx: Math.cos(a) * 200, vy: Math.sin(a) * 200, radius: 8, damage: 1 }); } }
+        if (b.specialTimer >= 5) { b.specialTimer = 0; for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) { enemyProjectiles.push({ x: b.x, y: b.y, vx: Math.cos(a) * 180, vy: Math.sin(a) * 180, radius: 8, damage: 1 }); } }
     }
 
     for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
@@ -438,7 +428,14 @@ function update(dt, now) {
     camera.y = Math.max(0, Math.min(world.height - canvas.height, player.y - canvas.height / 2));
 
     for (let i = projectiles.length - 1; i >= 0; i--) {
-        let p = projectiles[i]; p.x += p.vx * dt; p.y += p.vy * dt;
+        let p = projectiles[i]; 
+        let moveStep = Math.hypot(p.vx, p.vy) * dt;
+        p.x += p.vx * dt; p.y += p.vy * dt;
+        p.traveled += moveStep;
+
+        // Если пуля пролетела максимальную дистанцию видимости — удаляем её
+        if (p.traveled >= p.maxDist) { projectiles.splice(i, 1); continue; }
+
         let hitObstacle = obstacles.some(obs => Math.hypot(p.x - obs.x, p.y - obs.y) < p.radius + obs.radius);
         if (hitObstacle || p.x < 0 || p.x > world.width || p.y < 0 || p.y > world.height) { projectiles.splice(i, 1); continue; }
         
@@ -459,7 +456,7 @@ function update(dt, now) {
         if (hitSomething) continue;
         for (let j = bosses.length - 1; j >= 0; j--) {
             let b = bosses[j];
-            if (Math.hypot(p.x - b.x, p.y - b.y) < p.radius + b.radius && !p.hitEnemies.includes(b)) {
+            if (Math.hypot(p.x - b.x, p.y - b.y) < b.radius + p.radius && !p.hitEnemies.includes(b)) {
                 b.hp -= p.damage; spawnFloatingText(b.x, b.y - 40, p.damage.toFixed(1), "#ffffff"); 
                 if (!player.hasPiercing) { projectiles.splice(i, 1); hitSomething = true; } else { p.hitEnemies.push(b); }
                 if (b.hp <= 0) { 
