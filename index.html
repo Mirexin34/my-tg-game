@@ -14,24 +14,29 @@
 </head>
 <body>
     <div id="app">
-        <!-- Верхняя панель ресурсов -->
+        <!-- Верхняя панель ресурсов (добавлен БМ ⚔️) -->
         <div id="topBar" style="position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; align-items: center; z-index: 40; pointer-events: none;">
-            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                <div style="background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; color: #ffd700; font-weight: bold; border: 2px solid #ffd700; font-size: 12px;">
+            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                <div style="background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 20px; color: #ffd700; font-weight: bold; border: 2px solid #ffd700; font-size: 11px;">
                     💰 <span id="goldDisplay">0</span>
                 </div>
-                <div style="background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; color: #00ffff; font-weight: bold; border: 2px solid #00ffff; font-size: 12px;">
+                <div style="background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 20px; color: #00ffff; font-weight: bold; border: 2px solid #00ffff; font-size: 11px;">
                     💎 <span id="gemDisplay">0</span>
                 </div>
-                <div style="background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; color: #ff4500; font-weight: bold; border: 2px solid #ff4500; font-size: 12px;">
+                <div style="background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 20px; color: #ff4500; font-weight: bold; border: 2px solid #ff4500; font-size: 11px;">
                     ⚡ <span id="energyDisplay">20</span>/20
                 </div>
-                <div style="background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; color: #00ff00; font-weight: bold; border: 2px solid #00ff00; font-size: 12px;">
+                <div style="background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 20px; color: #00ff00; font-weight: bold; border: 2px solid #00ff00; font-size: 11px;">
                     ⚙️ <span id="partsDisplay">0</span>
                 </div>
             </div>
-            <div style="background: rgba(0,0,0,0.7); padding: 4px 10px; border-radius: 20px; color: #ffea00; font-weight: bold; border: 2px solid #ffea00; font-size: 12px;">
-                ⭐ <span id="accountLevelDisplay">1</span>
+            <div style="display: flex; gap: 5px;">
+                <div style="background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 20px; color: #ff4a4a; font-weight: bold; border: 2px solid #ff4a4a; font-size: 11px;">
+                    ⚔️ БМ: <span id="bmDisplay">100</span>
+                </div>
+                <div style="background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 20px; color: #ffea00; font-weight: bold; border: 2px solid #ffea00; font-size: 11px;">
+                    ⭐ <span id="accountLevelDisplay">1</span>
+                </div>
             </div>
         </div>
 
@@ -77,12 +82,14 @@
             <button class="heroBtn" id="btnAssassin" style="background: #555; border-color: #777;">🔒 УБИЙЦА<span>Быстрый, Пулемет, 3 Жизни</span><div id="assassinPrice" style="margin-top: 5px; color: #00ffff; font-weight: bold;">Цена: 15 💎</div></button>
             
             <button class="heroBtn" id="btnSurvival" style="background: #dc3545; margin-top: 12px; border-color: #ff6b6b;">🔥 РЕЖИМ ВЫЖИВАНИЯ (5 ⚡)</button>
-            <button class="heroBtn" id="btnCraft" style="background: #00ff00; color: #000; margin-top: 10px; border-color: #32cd32; font-weight: bold;">🔧 МАСТЕРСКАЯ КРАФТА</button>
-
-            <!-- Кнопка РУЛЕТКИ (НОВОЕ) -->
-            <button class="heroBtn" id="btnWheel" style="background: #ff00ff; color: #fff; margin-top: 10px; border-color: #ff69b4; font-weight: bold;">
-                🎰 РУЛЕТКА УДАЧИ
+            
+            <!-- Кнопка УБЕЖИЩА (НОВОЕ) -->
+            <button class="heroBtn" id="btnShelter" style="background: #ff8c00; color: #fff; margin-top: 10px; border-color: #ffa500; font-weight: bold;">
+                🏡 УБЕЖИЩЕ (ХАБ)
             </button>
+
+            <button class="heroBtn" id="btnCraft" style="background: #00ff00; color: #000; margin-top: 10px; border-color: #32cd32; font-weight: bold;">🔧 МАСТЕРСКАЯ КРАФТА</button>
+            <button class="heroBtn" id="btnWheel" style="background: #ff00ff; color: #fff; margin-top: 10px; border-color: #ff69b4; font-weight: bold;">🎰 РУЛЕТКА УДАЧИ</button>
 
             <button class="heroBtn" id="btnEquipment" style="background: #6f42c1; margin-top: 10px; border-color: #8561c5;">🛡 ЭКИПИРОВКА</button>
             <button class="heroBtn" id="btnQuests" style="background: #ff8c00; margin-top: 10px; border-color: #ffb84d;">📋 ЗАДАНИЯ И НАГРАДЫ</button>
@@ -90,27 +97,44 @@
             <button class="heroBtn" id="btnDailyReward" style="background: #17a2b8; margin-top: 10px; margin-bottom: 30px; border-color: #20c997;">🎁 ЕЖЕДНЕВНАЯ НАГРАДА</button>
         </div>
 
-        <!-- Экран Рулетки Удачи (НОВОЕ) -->
-        <div id="wheelScreen" style="display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: #1e1e24; flex-direction: column; justify-content: flex-start; align-items: center; z-index: 50; padding-top: 80px; overflow-y: auto;">
-            <h2 style="color: #ff00ff; margin-bottom: 10px; font-size: 26px;">РУЛЕТКА УДАЧИ</h2>
-            <div style="font-size: 14px; color: #aaa; margin-bottom: 25px; text-align: center; width: 85%;">Крути барабан и выигрывай золото, кристаллы и детали!</div>
+        <!-- Экран Убежища (НОВОЕ) -->
+        <div id="shelterScreen" style="display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: #1e1e24; flex-direction: column; justify-content: flex-start; align-items: center; z-index: 50; padding-top: 80px; overflow-y: auto;">
+            <h2 style="color: #ff8c00; margin-bottom: 15px; font-size: 26px;">БУНКЕР УБЕЖИЩА</h2>
+            <div style="font-size: 14px; color: #aaa; margin-bottom: 20px; text-align: center; width: 85%;">Улучшай постройки в бункере, чтобы получать постоянные пассивные бонусы во всех боях!</div>
 
-            <!-- Зона результата -->
-            <div id="wheelResult" style="width: 85%; max-width: 300px; background: rgba(255,0,255,0.1); border: 2px dashed #ff00ff; border-radius: 12px; padding: 20px; text-align: center; color: #ffea00; font-size: 18px; font-weight: bold; margin-bottom: 25px;">
-                Нажми кнопку ниже!
+            <!-- Здание 1: Тренировочный зал -->
+            <div style="width: 85%; background: #2a2a35; padding: 15px; border-radius: 12px; margin-bottom: 15px; color: white; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;">
+                <div>
+                    <div style="font-weight: bold; font-size: 15px; margin-bottom: 3px;">🏟 Тренировочный зал</div>
+                    <div style="font-size: 13px; color: #aaa;">Уровень: <span id="shelterGymLvl">0</span>/5 (+Здоровье герою)</div>
+                </div>
+                <button id="btnShelterGym" style="padding: 10px; background: #ff8c00; color: #fff; border: 2px solid #ffa500; border-radius: 8px; font-weight: bold; font-size: 13px;">200 💰</button>
             </div>
 
-            <button class="heroBtn" id="btnSpinWheel" style="background: #ff00ff; color: #fff; width: 80%; border-color: #ff69b4; font-size: 18px; margin-bottom: 15px;">
-                КРУТИТЬ (Бесплатно)
-            </button>
+            <!-- Здание 2: Склад боеприпасов -->
+            <div style="width: 85%; background: #2a2a35; padding: 15px; border-radius: 12px; margin-bottom: 15px; color: white; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;">
+                <div>
+                    <div style="font-weight: bold; font-size: 15px; margin-bottom: 3px;">📦 Склад боеприпасов</div>
+                    <div style="font-size: 13px; color: #aaa;">Уровень: <span id="shelterArmoryLvl">0</span>/5 (+Бонус к урону)</div>
+                </div>
+                <button id="btnShelterArmory" style="padding: 10px; background: #ff8c00; color: #fff; border: 2px solid #ffa500; border-radius: 8px; font-weight: bold; font-size: 13px;">300 💰</button>
+            </div>
 
-            <button class="heroBtn" id="btnBackFromWheel" style="background: #dc3545; margin-top: 10px; margin-bottom: 40px; width: 60%;">НАЗАД</button>
+            <button class="heroBtn" id="btnBackFromShelter" style="background: #dc3545; margin-top: 15px; margin-bottom: 40px; width: 60%;">НАЗАД</button>
         </div>
 
         <!-- Остальные экраны без изменений -->
+        <div id="wheelScreen" style="display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: #1e1e24; flex-direction: column; justify-content: flex-start; align-items: center; z-index: 50; padding-top: 80px; overflow-y: auto;">
+            <h2 style="color: #ff00ff; margin-bottom: 10px; font-size: 26px;">РУЛЕТКА УДАЧИ</h2>
+            <div style="font-size: 14px; color: #aaa; margin-bottom: 25px; text-align: center; width: 85%;">Крути барабан и выигрывай золото, кристаллы и детали!</div>
+            <div id="wheelResult" style="width: 85%; max-width: 300px; background: rgba(255,0,255,0.1); border: 2px dashed #ff00ff; border-radius: 12px; padding: 20px; text-align: center; color: #ffea00; font-size: 18px; font-weight: bold; margin-bottom: 25px;">Нажми кнопку ниже!</div>
+            <button class="heroBtn" id="btnSpinWheel" style="background: #ff00ff; color: #fff; width: 80%; border-color: #ff69b4; font-size: 18px; margin-bottom: 15px;">КРУТИТЬ</button>
+            <button class="heroBtn" id="btnBackFromWheel" style="background: #dc3545; margin-top: 10px; margin-bottom: 40px; width: 60%;">НАЗАД</button>
+        </div>
+
         <div id="craftScreen" style="display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: #1e1e24; flex-direction: column; justify-content: flex-start; align-items: center; z-index: 50; padding-top: 80px; overflow-y: auto;">
             <h2 style="color: #00ff00; margin-bottom: 15px; font-size: 26px;">МАСТЕРСКАЯ КРАФТА</h2>
-            <div style="font-size: 14px; color: #aaa; margin-bottom: 20px; text-align: center; width: 85%;">Улучшай оружие с помощью деталей (⚙️), выбиваемых из боссов!</div>
+            <div style="font-size: 14px; color: #aaa; margin-bottom: 20px; text-align: center; width: 85%;">Улучшай оружие с помощью деталей (⚙️)!</div>
             <div style="width: 85%; background: #2a2a35; padding: 15px; border-radius: 12px; margin-bottom: 15px; color: white; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;">
                 <div><div style="font-weight: bold; font-size: 15px; margin-bottom: 3px;">📦 Увеличенный рожок</div><div style="font-size: 13px; color: #aaa;">Уровень: <span id="craftMagLvl">0</span>/3</div></div>
                 <button id="btnCraftMag" style="padding: 10px; background: #00ff00; color: #000; border: 2px solid #32cd32; border-radius: 8px; font-weight: bold; font-size: 13px;">5 ⚙️ + 200 💰</button>
