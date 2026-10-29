@@ -4,11 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Арена смерти</title>
-    <!-- Подключение к Telegram (которое я забыл) -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="styles.css">
     <script>
-        // Принудительно растягиваем на весь экран и красим шапку в цвет игры, чтобы убрать границу
         window.Telegram.WebApp.expand();
         window.Telegram.WebApp.setHeaderColor('#1e1e24');
         window.Telegram.WebApp.setBackgroundColor('#1e1e24');
@@ -38,6 +36,13 @@
         <div id="levelUpScreen">
             <h2>ВЫБЕРИ УЛУЧШЕНИЕ</h2>
             <div id="perksContainer"></div>
+        </div>
+
+        <!-- Новый экран смерти -->
+        <div id="gameOverScreen" style="display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: rgba(0,0,0,0.9); flex-direction: column; justify-content: center; align-items: center; z-index: 50;">
+            <h2 style="color: #ff4a4a; margin-bottom: 30px; font-size: 40px;">ПОТРАЧЕНО</h2>
+            <button class="perkBtn" id="btnRevive" style="background: #28a745;">ВОСКРЕСНУТЬ (1 раз)</button>
+            <button class="perkBtn" id="btnGiveUp" style="background: #dc3545; margin-top: 20px;">В МЕНЮ</button>
         </div>
     </div>
 
