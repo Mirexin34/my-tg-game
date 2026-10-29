@@ -14,7 +14,6 @@
 </head>
 <body>
     <div id="app">
-        <!-- Верхняя панель ресурсов (Золото и Алмазы) -->
         <div id="topBar" style="position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; z-index: 40; pointer-events: none;">
             <div style="background: rgba(0,0,0,0.6); padding: 8px 20px; border-radius: 20px; color: #ffd700; font-weight: bold; border: 2px solid #ffd700; font-size: 16px;">
                 💰 <span id="goldDisplay">0</span>
@@ -43,26 +42,71 @@
                 <span>Быстрый, Пулемет, 3 Жизни</span>
             </button>
             
-            <!-- Новая кнопка заданий -->
             <button class="heroBtn" id="btnQuests" style="background: #ff8c00; margin-top: 30px; border-color: #ffb84d;">
                 📋 ЗАДАНИЯ И НАГРАДЫ
+            </button>
+            <!-- Новая кнопка ПРОКАЧКА -->
+            <button class="heroBtn" id="btnUpgrades" style="background: #28a745; margin-top: 15px; border-color: #2eb84d;">
+                🛠 ПРОКАЧКА
             </button>
         </div>
 
         <!-- Экран заданий -->
-        <div id="questsScreen" style="display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: #1e1e24; flex-direction: column; justify-content: flex-start; align-items: center; z-index: 50; padding-top: 80px;">
+        <div id="questsScreen" style="display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: #1e1e24; flex-direction: column; justify-content: flex-start; align-items: center; z-index: 50; padding-top: 80px; overflow-y: auto;">
             <h2 style="color: #ffea00; margin-bottom: 20px; font-size: 28px;">ЗАДАНИЯ</h2>
             
-            <!-- Пример одного задания -->
-            <div style="width: 85%; background: #2a2a35; padding: 20px; border-radius: 12px; margin-bottom: 15px; color: white; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;">
+            <div style="width: 85%; background: #2a2a35; padding: 15px; border-radius: 12px; margin-bottom: 15px; color: white; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;">
                 <div>
-                    <div style="font-weight: bold; font-size: 18px; margin-bottom: 5px;">Убить 10 врагов</div>
+                    <div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">Убить 10 врагов</div>
                     <div style="font-size: 14px; color: #aaa;">Прогресс: <span id="questKillsProgress">0</span>/10</div>
                 </div>
-                <button id="btnClaimQuest1" style="padding: 10px 15px; background: #555; color: #fff; border: 2px solid #777; border-radius: 8px; font-weight: bold; font-size: 16px;">+50 💰</button>
+                <button id="btnClaimQuest1" style="padding: 10px; background: #555; color: #fff; border: 2px solid #777; border-radius: 8px; font-weight: bold; font-size: 14px;">+50 💰</button>
             </div>
 
-            <button class="heroBtn" id="btnBackToMenu" style="background: #dc3545; margin-top: auto; margin-bottom: 40px; width: 60%;">НАЗАД</button>
+            <!-- Новое задание 2 -->
+            <div style="width: 85%; background: #2a2a35; padding: 15px; border-radius: 12px; margin-bottom: 15px; color: white; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;">
+                <div>
+                    <div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">Дойти до 5 волны</div>
+                    <div style="font-size: 14px; color: #aaa;">Прогресс: <span id="questWaveProgress">1</span>/5</div>
+                </div>
+                <button id="btnClaimQuest2" style="padding: 10px; background: #555; color: #fff; border: 2px solid #777; border-radius: 8px; font-weight: bold; font-size: 14px;">+100 💰</button>
+            </div>
+
+            <!-- Новое задание 3 -->
+            <div style="width: 85%; background: #2a2a35; padding: 15px; border-radius: 12px; margin-bottom: 15px; color: white; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;">
+                <div>
+                    <div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">Убить Босса</div>
+                    <div style="font-size: 14px; color: #aaa;">Прогресс: <span id="questBossProgress">0</span>/1</div>
+                </div>
+                <button id="btnClaimQuest3" style="padding: 10px; background: #555; color: #fff; border: 2px solid #777; border-radius: 8px; font-weight: bold; font-size: 14px;">+200 💰</button>
+            </div>
+
+            <button class="heroBtn" id="btnBackFromQuests" style="background: #dc3545; margin-top: 20px; margin-bottom: 40px; width: 60%;">НАЗАД</button>
+        </div>
+
+        <!-- Новый Экран Прокачки (Магазин) -->
+        <div id="upgradesScreen" style="display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: #1e1e24; flex-direction: column; justify-content: flex-start; align-items: center; z-index: 50; padding-top: 80px; overflow-y: auto;">
+            <h2 style="color: #28a745; margin-bottom: 20px; font-size: 28px;">ПРОКАЧКА</h2>
+
+            <!-- Прокачка 1: Здоровье -->
+            <div style="width: 85%; background: #2a2a35; padding: 15px; border-radius: 12px; margin-bottom: 15px; color: white; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;">
+                <div>
+                    <div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">+1 Макс. Здоровье</div>
+                    <div style="font-size: 14px; color: #aaa;">Уровень: <span id="upgHealthLevel">0</span>/5</div>
+                </div>
+                <button id="btnBuyHealth" style="padding: 10px; background: #ff8c00; color: #fff; border: 2px solid #ffb84d; border-radius: 8px; font-weight: bold; font-size: 14px;">100 💰</button>
+            </div>
+
+            <!-- Прокачка 2: Урон -->
+            <div style="width: 85%; background: #2a2a35; padding: 15px; border-radius: 12px; margin-bottom: 15px; color: white; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;">
+                <div>
+                    <div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">+10% к Урону</div>
+                    <div style="font-size: 14px; color: #aaa;">Уровень: <span id="upgDamageLevel">0</span>/5</div>
+                </div>
+                <button id="btnBuyDamage" style="padding: 10px; background: #ff8c00; color: #fff; border: 2px solid #ffb84d; border-radius: 8px; font-weight: bold; font-size: 14px;">150 💰</button>
+            </div>
+
+            <button class="heroBtn" id="btnBackFromUpgrades" style="background: #dc3545; margin-top: 20px; margin-bottom: 40px; width: 60%;">НАЗАД</button>
         </div>
 
         <div id="levelUpScreen">
