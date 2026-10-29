@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>TMA Action-Roguelike</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Главное меню -->
+    <div id="mainMenu">
+        <h1>ВЫБЕРИ ГЕРОЯ</h1>
+        <button class="heroBtn" id="btnTank">
+            ТАНК<br><span>Медленный, 10 Жизней</span>
+        </button>
+        <button class="heroBtn" id="btnAssassin">
+            УБИЙЦА<br><span>Быстрый, Пулемет, 3 Жизни</span>
+        </button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="joystickZone">
+        <div id="joystickBase">
+            <div id="joystickStick"></div>
+        </div>
+    </div>
+
+    <div id="levelUpScreen">
+        <h2>Новый Уровень!</h2>
+        <button class="perkBtn" id="perkBtn0"></button>
+        <button class="perkBtn" id="perkBtn1"></button>
+        <button class="perkBtn" id="perkBtn2"></button>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
