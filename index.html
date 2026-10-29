@@ -4,11 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Арена смерти</title>
+    <!-- Подключение к Telegram (которое я забыл) -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="styles.css">
+    <script>
+        // Принудительно растягиваем на весь экран и красим шапку в цвет игры, чтобы убрать границу
+        window.Telegram.WebApp.expand();
+        window.Telegram.WebApp.setHeaderColor('#1e1e24');
+        window.Telegram.WebApp.setBackgroundColor('#1e1e24');
+    </script>
 </head>
 <body>
     <div id="app">
-        <!-- Сюда подгружается игра -->
         <canvas id="gameCanvas"></canvas>
         <div id="joystickZone">
             <div id="joystickBase">
@@ -16,7 +23,6 @@
             </div>
         </div>
         
-        <!-- Главное меню выбора героя -->
         <div id="mainMenu">
             <h1>ВЫБЕРИ ГЕРОЯ</h1>
             <button class="heroBtn" id="btnTank">
@@ -29,7 +35,6 @@
             </button>
         </div>
 
-        <!-- Экран повышения уровня -->
         <div id="levelUpScreen">
             <h2>ВЫБЕРИ УЛУЧШЕНИЕ</h2>
             <div id="perksContainer"></div>
