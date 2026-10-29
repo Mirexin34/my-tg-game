@@ -37,11 +37,12 @@ const btnRevive = document.getElementById('btnRevive');
 const btnGiveUp = document.getElementById('btnGiveUp');
 const questsScreen = document.getElementById('questsScreen');
 const upgradesScreen = document.getElementById('upgradesScreen');
+const equipmentScreen = document.getElementById('equipmentScreen');
 const btnDailyReward = document.getElementById('btnDailyReward');
 const btnAssassin = document.getElementById('btnAssassin');
 const chapterTitle = document.getElementById('chapterTitle');
 
-// --- СИСТЕМА ГЛАВ И МИРОВ ---
+// --- МИРЫ И ГЛАВЫ ---
 const chapters = [
     { id: 0, name: "Глава 1: Лес", bg: "#1e1e24", grid: "rgba(255, 255, 255, 0.05)", border: "#ffea00", enemyMult: 1.0 },
     { id: 1, name: "Глава 2: Пещера", bg: "#2a1515", grid: "rgba(255, 100, 100, 0.08)", border: "#ff4500", enemyMult: 1.3 },
@@ -57,32 +58,32 @@ document.getElementById('btnNextChapter').addEventListener('click', () => {
     currentChapterIndex = (currentChapterIndex + 1) % chapters.length;
     updateChapterUI();
 });
+function updateChapterUI() { chapterTitle.innerText = chapters[currentChapterIndex].name; }
 
-function updateChapterUI() {
-    chapterTitle.innerText = chapters[currentChapterIndex].name;
-}
-
-// --- СОХРАНЕНИЕ ---
+// --- СИСТЕМА СОХРАНЕНИЯ И ЭКИПИРОВКИ ---
 let savedData = JSON.parse(localStorage.getItem('arenaDeathSave')) || { 
     gold: 0, gems: 0, totalKills: 0, quest1Claimed: false, maxWave: 1, quest2Claimed: false, bossesKilled: 0, quest3Claimed: false, upgHealth: 0, upgDamage: 0, lastDailyReward: 0, assassinUnlocked: false,
-    accLevel: 1, accXP: 0, accMaxXP: 100
+    accLevel: 1, accXP: 0, accMaxXP: 100,
+    eqWeapon: false, eqArmor: false, eqRing: false
 };
 let gold = savedData.gold || 0; let gems = savedData.gems || 0; let totalKills = savedData.totalKills || 0; let quest1Claimed = savedData.quest1Claimed || false;
 let maxWave = savedData.maxWave || 1; let quest2Claimed = savedData.quest2Claimed || false; let bossesKilled = savedData.bossesKilled || 0; let quest3Claimed = savedData.quest3Claimed || false;
 let upgHealth = savedData.upgHealth || 0; let upgDamage = savedData.upgDamage || 0; let lastDailyReward = savedData.lastDailyReward || 0; let assassinUnlocked = savedData.assassinUnlocked || false;
 let accLevel = savedData.accLevel || 1; let accXP = savedData.accXP || 0; let accMaxXP = savedData.accMaxXP || 100;
+let eqWeapon = savedData.eqWeapon || false; let eqArmor = savedData.eqArmor || false; let eqRing = savedData.eqRing || false;
 
 function saveData() {
-    localStorage.setItem('arenaDeathSave', JSON.stringify({ gold, gems, totalKills, quest1Claimed, maxWave, quest2Claimed, bossesKilled, quest3Claimed, upgHealth, upgDamage, lastDailyReward, assassinUnlocked, accLevel, accXP, accMaxXP }));
+    localStorage.setItem('arenaDeathSave', JSON.stringify({ 
+        gold, gems, totalKills, quest1Claimed, maxWave, quest2Claimed, bossesKilled, quest3Claimed, upgHealth, upgDamage, lastDailyReward, assassinUnlocked, accLevel, accXP, accMaxXP,
+        eqWeapon, eqArmor, eqRing
+    }));
     updateUI();
 }
 
 function addAccountXP(amount) {
     accXP += amount;
     if (accXP >= accMaxXP) {
-        accLevel++;
-        accXP -= accMaxXP;
-        accMaxXP = Math.floor(accMaxXP * 1.5);
+        accLevel++; accXP -= accMaxXP; accMaxXP = Math.floor(accMaxXP * 1.5);
         gold += 50; gems += 2;
         spawnFloatingText(player.x, player.y - 50, `УРОВЕНЬ АККАУНТА ${accLevel}! (+50💰 +2💎)`, '#ffea00');
     }
@@ -94,6 +95,19 @@ function updateUI() {
     document.getElementById('gemDisplay').innerText = gems;
     document.getElementById('accountLevelDisplay').innerText = accLevel;
     
+    // Экипировка статусы
+    const btnW = document.getElementById('btnBuyWeapon');
+    if (eqWeapon) { document.getElementById('eqWeaponStatus').innerText = "Надето"; btnW.innerText = "КУПЛЕНО"; btnW.style.background = "#28a745"; btnW.disabled = true; } 
+    else { document.getElementById('eqWeaponStatus').innerText = "Не куплен"; btnW.innerText = "300 💰"; btnW.style.background = gold >= 300 ? "#ff8c00" : "#555"; btnW.disabled = gold < 300; }
+
+    const btnA = document.getElementById('btnBuyArmor');
+    if (eqArmor) { document.getElementById('eqArmorStatus').innerText = "Надето"; btnA.innerText = "КУПЛЕНО"; btnA.style.background = "#28a745"; btnA.disabled = true; } 
+    else { document.getElementById('eqArmorStatus').innerText = "Не куплен"; btnA.innerText = "400 💰"; btnA.style.background = gold >= 400 ? "#ff8c00" : "#555"; btnA.disabled = gold < 400; }
+
+    const btnR = document.getElementById('btnBuyRing');
+    if (eqRing) { document.getElementById('eqRingStatus').innerText = "Надето"; btnR.innerText = "КУПЛЕНО"; btnR.style.background = "#28a745"; btnR.disabled = true; } 
+    else { document.getElementById('eqRingStatus').innerText = "Не куплен"; btnR.innerText = "500 💰"; btnR.style.background = gold >= 500 ? "#ff8c00" : "#555"; btnR.disabled = gold < 500; }
+
     if (assassinUnlocked) {
         btnAssassin.style.background = "#9932CC"; btnAssassin.style.borderColor = "#fff"; btnAssassin.innerHTML = `УБИЙЦА (Открыт)<span>Быстрый, Пулемет, 3 Жизни</span>`;
     } else {
@@ -133,16 +147,26 @@ function updateUI() {
 updateUI();
 updateChapterUI();
 
+// Навигация и кнопки меню
 btnDailyReward.addEventListener('click', () => { const now = Date.now(); if (now - lastDailyReward >= 86400000) { gold += 100; lastDailyReward = now; saveData(); } });
 document.getElementById('btnQuests').addEventListener('click', () => { mainMenu.style.display = 'none'; questsScreen.style.display = 'flex'; updateUI(); });
 document.getElementById('btnBackFromQuests').addEventListener('click', () => { questsScreen.style.display = 'none'; mainMenu.style.display = 'flex'; });
 document.getElementById('btnUpgrades').addEventListener('click', () => { mainMenu.style.display = 'none'; upgradesScreen.style.display = 'flex'; updateUI(); });
 document.getElementById('btnBackFromUpgrades').addEventListener('click', () => { upgradesScreen.style.display = 'none'; mainMenu.style.display = 'flex'; });
+document.getElementById('btnEquipment').addEventListener('click', () => { mainMenu.style.display = 'none'; equipmentScreen.style.display = 'flex'; updateUI(); });
+document.getElementById('btnBackFromEquipment').addEventListener('click', () => { equipmentScreen.style.display = 'none'; mainMenu.style.display = 'flex'; });
+
+// Покупка экипировки
+document.getElementById('btnBuyWeapon').addEventListener('click', () => { if (gold >= 300 && !eqWeapon) { gold -= 300; eqWeapon = true; saveData(); } });
+document.getElementById('btnBuyArmor').addEventListener('click', () => { if (gold >= 400 && !eqArmor) { gold -= 400; eqArmor = true; saveData(); } });
+document.getElementById('btnBuyRing').addEventListener('click', () => { if (gold >= 500 && !eqRing) { gold -= 500; eqRing = true; saveData(); } });
+
 document.getElementById('btnClaimQuest1').addEventListener('click', () => { if (totalKills >= 10 && !quest1Claimed) { gold += 50; quest1Claimed = true; saveData(); } });
 document.getElementById('btnClaimQuest2').addEventListener('click', () => { if (maxWave >= 5 && !quest2Claimed) { gold += 100; quest2Claimed = true; saveData(); } });
 document.getElementById('btnClaimQuest3').addEventListener('click', () => { if (bossesKilled >= 1 && !quest3Claimed) { gold += 200; quest3Claimed = true; saveData(); } });
 document.getElementById('btnBuyHealth').addEventListener('click', () => { if (gold >= 100 && upgHealth < 5) { gold -= 100; upgHealth++; saveData(); } });
 document.getElementById('btnBuyDamage').addEventListener('click', () => { if (gold >= 150 && upgDamage < 5) { gold -= 150; upgDamage++; saveData(); } });
+
 document.getElementById('btnTank').addEventListener('click', () => startGame('tank'));
 btnAssassin.addEventListener('click', () => { if (assassinUnlocked) { startGame('assassin'); } else if (gems >= 15) { gems -= 15; assassinUnlocked = true; saveData(); } });
 
@@ -166,10 +190,17 @@ function startGame(heroClass) {
     player.hasMultiShot = false; player.hasPiercing = false;
 
     let baseHp = heroClass === 'tank' ? 10 : 3;
-    player.maxHp = baseHp + upgHealth; player.hp = player.maxHp;
-    
-    if (heroClass === 'tank') { player.speed = 140; player.attackRate = 1.5; player.color = '#0088cc'; } 
-    else if (heroClass === 'assassin') { player.speed = 280; player.attackRate = 4.0; player.color = '#ff00ff'; }
+    let baseSpeed = heroClass === 'tank' ? 140 : 280;
+
+    // ПРИМЕНЯЕМ БОНУСЫ ЭКИПИРОВКИ И ПРОКАЧКИ
+    let armorBonus = eqArmor ? 2 : 0;
+    let ringBonus = eqRing ? 30 : 0;
+
+    player.maxHp = baseHp + upgHealth + armorBonus; 
+    player.hp = player.maxHp;
+    player.speed = baseSpeed + ringBonus;
+    player.attackRate = heroClass === 'tank' ? 1.5 : 4.0;
+    player.color = heroClass === 'tank' ? '#0088cc' : '#ff00ff';
 
     for(let i = 0; i < 20; i++) {
         let ox = Math.random() * world.width; let oy = Math.random() * world.height;
@@ -260,7 +291,10 @@ function handleAttack(now) {
 
     if (nearestTarget) {
         const dx = nearestTarget.x - player.x, dy = nearestTarget.y - player.y, dist = Math.hypot(dx, dy);
-        let finalDamage = 1 * (1 + (upgDamage * 0.1));
+        // ПРИМЕНЯЕМ БОНУС МЕЧА ЭКИПИРОВКИ (+0.5 урона) И ПРОКАЧКУ УРОНА
+        let weaponBonus = eqWeapon ? 0.5 : 0;
+        let finalDamage = (1 + weaponBonus) * (1 + (upgDamage * 0.1));
+
         projectiles.push({ x: player.x, y: player.y, vx: (dx / dist) * 500, vy: (dy / dist) * 500, radius: 4, damage: finalDamage, hitEnemies: [] });
         if (player.hasMultiShot) {
             const angle = Math.atan2(dy, dx); const spread = 0.2;
