@@ -1,9 +1,11 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
-try { tg.disableVerticalSwipes(); } catch(e) {} // Говорим Телеграму не закрывать окно свайпом
-tg.ready();
+try {
+    tg.disableVerticalSwipes();
+    tg.setHeaderColor('#1e1e24');
+    tg.setBackgroundColor('#1e1e24');
+} catch(e) {}
 
-// Жесткая блокировка скролла и системных жестов iOS (чтобы экран не "тянулся" вниз)
 document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
 
 const canvas = document.getElementById('gameCanvas');
@@ -17,14 +19,12 @@ function resize() { canvas.width = window.innerWidth; canvas.height = window.inn
 window.addEventListener('resize', resize);
 resize();
 
-// --- Интерфейс ---
 const joystickZone = document.getElementById('joystickZone');
 const joystickBase = document.getElementById('joystickBase');
 const joystickStick = document.getElementById('joystickStick');
 const levelUpScreen = document.getElementById('levelUpScreen');
 const mainMenu = document.getElementById('mainMenu');
 
-// --- Выбор Героя ---
 document.getElementById('btnTank').addEventListener('click', () => startGame('tank'));
 document.getElementById('btnAssassin').addEventListener('click', () => startGame('assassin'));
 
@@ -53,7 +53,6 @@ function startGame(heroClass) {
     }
 }
 
-// --- Управление ---
 const input = { x: 0, y: 0, isMoving: false };
 const joystickCenter = { x: 0, y: 0 };
 const MAX_JOYSTICK_RADIUS = 50;
@@ -84,7 +83,6 @@ const endTouch = () => { input.isMoving = false; input.x = 0; input.y = 0; joyst
 joystickZone.addEventListener('touchend', endTouch);
 joystickZone.addEventListener('touchcancel', endTouch);
 
-// --- Игровые сущности ---
 const player = { x: 0, y: 0, radius: 12, speed: 200, attackRate: 2.5, lastAttackTime: 0, hp: 5, maxHp: 5, invulnerableTimer: 0, level: 1, xp: 0, maxXP: 5, buffTimer: 0, color: '#0088cc' };
 let enemies = []; let projectiles = []; let items = []; let bosses = []; let enemyProjectiles = [];
 let wave = 1; let enemiesInWave = 5; let spawnedEnemies = 0;
@@ -101,12 +99,18 @@ function triggerLevelUp() {
     player.level++; player.xp -= player.maxXP; player.maxXP = Math.floor(player.maxXP * 1.5); 
     let shuffled = availablePerks.sort(() => 0.5 - Math.random());
     let currentPerks = shuffled.slice(0, 3);
-    levelUpScreen.style.display = 'flex';
+    
+    const container = document.getElementById('perksContainer');
+    container.innerHTML = '';
+    
     for (let i = 0; i < 3; i++) {
-        const btn = document.getElementById(`perkBtn${i}`);
+        const btn = document.createElement('button');
+        btn.className = 'perkBtn';
         btn.innerText = currentPerks[i].name;
         btn.onclick = () => { currentPerks[i].action(); levelUpScreen.style.display = 'none'; gameState = 'playing'; };
+        container.appendChild(btn);
     }
+    levelUpScreen.style.display = 'flex';
 }
 
 let timeSinceLastSpawn = 0; const SPAWN_INTERVAL = 1.2;
