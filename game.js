@@ -23,6 +23,43 @@ function spawnParticles(x, y, color) {
     }
 }
 
+// --- АУДИО СИНТЕЗАТОР (Web Audio API) ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playSound(type) {
+    if (!audioCtx) return;
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    let now = audioCtx.currentTime;
+    if (type === 'shoot') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(80, now + 0.1);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+        osc.start(now); osc.stop(now + 0.1);
+    } else if (type === 'hit') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(120, now);
+        osc.frequency.linearRampToValueAtTime(40, now + 0.15);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+        osc.start(now); osc.stop(now + 0.15);
+    } else if (type === 'win') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.setValueAtTime(450, now + 0.1);
+        osc.frequency.setValueAtTime(600, now + 0.2);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+        osc.start(now); osc.stop(now + 0.4);
+    }
+}
+
 function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 window.addEventListener('resize', resize);
 resize();
@@ -50,6 +87,7 @@ const bestSurvivalWaveDisplay = document.getElementById('bestSurvivalWave');
 const energyDisplay = document.getElementById('energyDisplay');
 const partsDisplay = document.getElementById('partsDisplay');
 const bmDisplay = document.getElementById('bmDisplay');
+const droneStatus = document.getElementById('droneStatus');
 const lbBM = document.getElementById('lbBM');
 const lbLevel = document.getElementById('lbLevel');
 const lbKills = document.getElementById('lbKills');
@@ -99,7 +137,8 @@ let savedData = JSON.parse(localStorage.getItem('arenaDeathSave')) || {
     energy: 20, lastEnergyTime: Date.now(),
     parts: 0, craftMagLvl: 0, craftRangeLvl: 0, craftDmgLvl: 0,
     lastWheelSpin: 0,
-    shelterGymLvl: 0, shelterArmoryLvl: 0
+    shelterGymLvl: 0, shelterArmoryLvl: 0,
+    droneUnlocked: false
 };
 let gold = savedData.gold || 0; let gems = savedData.gems || 0; let totalKills = savedData.totalKills || 0; let quest1Claimed = savedData.quest1Claimed || false;
 let maxWave = savedData.maxWave || 1; let quest2Claimed = savedData.quest2Claimed || false; let bossesKilled = savedData.bossesKilled || 0; let quest3Claimed = savedData.quest3Claimed || false;
@@ -116,6 +155,7 @@ let craftDmgLvl = savedData.craftDmgLvl || 0;
 let lastWheelSpin = savedData.lastWheelSpin || 0;
 let shelterGymLvl = savedData.shelterGymLvl || 0;
 let shelterArmoryLvl = savedData.shelterArmoryLvl || 0;
+let droneUnlocked = savedData.droneUnlocked || false;
 
 const MAX_ENERGY = 20;
 const ENERGY_COST = 5;
@@ -126,7 +166,8 @@ function calculateBM() {
     let upgradesBM = (upgHealth * 50) + (upgDamage * 70);
     let craftBM = (craftMagLvl * 80) + (craftRangeLvl * 80) + (craftDmgLvl * 100);
     let shelterBM = (shelterGymLvl * 90) + (shelterArmoryLvl * 110);
-    return base + gearBM + upgradesBM + craftBM + shelterBM;
+    let droneBM = droneUnlocked ? 300 : 0;
+    return base + gearBM + upgradesBM + craftBM + shelterBM + droneBM;
 }
 
 function saveData() {
@@ -134,7 +175,7 @@ function saveData() {
         gold, gems, totalKills, quest1Claimed, maxWave, quest2Claimed, bossesKilled, quest3Claimed, upgHealth, upgDamage, lastDailyReward, assassinUnlocked, accLevel, accXP, accMaxXP,
         eqWeapon, eqArmor, eqRing, bestSurvivalWave, energy, lastEnergyTime,
         parts, craftMagLvl, craftRangeLvl, craftDmgLvl, lastWheelSpin,
-        shelterGymLvl, shelterArmoryLvl
+        shelterGymLvl, shelterArmoryLvl, droneUnlocked
     }));
     updateUI();
 }
@@ -172,12 +213,19 @@ function updateUI() {
     document.getElementById('accountLevelDisplay').innerText = accLevel;
     bestSurvivalWaveDisplay.innerText = bestSurvivalWave;
 
-    // Экран статистики и рейтинга
     lbBM.innerText = calculateBM();
     lbLevel.innerText = accLevel;
     lbKills.innerText = totalKills;
     lbWave.innerText = `${bestSurvivalWave} волн`;
     
+    if (droneUnlocked) {
+        droneStatus.innerText = "КУПЛЕН (Активен)";
+        droneStatus.style.color = "#00ff00";
+    } else {
+        droneStatus.innerText = "НЕ КУПЛЕН (50 💎)";
+        droneStatus.style.color = "#ff4a4a";
+    }
+
     const btnGym = document.getElementById('btnShelterGym');
     if (shelterGymLvl >= 5) { btnGym.innerText = "МАКС."; btnGym.disabled = true; btnGym.style.background = "#555"; }
     else { let cost = 200 * (shelterGymLvl + 1); btnGym.innerText = `${cost} 💰`; btnGym.disabled = gold < cost; btnGym.style.background = gold >= cost ? "#ff8c00" : "#555"; }
@@ -240,26 +288,24 @@ function updateUI() {
     document.getElementById('questKillsProgress').innerText = Math.min(totalKills, 10);
     const btnQ1 = document.getElementById('btnClaimQuest1');
     if (quest1Claimed) { btnQ1.innerText = "ВЫПОЛНЕНО"; btnQ1.style.background = "#28a745"; btnQ1.disabled = true; } else if (totalKills >= 10) { btnQ1.innerText = "ЗАБРАТЬ 50 💰"; btnQ1.style.background = "#ff8c00"; btnQ1.disabled = false; } else { btnQ1.innerText = "+50 💰"; btnQ1.style.background = "#555"; btnQ1.disabled = true; }
-
-    document.getElementById('questWaveProgress').innerText = Math.min(maxWave, 5);
-    const btnQ2 = document.getElementById('btnClaimQuest2');
-    if (quest2Claimed) { btnQ2.innerText = "ВЫПОЛНЕНО"; btnQ2.style.background = "#28a745"; btnQ2.disabled = true; } else if (maxWave >= 5) { btnQ2.innerText = "ЗАБРАТЬ 100 💰"; btnQ2.style.background = "#ff8c00"; btnQ2.disabled = false; } else { btnQ2.innerText = "+100 💰"; btnQ2.style.background = "#555"; btnQ2.disabled = true; }
-
-    document.getElementById('questBossProgress').innerText = Math.min(bossesKilled, 1);
-    const btnQ3 = document.getElementById('btnClaimQuest3');
-    if (quest3Claimed) { btnQ3.innerText = "ВЫПОЛНЕНО"; btnQ3.style.background = "#28a745"; btnQ3.disabled = true; } else if (bossesKilled >= 1) { btnQ3.innerText = "ЗАБРАТЬ 200 💰"; btnQ3.style.background = "#ff8c00"; btnQ3.disabled = false; } else { btnQ3.innerText = "+200 💰"; btnQ3.style.background = "#555"; btnQ3.disabled = true; }
-
-    document.getElementById('upgHealthLevel').innerText = upgHealth;
-    const btnUpgHealth = document.getElementById('btnBuyHealth');
-    if (upgHealth >= 5) { btnUpgHealth.innerText = "МАКС."; btnUpgHealth.style.background = "#28a745"; btnUpgHealth.disabled = true; } else { btnUpgHealth.innerText = "100 💰"; btnUpgHealth.disabled = gold < 100; btnUpgHealth.style.background = gold >= 100 ? "#ff8c00" : "#555"; }
-
-    document.getElementById('upgDamageLevel').innerText = upgDamage;
-    const btnUpgDamage = document.getElementById('btnBuyDamage');
-    if (upgDamage >= 5) { btnUpgDamage.innerText = "МАКС."; btnUpgDamage.style.background = "#28a745"; btnUpgDamage.disabled = true; } else { btnUpgDamage.innerText = "150 💰"; btnUpgDamage.disabled = gold < 150; btnUpgDamage.style.background = gold >= 150 ? "#ff8c00" : "#555"; }
 }
 updateUI();
 updateChapterUI();
 updateWeaponUI();
+
+// Покупка дрона
+document.getElementById('btnBuyDrone').addEventListener('click', () => {
+    if (droneUnlocked) {
+        alert("Боевой дрон уже куплен!");
+    } else if (gems >= 50) {
+        gems -= 50;
+        droneUnlocked = true;
+        saveData();
+        alert("Боевой дрон успешно куплен и активирован!");
+    } else {
+        alert("Не хватает алмазов (нужно 50 💎)");
+    }
+});
 
 document.getElementById('btnShelterGym').addEventListener('click', () => {
     let cost = 200 * (shelterGymLvl + 1);
@@ -331,10 +377,6 @@ document.getElementById('btnBuyArmor').addEventListener('click', () => { if (gol
 document.getElementById('btnBuyRing').addEventListener('click', () => { if (gold >= 500 && !eqRing) { gold -= 500; eqRing = true; saveData(); } });
 
 document.getElementById('btnClaimQuest1').addEventListener('click', () => { if (totalKills >= 10 && !quest1Claimed) { gold += 50; quest1Claimed = true; saveData(); } });
-document.getElementById('btnClaimQuest2').addEventListener('click', () => { if (maxWave >= 5 && !quest2Claimed) { gold += 100; quest2Claimed = true; saveData(); } });
-document.getElementById('btnClaimQuest3').addEventListener('click', () => { if (bossesKilled >= 1 && !quest3Claimed) { gold += 200; quest3Claimed = true; saveData(); } });
-document.getElementById('btnBuyHealth').addEventListener('click', () => { if (gold >= 100 && upgHealth < 5) { gold -= 100; upgHealth++; saveData(); } });
-document.getElementById('btnBuyDamage').addEventListener('click', () => { if (gold >= 150 && upgDamage < 5) { gold -= 150; upgDamage++; saveData(); } });
 
 document.getElementById('btnTank').addEventListener('click', () => {
     if (energy < ENERGY_COST) { alert("Недостаточно энергии!"); return; }
@@ -363,6 +405,7 @@ let floatingTexts = [];
 function spawnFloatingText(x, y, text, color) { floatingTexts.push({ x, y, text, color, life: 1.0 }); }
 
 let isSurvivalMode = false;
+let drone = { x: 0, y: 0, angle: 0, lastAttack: 0 };
 
 function startGame(heroClass, survival) {
     mainMenu.style.display = 'none'; gameOverScreen.style.display = 'none'; gameState = 'playing';
@@ -395,6 +438,8 @@ function startGame(heroClass, survival) {
     
     player.color = heroClass === 'tank' ? '#0088cc' : '#ff00ff';
 
+    drone.x = player.x; drone.y = player.y - 30; drone.lastAttack = 0;
+
     for(let i = 0; i < 15; i++) {
         let ox = Math.random() * world.width; let oy = Math.random() * world.height;
         if (Math.hypot(ox - player.x, oy - player.y) > 200) obstacles.push({ x: ox, y: oy, radius: 30 });
@@ -403,6 +448,7 @@ function startGame(heroClass, survival) {
 
 function triggerGameOver() {
     gameState = 'gameover'; endTouch(); gameOverScreen.style.display = 'flex';
+    playSound('hit');
     if (isSurvivalMode) {
         if (wave > bestSurvivalWave) { bestSurvivalWave = wave; saveData(); }
     }
@@ -495,7 +541,29 @@ function handleAttack(now) {
             const angle = Math.atan2(dy, dx); const spread = 0.2;
             projectiles.push({ x: player.x, y: player.y, vx: Math.cos(angle + spread) * player.weaponRange, vy: Math.sin(angle + spread) * player.weaponRange, radius: 4, damage: finalDamage, hitEnemies: [], maxDist: player.weaponRange, traveled: 0, color: player.bulletColor });
         }
+        playSound('shoot');
         player.lastAttackTime = now;
+    }
+}
+
+// Логика стрельбы дрона-компаньона
+function updateDrone(now) {
+    if (!droneUnlocked) return;
+    // Дрон плавно следует за игроком
+    let targetX = player.x - 30; let targetY = player.y - 30;
+    drone.x += (targetX - drone.x) * 0.1;
+    drone.y += (targetY - drone.y) * 0.1;
+
+    if ((now - drone.lastAttack) / 1000 >= 1.0 && (enemies.length > 0 || bosses.length > 0)) {
+        let nearestTarget = null, minDist = Infinity;
+        for (let enemy of enemies) { const dist = Math.hypot(enemy.x - drone.x, enemy.y - drone.y); if (dist < 350 && dist < minDist) { minDist = dist; nearestTarget = enemy; } }
+        for (let boss of bosses) { const dist = Math.hypot(boss.x - drone.x, boss.y - drone.y); if (dist < 350 && dist < minDist) { minDist = dist; nearestTarget = boss; } }
+
+        if (nearestTarget) {
+            const dx = nearestTarget.x - drone.x, dy = nearestTarget.y - drone.y, dist = Math.hypot(dx, dy);
+            projectiles.push({ x: drone.x, y: drone.y, vx: (dx / dist) * 400, vy: (dy / dist) * 400, radius: 3, damage: 1.0, hitEnemies: [], maxDist: 400, traveled: 0, color: '#00ffff' });
+            drone.lastAttack = now;
+        }
     }
 }
 
@@ -518,6 +586,8 @@ function update(dt, now) {
     if (player.invulnerableTimer > 0) player.invulnerableTimer -= dt;
     if (player.buffTimer > 0) player.buffTimer -= dt; 
     if (screenShake > 0) screenShake -= dt * 30; if (screenShake < 0) screenShake = 0;
+
+    updateDrone(now);
 
     for (let i = floatingTexts.length - 1; i >= 0; i--) { floatingTexts[i].life -= dt; floatingTexts[i].y -= 30 * dt; if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1); }
     for (let i = particles.length - 1; i >= 0; i--) { particles[i].x += particles[i].vx * dt; particles[i].y += particles[i].vy * dt; particles[i].life -= dt * 2.0; if (particles[i].life <= 0) particles.splice(i, 1); }
@@ -578,7 +648,7 @@ function update(dt, now) {
         resolveObstacleCollision(e);
 
         if (dist < player.radius + e.radius && player.invulnerableTimer <= 0) {
-            player.hp -= 1; player.invulnerableTimer = 1; spawnFloatingText(player.x, player.y - 20, "-1", "#ff0000"); addScreenShake(10);
+            player.hp -= 1; player.invulnerableTimer = 1; playSound('hit'); spawnFloatingText(player.x, player.y - 20, "-1", "#ff0000"); addScreenShake(10);
             if (player.hp <= 0) { triggerGameOver(); }
         }
     }
@@ -589,7 +659,7 @@ function update(dt, now) {
         resolveObstacleCollision(b);
         
         if (dist < player.radius + b.radius && player.invulnerableTimer <= 0) { 
-            player.hp -= 2; player.invulnerableTimer = 1; spawnFloatingText(player.x, player.y - 20, "-2", "#ff0000"); addScreenShake(15);
+            player.hp -= 2; player.invulnerableTimer = 1; playSound('hit'); spawnFloatingText(player.x, player.y - 20, "-2", "#ff0000"); addScreenShake(15);
             if (player.hp <= 0) { triggerGameOver(); }
         }
         
@@ -605,7 +675,7 @@ function update(dt, now) {
         if (hitObstacle || p.x < 0 || p.x > world.width || p.y < 0 || p.y > world.height) { enemyProjectiles.splice(i, 1); continue; }
         
         if (Math.hypot(p.x - player.x, p.y - player.y) < p.radius + player.radius && player.invulnerableTimer <= 0) {
-            player.hp -= p.damage; player.invulnerableTimer = 1; spawnFloatingText(player.x, player.y - 20, `-${p.damage}`, "#ff0000"); addScreenShake(10); enemyProjectiles.splice(i, 1);
+            player.hp -= p.damage; player.invulnerableTimer = 1; playSound('hit'); spawnFloatingText(player.x, player.y - 20, `-${p.damage}`, "#ff0000"); addScreenShake(10); enemyProjectiles.splice(i, 1);
             if (player.hp <= 0) { triggerGameOver(); }
         }
     }
@@ -645,6 +715,7 @@ function update(dt, now) {
                 b.hp -= p.damage; spawnFloatingText(b.x, b.y - 40, p.damage.toFixed(1), "#ffffff"); 
                 if (!player.hasPiercing) { projectiles.splice(i, 1); hitSomething = true; } else { p.hitEnemies.push(b); }
                 if (b.hp <= 0) { 
+                    playSound('win');
                     spawnParticles(b.x, b.y, '#9932CC'); bosses.splice(j, 1); totalKills++; bossesKilled++; gems += 5; 
                     parts += 5; 
                     spawnFloatingText(b.x, b.y - 60, "+5 Деталей ⚙️!", "#00ff00");
@@ -688,6 +759,13 @@ function draw() {
     }
 
     for (let p of particles) { ctx.globalAlpha = p.life; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); ctx.globalAlpha = 1.0; }
+
+    // Отрисовка дрона-компаньона
+    if (droneUnlocked) {
+        ctx.fillStyle = '#00ffff';
+        ctx.beginPath(); ctx.arc(drone.x, drone.y, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    }
 
     for (let e of enemies) {
         ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);

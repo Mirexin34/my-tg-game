@@ -83,11 +83,12 @@
             
             <button class="heroBtn" id="btnSurvival" style="background: #dc3545; margin-top: 12px; border-color: #ff6b6b;">🔥 РЕЖИМ ВЫЖИВАНИЯ (5 ⚡)</button>
             
-            <!-- Кнопка РЕЙТИНГА (НОВОЕ) -->
-            <button class="heroBtn" id="btnLeaderboard" style="background: #00bcd4; color: #fff; margin-top: 10px; border-color: #00e5ff; font-weight: bold;">
-                🏆 РЕЙТИНГ И СТАТИСТИКА
+            <!-- Покупка Питомца-Компаньона (НОВОЕ) -->
+            <button class="heroBtn" id="btnBuyDrone" style="background: #00bcd4; color: #fff; margin-top: 10px; border-color: #00e5ff; font-weight: bold;">
+                🤖 БОЕВОЙ ДРОН: <span id="droneStatus">НЕ КУПЛЕН (50 💎)</span>
             </button>
 
+            <button class="heroBtn" id="btnLeaderboard" style="background: #00bcd4; color: #fff; margin-top: 10px; border-color: #00e5ff; font-weight: bold;">🏆 РЕЙТИНГ И СТАТИСТИКА</button>
             <button class="heroBtn" id="btnShelter" style="background: #ff8c00; color: #fff; margin-top: 10px; border-color: #ffa500; font-weight: bold;">🏡 УБЕЖИЩЕ (ХАБ)</button>
             <button class="heroBtn" id="btnCraft" style="background: #00ff00; color: #000; margin-top: 10px; border-color: #32cd32; font-weight: bold;">🔧 МАСТЕРСКАЯ КРАФТА</button>
             <button class="heroBtn" id="btnWheel" style="background: #ff00ff; color: #fff; margin-top: 10px; border-color: #ff69b4; font-weight: bold;">🎰 РУЛЕТКА УДАЧИ</button>
@@ -98,10 +99,9 @@
             <button class="heroBtn" id="btnDailyReward" style="background: #17a2b8; margin-top: 10px; margin-bottom: 30px; border-color: #20c997;">🎁 ЕЖЕДНЕВНАЯ НАГРАДА</button>
         </div>
 
-        <!-- Экран Рейтинга и Статистики (НОВОЕ) -->
+        <!-- Экран Рейтинга и Статистики -->
         <div id="leaderboardScreen" style="display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: #1e1e24; flex-direction: column; justify-content: flex-start; align-items: center; z-index: 50; padding-top: 80px; overflow-y: auto;">
             <h2 style="color: #00bcd4; margin-bottom: 15px; font-size: 26px;">СТАТИСТИКА И РЕЙТИНГ</h2>
-            
             <div style="width: 85%; background: #2a2a35; padding: 20px; border-radius: 12px; margin-bottom: 20px; color: white; border: 1px solid #444; text-align: left;">
                 <div style="font-weight: bold; font-size: 16px; margin-bottom: 12px; color: #ffea00; text-align: center;">ТВОИ ДОСТИЖЕНИЯ</div>
                 <div style="font-size: 14px; margin-bottom: 8px; display: flex; justify-content: space-between;"><span>⚔️ Боевая Мощь (БМ):</span> <strong id="lbBM" style="color: #ff4a4a;">100</strong></div>
@@ -109,18 +109,12 @@
                 <div style="font-size: 14px; margin-bottom: 8px; display: flex; justify-content: space-between;"><span>💀 Всего убийств:</span> <strong id="lbKills" style="color: #00ff00;">0</strong></div>
                 <div style="font-size: 14px; margin-bottom: 8px; display: flex; justify-content: space-between;"><span>👑 Рекорд выживания:</span> <strong id="lbWave" style="color: #00ffff;">0 волн</strong></div>
             </div>
-
-            <div style="width: 85%; max-width: 350px; background: rgba(0,188,212,0.1); border: 2px dashed #00bcd4; border-radius: 12px; padding: 15px; text-align: center; color: #fff; font-size: 13px; margin-bottom: 20px;">
-                💡 Глобальный рейтинг с другими игроками Telegram подключится при релизе сервера! Сейчас ты на 1 месте среди игроков на своем устройстве. 🥇
-            </div>
-
             <button class="heroBtn" id="btnBackFromLeaderboard" style="background: #dc3545; margin-top: 10px; margin-bottom: 40px; width: 60%;">НАЗАД</button>
         </div>
 
         <!-- Остальные экраны без изменений -->
         <div id="shelterScreen" style="display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: #1e1e24; flex-direction: column; justify-content: flex-start; align-items: center; z-index: 50; padding-top: 80px; overflow-y: auto;">
             <h2 style="color: #ff8c00; margin-bottom: 15px; font-size: 26px;">БУНКЕР УБЕЖИЩА</h2>
-            <div style="font-size: 14px; color: #aaa; margin-bottom: 20px; text-align: center; width: 85%;">Улучшай постройки в бункере, чтобы получать постоянные пассивные бонусы во всех боях!</div>
             <div style="width: 85%; background: #2a2a35; padding: 15px; border-radius: 12px; margin-bottom: 15px; color: white; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;">
                 <div><div style="font-weight: bold; font-size: 15px; margin-bottom: 3px;">🏟 Тренировочный зал</div><div style="font-size: 13px; color: #aaa;">Уровень: <span id="shelterGymLvl">0</span>/5</div></div>
                 <button id="btnShelterGym" style="padding: 10px; background: #ff8c00; color: #fff; border: 2px solid #ffa500; border-radius: 8px; font-weight: bold; font-size: 13px;">200 💰</button>
@@ -134,7 +128,6 @@
 
         <div id="wheelScreen" style="display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: #1e1e24; flex-direction: column; justify-content: flex-start; align-items: center; z-index: 50; padding-top: 80px; overflow-y: auto;">
             <h2 style="color: #ff00ff; margin-bottom: 10px; font-size: 26px;">РУЛЕТКА УДАЧИ</h2>
-            <div style="font-size: 14px; color: #aaa; margin-bottom: 25px; text-align: center; width: 85%;">Крути барабан и выигрывай золото, кристаллы и детали!</div>
             <div id="wheelResult" style="width: 85%; max-width: 300px; background: rgba(255,0,255,0.1); border: 2px dashed #ff00ff; border-radius: 12px; padding: 20px; text-align: center; color: #ffea00; font-size: 18px; font-weight: bold; margin-bottom: 25px;">Нажми кнопку ниже!</div>
             <button class="heroBtn" id="btnSpinWheel" style="background: #ff00ff; color: #fff; width: 80%; border-color: #ff69b4; font-size: 18px; margin-bottom: 15px;">КРУТИТЬ</button>
             <button class="heroBtn" id="btnBackFromWheel" style="background: #dc3545; margin-top: 10px; margin-bottom: 40px; width: 60%;">НАЗАД</button>
@@ -142,7 +135,6 @@
 
         <div id="craftScreen" style="display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: #1e1e24; flex-direction: column; justify-content: flex-start; align-items: center; z-index: 50; padding-top: 80px; overflow-y: auto;">
             <h2 style="color: #00ff00; margin-bottom: 15px; font-size: 26px;">МАСТЕРСКАЯ КРАФТА</h2>
-            <div style="font-size: 14px; color: #aaa; margin-bottom: 20px; text-align: center; width: 85%;">Улучшай оружие с помощью деталей (⚙️)!</div>
             <div style="width: 85%; background: #2a2a35; padding: 15px; border-radius: 12px; margin-bottom: 15px; color: white; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;">
                 <div><div style="font-weight: bold; font-size: 15px; margin-bottom: 3px;">📦 Увеличенный рожок</div><div style="font-size: 13px; color: #aaa;">Уровень: <span id="craftMagLvl">0</span>/3</div></div>
                 <button id="btnCraftMag" style="padding: 10px; background: #00ff00; color: #000; border: 2px solid #32cd32; border-radius: 8px; font-weight: bold; font-size: 13px;">5 ⚙️ + 200 💰</button>
@@ -181,27 +173,11 @@
                 <div><div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">Убить 10 врагов</div><div style="font-size: 14px; color: #aaa;">Прогресс: <span id="questKillsProgress">0</span>/10</div></div>
                 <button id="btnClaimQuest1" style="padding: 10px; background: #555; color: #fff; border: 2px solid #777; border-radius: 8px; font-weight: bold; font-size: 14px;">+50 💰</button>
             </div>
-            <div style="width: 85%; background: #2a2a35; padding: 15px; border-radius: 12px; margin-bottom: 15px; color: white; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;">
-                <div><div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">Дойти до 5 волны</div><div style="font-size: 14px; color: #aaa;">Прогресс: <span id="questWaveProgress">1</span>/5</div></div>
-                <button id="btnClaimQuest2" style="padding: 10px; background: #555; color: #fff; border: 2px solid #777; border-radius: 8px; font-weight: bold; font-size: 14px;">+100 💰</button>
-            </div>
-            <div style="width: 85%; background: #2a2a35; padding: 15px; border-radius: 12px; margin-bottom: 15px; color: white; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;">
-                <div><div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">Убить Босса</div><div style="font-size: 14px; color: #aaa;">Прогресс: <span id="questBossProgress">0</span>/1</div></div>
-                <button id="btnClaimQuest3" style="padding: 10px; background: #555; color: #fff; border: 2px solid #777; border-radius: 8px; font-weight: bold; font-size: 14px;">+200 💰</button>
-            </div>
             <button class="heroBtn" id="btnBackFromQuests" style="background: #dc3545; margin-top: 20px; margin-bottom: 40px; width: 60%;">НАЗАД</button>
         </div>
 
         <div id="upgradesScreen" style="display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: #1e1e24; flex-direction: column; justify-content: flex-start; align-items: center; z-index: 50; padding-top: 80px; overflow-y: auto;">
             <h2 style="color: #28a745; margin-bottom: 20px; font-size: 28px;">ПРОКАЧКА</h2>
-            <div style="width: 85%; background: #2a2a35; padding: 15px; border-radius: 12px; margin-bottom: 15px; color: white; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;">
-                <div><div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">+1 Макс. Здоровье</div><div style="font-size: 14px; color: #aaa;">Уровень: <span id="upgHealthLevel">0</span>/5</div></div>
-                <button id="btnBuyHealth" style="padding: 10px; background: #ff8c00; color: #fff; border: 2px solid #ffb84d; border-radius: 8px; font-weight: bold; font-size: 14px;">100 💰</button>
-            </div>
-            <div style="width: 85%; background: #2a2a35; padding: 15px; border-radius: 12px; margin-bottom: 15px; color: white; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;">
-                <div><div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">+10% к Урону</div><div style="font-size: 14px; color: #aaa;">Уровень: <span id="upgDamageLevel">0</span>/5</div></div>
-                <button id="btnBuyDamage" style="padding: 10px; background: #ff8c00; color: #fff; border: 2px solid #ffb84d; border-radius: 8px; font-weight: bold; font-size: 14px;">150 💰</button>
-            </div>
             <button class="heroBtn" id="btnBackFromUpgrades" style="background: #dc3545; margin-top: 20px; margin-bottom: 40px; width: 60%;">НАЗАД</button>
         </div>
 
