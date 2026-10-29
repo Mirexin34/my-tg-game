@@ -25,8 +25,30 @@ const joystickStick = document.getElementById('joystickStick');
 const levelUpScreen = document.getElementById('levelUpScreen');
 const mainMenu = document.getElementById('mainMenu');
 
+// Подключаем новые кнопки экрана смерти
+const gameOverScreen = document.getElementById('gameOverScreen');
+const btnRevive = document.getElementById('btnRevive');
+const btnGiveUp = document.getElementById('btnGiveUp');
+
+let hasRevived = false;
+
 document.getElementById('btnTank').addEventListener('click', () => startGame('tank'));
 document.getElementById('btnAssassin').addEventListener('click', () => startGame('assassin'));
+
+// Логика кнопки воскрешения
+btnRevive.addEventListener('click', () => {
+    hasRevived = true;
+    player.hp = player.maxHp;
+    player.invulnerableTimer = 3; // 3 секунды неуязвимости
+    gameOverScreen.style.display = 'none';
+    gameState = 'playing';
+});
+
+// Логика кнопки "Сдаться"
+btnGiveUp.addEventListener('click', () => {
+    gameOverScreen.style.display = 'none';
+    showMenu();
+});
 
 function showMenu() {
     gameState = 'menu';
@@ -35,10 +57,12 @@ function showMenu() {
 
 function startGame(heroClass) {
     mainMenu.style.display = 'none';
+    gameOverScreen.style.display = 'none';
     gameState = 'playing';
     
     enemies = []; projectiles = []; items = []; bosses = []; enemyProjectiles = [];
     wave = 1; enemiesInWave = 5; spawnedEnemies = 0;
+    hasRevived = false; // Сбрасываем счетчик воскрешений
     
     player.level = 1; player.xp = 0; player.maxXP = 5; player.buffTimer = 0;
     player.x = world.width / 2; player.y = world.height / 2;
@@ -53,12 +77,24 @@ function startGame(heroClass) {
     }
 }
 
+// Функция смерти
+function triggerGameOver() {
+    gameState = 'gameover';
+    endTouch();
+    gameOverScreen.style.display = 'flex';
+    // Если уже воскрешался, прячем кнопку воскрешения
+    if (hasRevived) {
+        btnRevive.style.display = 'none';
+    } else {
+        btnRevive.style.display = 'block';
+    }
+}
+
 const input = { x: 0, y: 0, isMoving: false };
 const joystickCenter = { x: 0, y: 0 };
 const MAX_JOYSTICK_RADIUS = 50;
 
 joystickZone.addEventListener('touchstart', (e) => {
-    if (gameState === 'gameover' || gameState === 'win') { showMenu(); return; }
     if (gameState !== 'playing') return;
     
     const touch = e.changedTouches[0];
@@ -183,7 +219,7 @@ function update(dt, now) {
         if (dist > 0) { e.x += (dx / dist) * e.speed * dt; e.y += (dy / dist) * e.speed * dt; }
         if (dist < player.radius + e.radius && player.invulnerableTimer <= 0) {
             player.hp -= 1; player.invulnerableTimer = 1;
-            if (player.hp <= 0) { gameState = 'gameover'; endTouch(); }
+            if (player.hp <= 0) { triggerGameOver(); }
         }
     }
 
@@ -191,7 +227,10 @@ function update(dt, now) {
         let b = bosses[i];
         const dx = player.x - b.x, dy = player.y - b.y, dist = Math.hypot(dx, dy);
         if (dist > b.radius + player.radius) { b.x += (dx / dist) * b.speed * dt; b.y += (dy / dist) * b.speed * dt; }
-        if (dist < player.radius + b.radius && player.invulnerableTimer <= 0) { player.hp -= 2; player.invulnerableTimer = 1; if (player.hp <= 0) { gameState = 'gameover'; endTouch(); } }
+        if (dist < player.radius + b.radius && player.invulnerableTimer <= 0) { 
+            player.hp -= 2; player.invulnerableTimer = 1; 
+            if (player.hp <= 0) { triggerGameOver(); }
+        }
         if ((now - b.lastAttackTime) / 1000 >= 1 / b.attackRate) { enemyProjectiles.push({ x: b.x, y: b.y, vx: (dx / dist) * 300, vy: (dy / dist) * 300, radius: 8, damage: 1 }); b.lastAttackTime = now; }
     }
 
@@ -200,7 +239,7 @@ function update(dt, now) {
         if (p.x < 0 || p.x > world.width || p.y < 0 || p.y > world.height) { enemyProjectiles.splice(i, 1); continue; }
         if (Math.hypot(p.x - player.x, p.y - player.y) < p.radius + player.radius && player.invulnerableTimer <= 0) {
             player.hp -= p.damage; player.invulnerableTimer = 1; enemyProjectiles.splice(i, 1);
-            if (player.hp <= 0) { gameState = 'gameover'; endTouch(); }
+            if (player.hp <= 0) { triggerGameOver(); }
         }
     }
 
@@ -288,12 +327,7 @@ function draw() {
     if (bosses.length > 0) { ctx.fillStyle = '#9932CC'; ctx.fillText(`ВОЛНА БОССА`, canvas.width - 20, 40); }
     else { ctx.fillText(`Волна: ${wave}`, canvas.width - 20, 40); ctx.font = '14px sans-serif'; ctx.fillText(`Осталось врагов: ${enemiesInWave - spawnedEnemies + enemies.length}`, canvas.width - 20, 60); }
 
-    if (gameState === 'gameover') {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#ff4a4a'; ctx.font = 'bold 40px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText('ПОТРАЧЕНО', canvas.width / 2, canvas.height / 2 - 20);
-        ctx.fillStyle = '#ffffff'; ctx.font = '16px sans-serif'; ctx.fillText('Коснись для выхода в меню', canvas.width / 2, canvas.height / 2 + 30);
-    } else if (gameState === 'win') {
+    if (gameState === 'win') {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = '#00ff00'; ctx.font = 'bold 40px sans-serif'; ctx.textAlign = 'center';
         ctx.fillText('ПОБЕДА!', canvas.width / 2, canvas.height / 2 - 20);
