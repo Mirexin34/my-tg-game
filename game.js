@@ -38,12 +38,14 @@ const btnGiveUp = document.getElementById('btnGiveUp');
 const questsScreen = document.getElementById('questsScreen');
 const upgradesScreen = document.getElementById('upgradesScreen');
 const equipmentScreen = document.getElementById('equipmentScreen');
+const craftScreen = document.getElementById('craftScreen');
 const btnDailyReward = document.getElementById('btnDailyReward');
 const btnAssassin = document.getElementById('btnAssassin');
 const chapterTitle = document.getElementById('chapterTitle');
 const weaponTitle = document.getElementById('weaponTitle');
 const bestSurvivalWaveDisplay = document.getElementById('bestSurvivalWave');
 const energyDisplay = document.getElementById('energyDisplay');
+const partsDisplay = document.getElementById('partsDisplay');
 
 const weaponsDatabase = [
     { key: 'stick', name: "Ржавая палка", damage: 1.0, range: 220, fireRate: 1.2, color: "#8b4513" },
@@ -84,7 +86,8 @@ let savedData = JSON.parse(localStorage.getItem('arenaDeathSave')) || {
     accLevel: 1, accXP: 0, accMaxXP: 100,
     eqWeapon: false, eqArmor: false, eqRing: false,
     bestSurvivalWave: 0,
-    energy: 20, lastEnergyTime: Date.now()
+    energy: 20, lastEnergyTime: Date.now(),
+    parts: 0, craftMagLvl: 0, craftRangeLvl: 0, craftDmgLvl: 0
 };
 let gold = savedData.gold || 0; let gems = savedData.gems || 0; let totalKills = savedData.totalKills || 0; let quest1Claimed = savedData.quest1Claimed || false;
 let maxWave = savedData.maxWave || 1; let quest2Claimed = savedData.quest2Claimed || false; let bossesKilled = savedData.bossesKilled || 0; let quest3Claimed = savedData.quest3Claimed || false;
@@ -94,6 +97,10 @@ let eqWeapon = savedData.eqWeapon || false; let eqArmor = savedData.eqArmor || f
 let bestSurvivalWave = savedData.bestSurvivalWave || 0;
 let energy = savedData.energy !== undefined ? savedData.energy : 20;
 let lastEnergyTime = savedData.lastEnergyTime || Date.now();
+let parts = savedData.parts || 0;
+let craftMagLvl = savedData.craftMagLvl || 0;
+let craftRangeLvl = savedData.craftRangeLvl || 0;
+let craftDmgLvl = savedData.craftDmgLvl || 0;
 
 const MAX_ENERGY = 20;
 const ENERGY_COST = 5;
@@ -101,12 +108,12 @@ const ENERGY_COST = 5;
 function saveData() {
     localStorage.setItem('arenaDeathSave', JSON.stringify({ 
         gold, gems, totalKills, quest1Claimed, maxWave, quest2Claimed, bossesKilled, quest3Claimed, upgHealth, upgDamage, lastDailyReward, assassinUnlocked, accLevel, accXP, accMaxXP,
-        eqWeapon, eqArmor, eqRing, bestSurvivalWave, energy, lastEnergyTime
+        eqWeapon, eqArmor, eqRing, bestSurvivalWave, energy, lastEnergyTime,
+        parts, craftMagLvl, craftRangeLvl, craftDmgLvl
     }));
     updateUI();
 }
 
-// Проверка восстановления энергии со временем (1 энергия каждые 3 минуты = 180000 мс)
 function checkEnergyRegen() {
     const now = Date.now();
     const diff = now - lastEnergyTime;
@@ -118,7 +125,7 @@ function checkEnergyRegen() {
         saveData();
     }
 }
-setInterval(checkEnergyRegen, 10000); // проверяем каждые 10 секунд
+setInterval(checkEnergyRegen, 10000);
 
 function addAccountXP(amount) {
     accXP += amount;
@@ -135,9 +142,26 @@ function updateUI() {
     document.getElementById('goldDisplay').innerText = gold;
     document.getElementById('gemDisplay').innerText = gems;
     energyDisplay.innerText = energy;
+    partsDisplay.innerText = parts;
     document.getElementById('accountLevelDisplay').innerText = accLevel;
     bestSurvivalWaveDisplay.innerText = bestSurvivalWave;
     
+    // Крафт UI
+    document.getElementById('craftMagLvl').innerText = craftMagLvl;
+    const btnCM = document.getElementById('btnCraftMag');
+    if (craftMagLvl >= 3) { btnCM.innerText = "МАКС."; btnCM.disabled = true; btnCM.style.background = "#555"; }
+    else { btnCM.innerText = "5 ⚙️ + 200 💰"; btnCM.disabled = (parts < 5 || gold < 200); btnCM.style.background = (parts >= 5 && gold >= 200) ? "#00ff00" : "#555"; }
+
+    document.getElementById('craftRangeLvl').innerText = craftRangeLvl;
+    const btnCR = document.getElementById('btnCraftRange');
+    if (craftRangeLvl >= 3) { btnCR.innerText = "МАКС."; btnCR.disabled = true; btnCR.style.background = "#555"; }
+    else { btnCR.innerText = "5 ⚙️ + 250 💰"; btnCR.disabled = (parts < 5 || gold < 250); btnCR.style.background = (parts >= 5 && gold >= 250) ? "#00ff00" : "#555"; }
+
+    document.getElementById('craftDmgLvl').innerText = craftDmgLvl;
+    const btnCD = document.getElementById('btnCraftDmg');
+    if (craftDmgLvl >= 3) { btnCD.innerText = "МАКС."; btnCD.disabled = true; btnCD.style.background = "#555"; }
+    else { btnCD.innerText = "8 ⚙️ + 300 💰"; btnCD.disabled = (parts < 8 || gold < 300); btnCD.style.background = (parts >= 8 && gold >= 300) ? "#00ff00" : "#555"; }
+
     const btnW = document.getElementById('btnBuyWeapon');
     if (eqWeapon) { document.getElementById('eqWeaponStatus').innerText = "Надето"; btnW.innerText = "КУПЛЕНО"; btnW.style.background = "#28a745"; btnW.disabled = true; } 
     else { document.getElementById('eqWeaponStatus').innerText = "Не куплен"; btnW.innerText = "300 💰"; btnW.style.background = gold >= 300 ? "#ff8c00" : "#555"; btnW.disabled = gold < 300; }
@@ -190,16 +214,19 @@ updateUI();
 updateChapterUI();
 updateWeaponUI();
 
-// Покупка энергии за кристаллы
+// Кнопки крафта
+document.getElementById('btnCraftMag').addEventListener('click', () => {
+    if (parts >= 5 && gold >= 200 && craftMagLvl < 3) { parts -= 5; gold -= 200; craftMagLvl++; saveData(); updateUI(); }
+});
+document.getElementById('btnCraftRange').addEventListener('click', () => {
+    if (parts >= 5 && gold >= 250 && craftRangeLvl < 3) { parts -= 5; gold -= 250; craftRangeLvl++; saveData(); updateUI(); }
+});
+document.getElementById('btnCraftDmg').addEventListener('click', () => {
+    if (parts >= 8 && gold >= 300 && craftDmgLvl < 3) { parts -= 8; gold -= 300; craftDmgLvl++; saveData(); updateUI(); }
+});
+
 document.getElementById('btnBuyEnergy').addEventListener('click', () => {
-    if (gems >= 5) {
-        gems -= 5;
-        energy = Math.min(MAX_ENERGY, energy + 10);
-        saveData();
-        spawnFloatingText(canvas.width / 2, canvas.height / 2, "+10 Энергии!", "#ff4500");
-    } else {
-        alert("Не хватает алмазов (нужно 5 💎)");
-    }
+    if (gems >= 5) { gems -= 5; energy = Math.min(MAX_ENERGY, energy + 10); saveData(); } else { alert("Не хватает алмазов (нужно 5 💎)"); }
 });
 
 btnDailyReward.addEventListener('click', () => { const now = Date.now(); if (now - lastDailyReward >= 86400000) { gold += 100; lastDailyReward = now; saveData(); } });
@@ -209,6 +236,8 @@ document.getElementById('btnUpgrades').addEventListener('click', () => { mainMen
 document.getElementById('btnBackFromUpgrades').addEventListener('click', () => { upgradesScreen.style.display = 'none'; mainMenu.style.display = 'flex'; });
 document.getElementById('btnEquipment').addEventListener('click', () => { mainMenu.style.display = 'none'; equipmentScreen.style.display = 'flex'; updateUI(); });
 document.getElementById('btnBackFromEquipment').addEventListener('click', () => { equipmentScreen.style.display = 'none'; mainMenu.style.display = 'flex'; });
+document.getElementById('btnCraft').addEventListener('click', () => { mainMenu.style.display = 'none'; craftScreen.style.display = 'flex'; updateUI(); });
+document.getElementById('btnBackFromCraft').addEventListener('click', () => { craftScreen.style.display = 'none'; mainMenu.style.display = 'flex'; });
 
 document.getElementById('btnBuyWeapon').addEventListener('click', () => { if (gold >= 300 && !eqWeapon) { gold -= 300; eqWeapon = true; saveData(); } });
 document.getElementById('btnBuyArmor').addEventListener('click', () => { if (gold >= 400 && !eqArmor) { gold -= 400; eqArmor = true; saveData(); } });
@@ -220,24 +249,18 @@ document.getElementById('btnClaimQuest3').addEventListener('click', () => { if (
 document.getElementById('btnBuyHealth').addEventListener('click', () => { if (gold >= 100 && upgHealth < 5) { gold -= 100; upgHealth++; saveData(); } });
 document.getElementById('btnBuyDamage').addEventListener('click', () => { if (gold >= 150 && upgDamage < 5) { gold -= 150; upgDamage++; saveData(); } });
 
-// Проверка энергии перед стартом игры
 document.getElementById('btnTank').addEventListener('click', () => {
-    if (energy < ENERGY_COST) { alert("Недостаточно энергии! Подождите восстановления или купите за кристаллы."); return; }
-    energy -= ENERGY_COST; saveData();
-    startGame('tank', false);
+    if (energy < ENERGY_COST) { alert("Недостаточно энергии!"); return; }
+    energy -= ENERGY_COST; saveData(); startGame('tank', false);
 });
 document.getElementById('btnSurvival').addEventListener('click', () => {
-    if (energy < ENERGY_COST) { alert("Недостаточно энергии! Подождите восстановления или купите за кристаллы."); return; }
-    energy -= ENERGY_COST; saveData();
-    startGame('tank', true);
+    if (energy < ENERGY_COST) { alert("Недостаточно энергии!"); return; }
+    energy -= ENERGY_COST; saveData(); startGame('tank', true);
 });
 
 btnAssassin.addEventListener('click', () => {
     if (energy < ENERGY_COST) { alert("Недостаточно энергии!"); return; }
-    if (assassinUnlocked) { 
-        energy -= ENERGY_COST; saveData();
-        startGame('assassin', false); 
-    } 
+    if (assassinUnlocked) { energy -= ENERGY_COST; saveData(); startGame('assassin', false); } 
     else if (gems >= 15) { gems -= 15; assassinUnlocked = true; saveData(); alert("Убийца разблокирован!"); }
     else { alert("Не хватает алмазов на покупку Убийцы!"); }
 });
@@ -275,9 +298,10 @@ function startGame(heroClass, survival) {
     player.speed = baseSpeed + ringBonus;
     
     let selectedGun = weaponsDatabase[currentWeaponIndex];
-    player.attackRate = selectedGun.fireRate;
-    player.weaponRange = selectedGun.range;
-    player.weaponDamage = selectedGun.damage;
+    // Применяем крафт (рожок ускоряет стрельбу, прицел увеличивает дальность, усиленные пули — урон)
+    player.attackRate = selectedGun.fireRate + (craftMagLvl * 0.4);
+    player.weaponRange = selectedGun.range + (craftRangeLvl * 50);
+    player.weaponDamage = selectedGun.damage + (craftDmgLvl * 0.5);
     player.bulletColor = selectedGun.color;
     
     player.color = heroClass === 'tank' ? '#0088cc' : '#ff00ff';
@@ -291,11 +315,7 @@ function startGame(heroClass, survival) {
 function triggerGameOver() {
     gameState = 'gameover'; endTouch(); gameOverScreen.style.display = 'flex';
     if (isSurvivalMode) {
-        let bestSurvivalWave = savedData.bestSurvivalWave || 0;
-        if (wave > bestSurvivalWave) {
-            savedData.bestSurvivalWave = wave;
-            saveData();
-        }
+        if (wave > bestSurvivalWave) { bestSurvivalWave = wave; saveData(); }
     }
     if (hasRevived) { btnRevive.style.display = 'none'; } 
     else {
@@ -537,6 +557,8 @@ function update(dt, now) {
                 if (!player.hasPiercing) { projectiles.splice(i, 1); hitSomething = true; } else { p.hitEnemies.push(b); }
                 if (b.hp <= 0) { 
                     spawnParticles(b.x, b.y, '#9932CC'); bosses.splice(j, 1); totalKills++; bossesKilled++; gems += 5; 
+                    parts += 5; // ВЫПАДЕНИЕ 5 ДЕТАЛЕЙ ЗА УБИЙСТВО БОССА!
+                    spawnFloatingText(b.x, b.y - 60, "+5 Деталей ⚙️!", "#00ff00");
                     addAccountXP(100);
                     gameState = 'win'; endTouch(); 
                 }
