@@ -31,7 +31,7 @@
         </div>
         
         <!-- Главное меню -->
-        <div id="mainMenu">
+        <div id="mainMenu" style="overflow-y: auto; padding: 20px 0;">
             <h1>ВЫБЕРИ ГЕРОЯ</h1>
             <button class="heroBtn" id="btnTank">
                 ТАНК
@@ -45,9 +45,12 @@
             <button class="heroBtn" id="btnQuests" style="background: #ff8c00; margin-top: 30px; border-color: #ffb84d;">
                 📋 ЗАДАНИЯ И НАГРАДЫ
             </button>
-            <!-- Новая кнопка ПРОКАЧКА -->
             <button class="heroBtn" id="btnUpgrades" style="background: #28a745; margin-top: 15px; border-color: #2eb84d;">
                 🛠 ПРОКАЧКА
+            </button>
+            <!-- Новая кнопка Ежедневной награды -->
+            <button class="heroBtn" id="btnDailyReward" style="background: #17a2b8; margin-top: 15px; border-color: #20c997;">
+                🎁 НАГРАДА (Готово!)
             </button>
         </div>
 
@@ -63,7 +66,6 @@
                 <button id="btnClaimQuest1" style="padding: 10px; background: #555; color: #fff; border: 2px solid #777; border-radius: 8px; font-weight: bold; font-size: 14px;">+50 💰</button>
             </div>
 
-            <!-- Новое задание 2 -->
             <div style="width: 85%; background: #2a2a35; padding: 15px; border-radius: 12px; margin-bottom: 15px; color: white; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;">
                 <div>
                     <div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">Дойти до 5 волны</div>
@@ -72,7 +74,6 @@
                 <button id="btnClaimQuest2" style="padding: 10px; background: #555; color: #fff; border: 2px solid #777; border-radius: 8px; font-weight: bold; font-size: 14px;">+100 💰</button>
             </div>
 
-            <!-- Новое задание 3 -->
             <div style="width: 85%; background: #2a2a35; padding: 15px; border-radius: 12px; margin-bottom: 15px; color: white; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;">
                 <div>
                     <div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">Убить Босса</div>
@@ -84,11 +85,10 @@
             <button class="heroBtn" id="btnBackFromQuests" style="background: #dc3545; margin-top: 20px; margin-bottom: 40px; width: 60%;">НАЗАД</button>
         </div>
 
-        <!-- Новый Экран Прокачки (Магазин) -->
+        <!-- Экран Прокачки (Магазин) -->
         <div id="upgradesScreen" style="display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: #1e1e24; flex-direction: column; justify-content: flex-start; align-items: center; z-index: 50; padding-top: 80px; overflow-y: auto;">
             <h2 style="color: #28a745; margin-bottom: 20px; font-size: 28px;">ПРОКАЧКА</h2>
 
-            <!-- Прокачка 1: Здоровье -->
             <div style="width: 85%; background: #2a2a35; padding: 15px; border-radius: 12px; margin-bottom: 15px; color: white; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;">
                 <div>
                     <div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">+1 Макс. Здоровье</div>
@@ -97,7 +97,6 @@
                 <button id="btnBuyHealth" style="padding: 10px; background: #ff8c00; color: #fff; border: 2px solid #ffb84d; border-radius: 8px; font-weight: bold; font-size: 14px;">100 💰</button>
             </div>
 
-            <!-- Прокачка 2: Урон -->
             <div style="width: 85%; background: #2a2a35; padding: 15px; border-radius: 12px; margin-bottom: 15px; color: white; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;">
                 <div>
                     <div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">+10% к Урону</div>
