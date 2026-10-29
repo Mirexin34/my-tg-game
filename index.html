@@ -14,12 +14,19 @@
 </head>
 <body>
     <div id="app">
-        <div id="topBar" style="position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; z-index: 40; pointer-events: none;">
-            <div style="background: rgba(0,0,0,0.6); padding: 8px 20px; border-radius: 20px; color: #ffd700; font-weight: bold; border: 2px solid #ffd700; font-size: 16px;">
-                💰 <span id="goldDisplay">0</span>
+        <!-- Верхняя панель ресурсов и Профиля -->
+        <div id="topBar" style="position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; align-items: center; z-index: 40; pointer-events: none;">
+            <div style="display: flex; gap: 10px;">
+                <div style="background: rgba(0,0,0,0.6); padding: 6px 15px; border-radius: 20px; color: #ffd700; font-weight: bold; border: 2px solid #ffd700; font-size: 14px;">
+                    💰 <span id="goldDisplay">0</span>
+                </div>
+                <div style="background: rgba(0,0,0,0.6); padding: 6px 15px; border-radius: 20px; color: #00ffff; font-weight: bold; border: 2px solid #00ffff; font-size: 14px;">
+                    💎 <span id="gemDisplay">0</span>
+                </div>
             </div>
-            <div style="background: rgba(0,0,0,0.6); padding: 8px 20px; border-radius: 20px; color: #00ffff; font-weight: bold; border: 2px solid #00ffff; font-size: 16px;">
-                💎 <span id="gemDisplay">0</span>
+            <!-- Индикатор уровня аккаунта -->
+            <div style="background: rgba(0,0,0,0.7); padding: 6px 15px; border-radius: 20px; color: #ffea00; font-weight: bold; border: 2px solid #ffea00; font-size: 14px;">
+                ⭐ Укр. <span id="accountLevelDisplay">1</span>
             </div>
         </div>
 
@@ -38,24 +45,24 @@
                 <span>Медленный, 10 Жизней</span>
             </button>
             
-            <!-- Заблокированный Убийца -->
             <button class="heroBtn" id="btnAssassin" style="background: #555; border-color: #777;">
                 🔒 УБИЙЦА
                 <span>Быстрый, Пулемет, 3 Жизни</span>
                 <div id="assassinPrice" style="margin-top: 8px; color: #00ffff; font-weight: bold;">Цена: 15 💎</div>
             </button>
             
-            <button class="heroBtn" id="btnQuests" style="background: #ff8c00; margin-top: 30px; border-color: #ffb84d;">
+            <button class="heroBtn" id="btnQuests" style="background: #ff8c00; margin-top: 20px; border-color: #ffb84d;">
                 📋 ЗАДАНИЯ И НАГРАДЫ
             </button>
-            <button class="heroBtn" id="btnUpgrades" style="background: #28a745; margin-top: 15px; border-color: #2eb84d;">
-                🛠 ПРОКАЧКА
+            <button class="heroBtn" id="btnUpgrades" style="background: #28a745; margin-top: 10px; border-color: #2eb84d;">
+                🛠 ПРОКАЧКА ХАРАКТЕРИСТИК
             </button>
-            <button class="heroBtn" id="btnDailyReward" style="background: #17a2b8; margin-top: 15px; border-color: #20c997;">
-                🎁 НАГРАДА (Готово!)
+            <button class="heroBtn" id="btnDailyReward" style="background: #17a2b8; margin-top: 10px; border-color: #20c997;">
+                🎁 ЕЖЕДНЕВНАЯ НАГРАДА
             </button>
         </div>
 
+        <!-- Экран заданий -->
         <div id="questsScreen" style="display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: #1e1e24; flex-direction: column; justify-content: flex-start; align-items: center; z-index: 50; padding-top: 80px; overflow-y: auto;">
             <h2 style="color: #ffea00; margin-bottom: 20px; font-size: 28px;">ЗАДАНИЯ</h2>
             <div style="width: 85%; background: #2a2a35; padding: 15px; border-radius: 12px; margin-bottom: 15px; color: white; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;">
@@ -73,6 +80,7 @@
             <button class="heroBtn" id="btnBackFromQuests" style="background: #dc3545; margin-top: 20px; margin-bottom: 40px; width: 60%;">НАЗАД</button>
         </div>
 
+        <!-- Экран Прокачки -->
         <div id="upgradesScreen" style="display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: #1e1e24; flex-direction: column; justify-content: flex-start; align-items: center; z-index: 50; padding-top: 80px; overflow-y: auto;">
             <h2 style="color: #28a745; margin-bottom: 20px; font-size: 28px;">ПРОКАЧКА</h2>
             <div style="width: 85%; background: #2a2a35; padding: 15px; border-radius: 12px; margin-bottom: 15px; color: white; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;">
