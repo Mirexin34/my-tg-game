@@ -1,58 +1,127 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
-body, html {
-    width: 100%; height: 100%; overflow: hidden;
-    background-color: #1e1e24; touch-action: none;
-    user-select: none; -webkit-user-select: none;
-    font-family: sans-serif;
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
-#gameCanvas { display: block; width: 100%; height: 100%; }
+body, html {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    position: fixed;
+    background-color: #1e1e24;
+    touch-action: none;
+}
+
+#gameCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+}
 
 #joystickZone {
-    position: absolute; bottom: 0; left: 0;
-    width: 100%; height: 100%; z-index: 10;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    touch-action: none;
 }
 
 #joystickBase {
-    position: absolute; width: 120px; height: 120px;
-    background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 50%; display: none; transform: translate(-50%, -50%); pointer-events: none;
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    display: none;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
 }
 
-#joystickStick {
-    position: absolute; top: 50%; left: 50%; width: 50px; height: 50px;
-    background: rgba(255, 255, 255, 0.7); border-radius: 50%;
-    transform: translate(-50%, -50%); box-shadow: 0 0 10px rgba(0,0,0,0.5);
-}
-
-/* Стили главного меню */
 #mainMenu {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background: #1e1e24; display: flex; flex-direction: column;
-    justify-content: center; align-items: center; z-index: 30;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #1e1e24;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 30;
 }
 
-#mainMenu h1 { color: #ffea00; margin-bottom: 40px; font-size: 32px; }
+#mainMenu h1 {
+    color: #ffea00;
+    margin-bottom: 40px;
+    font-size: 32px;
+}
 
 .heroBtn {
-    width: 80%; padding: 20px; margin: 15px; font-size: 22px;
-    background: #9932CC; color: white; border: 2px solid #fff;
-    border-radius: 12px; cursor: pointer; font-weight: bold;
+    width: 80%;
+    padding: 20px;
+    margin: 15px;
+    font-size: 22px;
+    background: #9932CC;
+    color: white;
+    border: 2px solid #fff;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: bold;
 }
-.heroBtn span { font-size: 14px; font-weight: normal; display: block; margin-top: 5px;}
-.heroBtn:active { background: #6a1b9a; }
 
-/* Экран уровня */
+.heroBtn span {
+    font-size: 14px;
+    font-weight: normal;
+    display: block;
+    margin-top: 5px;
+}
+
+.heroBtn:active {
+    background: #6a1b9a;
+}
+
 #levelUpScreen {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.85); display: none;
-    flex-direction: column; justify-content: center; align-items: center; z-index: 20;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 20;
 }
-#levelUpScreen h2 { color: #ffea00; margin-bottom: 30px; font-size: 32px; }
+
+#levelUpScreen h2 {
+    color: #ffea00;
+    margin-bottom: 30px;
+    font-size: 32px;
+}
+
 .perkBtn {
-    width: 80%; padding: 20px; margin: 10px; font-size: 18px;
-    background: #0088cc; color: white; border: 2px solid #fff;
-    border-radius: 12px; cursor: pointer; font-weight: bold; z-index: 25;
+    width: 80%;
+    padding: 20px;
+    margin: 10px;
+    font-size: 18px;
+    background: #0088cc;
+    color: white;
+    border: 2px solid #fff;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: bold;
+    z-index: 25;
 }
-.perkBtn:active { background: #005580; }
+
+.perkBtn:active {
+    background: #005580;
+}
