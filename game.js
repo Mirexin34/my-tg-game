@@ -63,7 +63,6 @@ function updateUI() {
     document.getElementById('goldDisplay').innerText = gold;
     document.getElementById('gemDisplay').innerText = gems;
     
-    // Задания
     document.getElementById('questKillsProgress').innerText = Math.min(totalKills, 10);
     const btnQ1 = document.getElementById('btnClaimQuest1');
     if (quest1Claimed) { btnQ1.innerText = "ВЫПОЛНЕНО"; btnQ1.style.background = "#28a745"; btnQ1.disabled = true; } 
@@ -82,7 +81,6 @@ function updateUI() {
     else if (bossesKilled >= 1) { btnQ3.innerText = "ЗАБРАТЬ 200 💰"; btnQ3.style.background = "#ff8c00"; btnQ3.disabled = false; } 
     else { btnQ3.innerText = "+200 💰"; btnQ3.style.background = "#555"; btnQ3.disabled = true; }
 
-    // Прокачка
     document.getElementById('upgHealthLevel').innerText = upgHealth;
     const btnUpgHealth = document.getElementById('btnBuyHealth');
     if (upgHealth >= 5) { btnUpgHealth.innerText = "МАКС."; btnUpgHealth.style.background = "#28a745"; btnUpgHealth.disabled = true; }
@@ -95,18 +93,15 @@ function updateUI() {
 }
 updateUI();
 
-// --- НАВИГАЦИЯ И КНОПКИ МЕНЮ ---
 document.getElementById('btnQuests').addEventListener('click', () => { mainMenu.style.display = 'none'; questsScreen.style.display = 'flex'; updateUI(); });
 document.getElementById('btnBackFromQuests').addEventListener('click', () => { questsScreen.style.display = 'none'; mainMenu.style.display = 'flex'; });
 document.getElementById('btnUpgrades').addEventListener('click', () => { mainMenu.style.display = 'none'; upgradesScreen.style.display = 'flex'; updateUI(); });
 document.getElementById('btnBackFromUpgrades').addEventListener('click', () => { upgradesScreen.style.display = 'none'; mainMenu.style.display = 'flex'; });
 
-// Кнопки заданий
 document.getElementById('btnClaimQuest1').addEventListener('click', () => { if (totalKills >= 10 && !quest1Claimed) { gold += 50; quest1Claimed = true; saveData(); } });
 document.getElementById('btnClaimQuest2').addEventListener('click', () => { if (maxWave >= 5 && !quest2Claimed) { gold += 100; quest2Claimed = true; saveData(); } });
 document.getElementById('btnClaimQuest3').addEventListener('click', () => { if (bossesKilled >= 1 && !quest3Claimed) { gold += 200; quest3Claimed = true; saveData(); } });
 
-// Кнопки прокачки
 document.getElementById('btnBuyHealth').addEventListener('click', () => { if (gold >= 100 && upgHealth < 5) { gold -= 100; upgHealth++; saveData(); } });
 document.getElementById('btnBuyDamage').addEventListener('click', () => { if (gold >= 150 && upgDamage < 5) { gold -= 150; upgDamage++; saveData(); } });
 
@@ -127,17 +122,23 @@ btnGiveUp.addEventListener('click', () => { gameOverScreen.style.display = 'none
 
 function showMenu() { gameState = 'menu'; mainMenu.style.display = 'flex'; updateUI(); }
 
+// --- НОВАЯ СИСТЕМА ВЫЛЕТАЮЩЕГО УРОНА ---
+let floatingTexts = [];
+function spawnFloatingText(x, y, text, color) {
+    floatingTexts.push({ x, y, text, color, life: 1.0 });
+}
+
 function startGame(heroClass) {
     mainMenu.style.display = 'none'; gameOverScreen.style.display = 'none'; gameState = 'playing';
     
-    enemies = []; projectiles = []; items = []; bosses = []; enemyProjectiles = []; obstacles = [];
+    enemies = []; projectiles = []; items = []; bosses = []; enemyProjectiles = []; obstacles = []; floatingTexts = [];
     wave = 1; enemiesInWave = 5; spawnedEnemies = 0; hasRevived = false; 
     
     player.level = 1; player.xp = 0; player.maxXP = 5; player.buffTimer = 0;
     player.x = world.width / 2; player.y = world.height / 2; player.invulnerableTimer = 0;
 
     let baseHp = heroClass === 'tank' ? 10 : 3;
-    player.maxHp = baseHp + upgHealth; // ПРИМЕНЯЕМ ПРОКАЧКУ ЗДОРОВЬЯ
+    player.maxHp = baseHp + upgHealth; 
     player.hp = player.maxHp;
     
     if (heroClass === 'tank') { player.speed = 140; player.attackRate = 1.5; player.color = '#0088cc'; } 
@@ -226,7 +227,16 @@ function spawnEnemy() {
     });
 }
 
-function spawnBoss() { bosses.push({ x: player.x + 400, y: player.y - 400, radius: 40, hp: 50, maxHp: 50, speed: 70, attackRate: 1, lastAttackTime: 0 }); }
+function spawnBoss() { 
+    // Босс становится сильнее с каждой встречей
+    let bossMaxHp = 40 + (wave * 2);
+    bosses.push({ 
+        x: player.x + 400, y: player.y - 400, radius: 40, 
+        hp: bossMaxHp, maxHp: bossMaxHp, 
+        speed: 70, attackRate: 1, lastAttackTime: 0, 
+        specialTimer: 0 // Таймер для супер-атаки
+    }); 
+}
 
 function handleAttack(now) {
     if (enemies.length === 0 && bosses.length === 0) return;
@@ -239,7 +249,6 @@ function handleAttack(now) {
 
     if (nearestTarget) {
         const dx = nearestTarget.x - player.x, dy = nearestTarget.y - player.y, dist = Math.hypot(dx, dy);
-        // ПРИМЕНЯЕМ ПРОКАЧКУ УРОНА (+10% за каждый уровень прокачки)
         let finalDamage = 1 * (1 + (upgDamage * 0.1));
         projectiles.push({ x: player.x, y: player.y, vx: (dx / dist) * 500, vy: (dy / dist) * 500, radius: 4, damage: finalDamage });
         player.lastAttackTime = now;
@@ -265,12 +274,19 @@ function update(dt, now) {
     if (player.invulnerableTimer > 0) player.invulnerableTimer -= dt;
     if (player.buffTimer > 0) player.buffTimer -= dt; 
 
+    // Обновление вылетающего текста
+    for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        floatingTexts[i].life -= dt;
+        floatingTexts[i].y -= 30 * dt; // Текст летит вверх
+        if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1);
+    }
+
     if (bosses.length === 0) { 
         timeSinceLastSpawn += dt;
         if (spawnedEnemies < enemiesInWave && timeSinceLastSpawn >= SPAWN_INTERVAL) { spawnEnemy(); spawnedEnemies++; timeSinceLastSpawn = 0; }
         if (spawnedEnemies >= enemiesInWave && enemies.length === 0) {
             wave++;
-            if (wave > maxWave) { maxWave = wave; saveData(); } // Сохраняем рекорд волн
+            if (wave > maxWave) { maxWave = wave; saveData(); } 
             if (wave % 5 === 0) spawnBoss(); 
             else { enemiesInWave += 3; spawnedEnemies = 0; }
         }
@@ -288,7 +304,7 @@ function update(dt, now) {
         let item = items[i];
         if (Math.hypot(player.x - item.x, player.y - item.y) < player.radius + item.radius + 30) { 
             if (item.type === 'xp') { player.xp++; if (player.xp >= player.maxXP) triggerLevelUp(); } 
-            else if (item.type === 'hp') { player.hp = Math.min(player.maxHp, player.hp + 1); } 
+            else if (item.type === 'hp') { player.hp = Math.min(player.maxHp, player.hp + 1); spawnFloatingText(player.x, player.y - 20, "+1", "#00ff00"); } 
             else if (item.type === 'buff') { player.buffTimer = 5; }
             items.splice(i, 1);
         }
@@ -315,10 +331,12 @@ function update(dt, now) {
 
         if (dist < player.radius + e.radius && player.invulnerableTimer <= 0) {
             player.hp -= 1; player.invulnerableTimer = 1;
+            spawnFloatingText(player.x, player.y - 20, "-1", "#ff0000"); // Урон по игроку
             if (player.hp <= 0) { triggerGameOver(); }
         }
     }
 
+    // --- УМНЫЙ БОСС ---
     for (let i = bosses.length - 1; i >= 0; i--) {
         let b = bosses[i];
         const dx = player.x - b.x, dy = player.y - b.y, dist = Math.hypot(dx, dy);
@@ -327,9 +345,24 @@ function update(dt, now) {
         
         if (dist < player.radius + b.radius && player.invulnerableTimer <= 0) { 
             player.hp -= 2; player.invulnerableTimer = 1; 
+            spawnFloatingText(player.x, player.y - 20, "-2", "#ff0000");
             if (player.hp <= 0) { triggerGameOver(); }
         }
-        if ((now - b.lastAttackTime) / 1000 >= 1 / b.attackRate) { enemyProjectiles.push({ x: b.x, y: b.y, vx: (dx / dist) * 300, vy: (dy / dist) * 300, radius: 8, damage: 1 }); b.lastAttackTime = now; }
+        
+        // Обычная атака
+        if ((now - b.lastAttackTime) / 1000 >= 1 / b.attackRate) { 
+            enemyProjectiles.push({ x: b.x, y: b.y, vx: (dx / dist) * 300, vy: (dy / dist) * 300, radius: 8, damage: 1 }); 
+            b.lastAttackTime = now; 
+        }
+
+        // Супер-атака босса (веер пуль раз в 5 секунд)
+        b.specialTimer += dt;
+        if (b.specialTimer >= 5) {
+            b.specialTimer = 0;
+            for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) { // 8 пуль по кругу
+                enemyProjectiles.push({ x: b.x, y: b.y, vx: Math.cos(a) * 200, vy: Math.sin(a) * 200, radius: 8, damage: 1 });
+            }
+        }
     }
 
     for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
@@ -338,7 +371,9 @@ function update(dt, now) {
         if (hitObstacle || p.x < 0 || p.x > world.width || p.y < 0 || p.y > world.height) { enemyProjectiles.splice(i, 1); continue; }
         
         if (Math.hypot(p.x - player.x, p.y - player.y) < p.radius + player.radius && player.invulnerableTimer <= 0) {
-            player.hp -= p.damage; player.invulnerableTimer = 1; enemyProjectiles.splice(i, 1);
+            player.hp -= p.damage; player.invulnerableTimer = 1; 
+            spawnFloatingText(player.x, player.y - 20, `-${p.damage}`, "#ff0000"); // Урон пулей по игроку
+            enemyProjectiles.splice(i, 1);
             if (player.hp <= 0) { triggerGameOver(); }
         }
     }
@@ -355,7 +390,9 @@ function update(dt, now) {
         for (let j = enemies.length - 1; j >= 0; j--) {
             let e = enemies[j];
             if (Math.hypot(p.x - e.x, p.y - e.y) < p.radius + e.radius) {
-                e.hp -= p.damage; projectiles.splice(i, 1); hit = true;
+                e.hp -= p.damage; 
+                spawnFloatingText(e.x, e.y - 20, p.damage.toFixed(1), "#ffffff"); // Урон по врагу
+                projectiles.splice(i, 1); hit = true;
                 if (e.hp <= 0) { 
                     generateDrop(e.x, e.y); enemies.splice(j, 1); totalKills++; saveData();
                 }
@@ -366,11 +403,11 @@ function update(dt, now) {
         for (let j = bosses.length - 1; j >= 0; j--) {
             let b = bosses[j];
             if (Math.hypot(p.x - b.x, p.y - b.y) < p.radius + b.radius) {
-                b.hp -= p.damage; projectiles.splice(i, 1);
+                b.hp -= p.damage; 
+                spawnFloatingText(b.x, b.y - 40, p.damage.toFixed(1), "#ffffff"); // Урон по боссу
+                projectiles.splice(i, 1);
                 if (b.hp <= 0) { 
-                    bosses.splice(j, 1); totalKills++; 
-                    bossesKilled++; // Сохраняем убийство босса
-                    saveData();
+                    bosses.splice(j, 1); totalKills++; bossesKilled++; saveData();
                     gameState = 'win'; endTouch(); 
                 }
                 break;
@@ -424,8 +461,20 @@ function draw() {
         if (player.buffTimer > 0) ctx.fillStyle = '#ffa500'; else ctx.fillStyle = player.invulnerableTimer > 0 ? '#ffffff' : player.color; 
         ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
     }
+
+    // Отрисовка вылетающего урона
+    for (let ft of floatingTexts) {
+        ctx.globalAlpha = ft.life; // Текст постепенно исчезает
+        ctx.fillStyle = ft.color;
+        ctx.font = 'bold 20px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.globalAlpha = 1.0;
+    }
+
     ctx.restore();
 
+    // --- ИНТЕРФЕЙС ПОВЕРХ КАМЕРЫ ---
     const barWidth = 150;
     ctx.fillStyle = 'rgba(255, 0, 0, 0.5)'; ctx.fillRect(20, 20, barWidth, 15);
     ctx.fillStyle = '#00ff00'; ctx.fillRect(20, 20, barWidth * (player.hp / player.maxHp), 15);
@@ -436,7 +485,23 @@ function draw() {
     ctx.fillStyle = '#fff'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(`Уровень: ${player.level}`, 20, 75);
 
     ctx.fillStyle = '#fff'; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'right';
-    if (bosses.length > 0) { ctx.fillStyle = '#9932CC'; ctx.fillText(`ВОЛНА БОССА`, canvas.width - 20, 40); }
+    if (bosses.length > 0) { 
+        // --- БОЛЬШАЯ ПОЛОСКА ЗДОРОВЬЯ БОССА СВЕРХУ ПО ЦЕНТРУ ---
+        let b = bosses[0];
+        let bossBarWidth = canvas.width * 0.6; // 60% ширины экрана
+        let bossBarX = (canvas.width - bossBarWidth) / 2;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; ctx.fillRect(bossBarX, 70, bossBarWidth, 25);
+        ctx.fillStyle = '#ff0000'; ctx.fillRect(bossBarX, 70, bossBarWidth * (b.hp / b.maxHp), 25);
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.strokeRect(bossBarX, 70, bossBarWidth, 25);
+        
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.fillText(`БОСС: ${Math.ceil(b.hp)} / ${Math.ceil(b.maxHp)}`, canvas.width / 2, 88);
+        
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#9932CC'; ctx.fillText(`ВОЛНА БОССА`, canvas.width - 20, 40); 
+    }
     else { ctx.fillText(`Волна: ${wave}`, canvas.width - 20, 40); ctx.font = '14px sans-serif'; ctx.fillText(`Осталось врагов: ${enemiesInWave - spawnedEnemies + enemies.length}`, canvas.width - 20, 60); }
 
     if (gameState === 'win') {
