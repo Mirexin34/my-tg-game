@@ -7,7 +7,7 @@ document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { pa
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-const world = { width: 1600, height: 1600 }; // Немного уменьшили мир для компактности
+const world = { width: 1600, height: 1600 };
 const camera = { x: 0, y: 0 };
 let gameState = 'menu'; 
 
@@ -43,10 +43,18 @@ const btnAssassin = document.getElementById('btnAssassin');
 const chapterTitle = document.getElementById('chapterTitle');
 const bestSurvivalWaveDisplay = document.getElementById('bestSurvivalWave');
 
+// --- БАЗА ОРУЖИЯ (ЭТАП 1) ---
+const weaponsDatabase = {
+    stick: { name: "Ржавая палка", damage: 1.0, range: 250, fireRate: 1.2, color: "#8b4513" },
+    pistol: { name: "Пистолет", damage: 2.0, range: 400, fireRate: 2.0, color: "#4682b4" },
+    smg: { name: "Автомат", damage: 1.5, range: 450, fireRate: 5.0, color: "#ffd700" }
+};
+let currentWeaponKey = 'stick'; // С чего начинает игрок в постапокалипсисе
+
 const chapters = [
-    { id: 0, name: "Глава 1: Лес", bg: "#1e1e24", grid: "rgba(255, 255, 255, 0.05)", border: "#ffea00", enemyMult: 1.0 },
-    { id: 1, name: "Глава 2: Пещера", bg: "#2a1515", grid: "rgba(255, 100, 100, 0.08)", border: "#ff4500", enemyMult: 1.3 },
-    { id: 2, name: "Глава 3: Замок", bg: "#1a152a", grid: "rgba(150, 100, 255, 0.08)", border: "#9932CC", enemyMult: 1.6 }
+    { id: 0, name: "Глава 1: Руины", bg: "#1e1e24", grid: "rgba(255, 255, 255, 0.05)", border: "#ffea00", enemyMult: 1.0 },
+    { id: 1, name: "Глава 2: Заброшенный завод", bg: "#2a1515", grid: "rgba(255, 100, 100, 0.08)", border: "#ff4500", enemyMult: 1.3 },
+    { id: 2, name: "Глава 3: Бункер", bg: "#1a152a", grid: "rgba(150, 100, 255, 0.08)", border: "#9932CC", enemyMult: 1.6 }
 ];
 let currentChapterIndex = 0;
 
@@ -63,31 +71,34 @@ function updateChapterUI() { chapterTitle.innerText = chapters[currentChapterInd
 let savedData = JSON.parse(localStorage.getItem('arenaDeathSave')) || { 
     gold: 0, gems: 0, totalKills: 0, quest1Claimed: false, maxWave: 1, quest2Claimed: false, bossesKilled: 0, quest3Claimed: false, upgHealth: 0, upgDamage: 0, lastDailyReward: 0, assassinUnlocked: false,
     accLevel: 1, accXP: 0, accMaxXP: 100,
-    eqWeapon: false, eqArmor: false, eqRing: false,
+    unlockedWeapons: ['stick', 'pistol'], // Палка и пистолет уже доступны
+    equippedWeapon: 'pistol',            // По умолчанию выбран пистолет
     bestSurvivalWave: 0
 };
 let gold = savedData.gold || 0; let gems = savedData.gems || 0; let totalKills = savedData.totalKills || 0; let quest1Claimed = savedData.quest1Claimed || false;
 let maxWave = savedData.maxWave || 1; let quest2Claimed = savedData.quest2Claimed || false; let bossesKilled = savedData.bossesKilled || 0; let quest3Claimed = savedData.quest3Claimed || false;
 let upgHealth = savedData.upgHealth || 0; let upgDamage = savedData.upgDamage || 0; let lastDailyReward = savedData.lastDailyReward || 0; let assassinUnlocked = savedData.assassinUnlocked || false;
 let accLevel = savedData.accLevel || 1; let accXP = savedData.accXP || 0; let accMaxXP = savedData.accMaxXP || 100;
-let eqWeapon = savedData.eqWeapon || false; let eqArmor = savedData.eqArmor || false; let eqRing = savedData.eqRing || false;
+let unlockedWeapons = savedData.unlockedWeapons || ['stick', 'pistol'];
+currentWeaponKey = savedData.equippedWeapon || 'pistol';
 let bestSurvivalWave = savedData.bestSurvivalWave || 0;
 let isSurvivalMode = false;
 
 function saveData() {
     localStorage.setItem('arenaDeathSave', JSON.stringify({ 
         gold, gems, totalKills, quest1Claimed, maxWave, quest2Claimed, bossesKilled, quest3Claimed, upgHealth, upgDamage, lastDailyReward, assassinUnlocked, accLevel, accXP, accMaxXP,
-        eqWeapon, eqArmor, eqRing, bestSurvivalWave
+        unlockedWeapons, equippedWeapon: currentWeaponKey, bestSurvivalWave
     }));
     updateUI();
 }
 
 function addAccountXP(amount) {
     accXP += amount;
+    // Геометрическая прогрессия для уровня аккаунта
     if (accXP >= accMaxXP) {
-        accLevel++; accXP -= accMaxXP; accMaxXP = Math.floor(accMaxXP * 1.5);
-        gold += 50; gems += 2;
-        spawnFloatingText(player.x, player.y - 50, `УРОВЕНЬ АККАУНТА ${accLevel}! (+50💰 +2💎)`, '#ffea00');
+        accLevel++; accXP -= accMaxXP; accMaxXP = Math.floor(accMaxXP * 1.6);
+        gold += 50 * accLevel; gems += 3;
+        spawnFloatingText(player.x, player.y - 50, `УРОВЕНЬ АККАУНТА ${accLevel}!`, '#ffea00');
     }
     saveData();
 }
@@ -98,18 +109,6 @@ function updateUI() {
     document.getElementById('accountLevelDisplay').innerText = accLevel;
     bestSurvivalWaveDisplay.innerText = bestSurvivalWave;
     
-    const btnW = document.getElementById('btnBuyWeapon');
-    if (eqWeapon) { document.getElementById('eqWeaponStatus').innerText = "Надето"; btnW.innerText = "КУПЛЕНО"; btnW.style.background = "#28a745"; btnW.disabled = true; } 
-    else { document.getElementById('eqWeaponStatus').innerText = "Не куплен"; btnW.innerText = "300 💰"; btnW.style.background = gold >= 300 ? "#ff8c00" : "#555"; btnW.disabled = gold < 300; }
-
-    const btnA = document.getElementById('btnBuyArmor');
-    if (eqArmor) { document.getElementById('eqArmorStatus').innerText = "Надето"; btnA.innerText = "КУПЛЕНО"; btnA.style.background = "#28a745"; btnA.disabled = true; } 
-    else { document.getElementById('eqArmorStatus').innerText = "Не куплен"; btnA.innerText = "400 💰"; btnA.style.background = gold >= 400 ? "#ff8c00" : "#555"; btnA.disabled = gold < 400; }
-
-    const btnR = document.getElementById('btnBuyRing');
-    if (eqRing) { document.getElementById('eqRingStatus').innerText = "Надето"; btnR.innerText = "КУПЛЕНО"; btnR.style.background = "#28a745"; btnR.disabled = true; } 
-    else { document.getElementById('eqRingStatus').innerText = "Не куплен"; btnR.innerText = "500 💰"; btnR.style.background = gold >= 500 ? "#ff8c00" : "#555"; btnR.disabled = gold < 500; }
-
     if (assassinUnlocked) {
         btnAssassin.style.background = "#9932CC"; btnAssassin.style.borderColor = "#fff"; btnAssassin.innerHTML = `УБИЙЦА (Открыт)<span>Быстрый, Пулемет, 3 Жизни</span>`;
     } else {
@@ -198,13 +197,15 @@ function startGame(heroClass, survival) {
     let baseHp = heroClass === 'tank' ? 10 : 3;
     let baseSpeed = heroClass === 'tank' ? 140 : 280;
 
-    let armorBonus = eqArmor ? 2 : 0;
-    let ringBonus = eqRing ? 30 : 0;
-
-    player.maxHp = baseHp + upgHealth + armorBonus; 
+    player.maxHp = baseHp + upgHealth; 
     player.hp = player.maxHp;
-    player.speed = baseSpeed + ringBonus;
-    player.attackRate = heroClass === 'tank' ? 1.5 : 4.0;
+    player.speed = baseSpeed;
+    
+    // Берем текущее выбранное оружие игрока
+    let currentGun = weaponsDatabase[currentWeaponKey];
+    player.attackRate = currentGun.fireRate;
+    player.weaponRange = currentGun.range;
+    player.weaponDamage = currentGun.damage;
     player.color = heroClass === 'tank' ? '#0088cc' : '#ff00ff';
 
     for(let i = 0; i < 15; i++) {
@@ -242,7 +243,7 @@ joystickZone.addEventListener('touchmove', (e) => {
 const endTouch = () => { input.isMoving = false; input.x = 0; input.y = 0; joystickBase.style.display = 'none'; };
 joystickZone.addEventListener('touchend', endTouch); joystickZone.addEventListener('touchcancel', endTouch);
 
-const player = { x: 0, y: 0, radius: 14, speed: 200, attackRate: 2.5, lastAttackTime: 0, hp: 5, maxHp: 5, invulnerableTimer: 0, level: 1, xp: 0, maxXP: 5, buffTimer: 0, color: '#0088cc', hasMultiShot: false, hasPiercing: false };
+const player = { x: 0, y: 0, radius: 14, speed: 200, attackRate: 2.5, lastAttackTime: 0, hp: 5, maxHp: 5, invulnerableTimer: 0, level: 1, xp: 0, maxXP: 5, buffTimer: 0, color: '#0088cc', hasMultiShot: false, hasPiercing: false, weaponRange: 400, weaponDamage: 1.0 };
 
 let enemies = []; let projectiles = []; let items = []; let bosses = []; let enemyProjectiles = []; let obstacles = [];
 let wave = 1; let enemiesInWave = 5; let spawnedEnemies = 0;
@@ -294,20 +295,17 @@ function handleAttack(now) {
     if ((now - player.lastAttackTime) / 1000 < 1 / currentRate) return;
 
     let nearestTarget = null, minDist = Infinity;
-    // Ограничиваем дальность прицела/стрельбы (например, только враги в радиусе 450 пикселей)
-    for (let enemy of enemies) { const dist = Math.hypot(enemy.x - player.x, enemy.y - player.y); if (dist < 450 && dist < minDist) { minDist = dist; nearestTarget = enemy; } }
-    for (let boss of bosses) { const dist = Math.hypot(boss.x - player.x, boss.y - player.y); if (dist < 500 && dist < minDist) { minDist = dist; nearestTarget = boss; } }
+    for (let enemy of enemies) { const dist = Math.hypot(enemy.x - player.x, enemy.y - player.y); if (dist < player.weaponRange && dist < minDist) { minDist = dist; nearestTarget = enemy; } }
+    for (let boss of bosses) { const dist = Math.hypot(boss.x - player.x, boss.y - player.y); if (dist < player.weaponRange + 50 && dist < minDist) { minDist = dist; nearestTarget = boss; } }
 
     if (nearestTarget) {
         const dx = nearestTarget.x - player.x, dy = nearestTarget.y - player.y, dist = Math.hypot(dx, dy);
-        let weaponBonus = eqWeapon ? 0.5 : 0;
-        let finalDamage = (1 + weaponBonus) * (1 + (upgDamage * 0.1));
+        let finalDamage = player.weaponDamage * (1 + (upgDamage * 0.1));
 
-        // Ограничиваем дальность полета пуль до 450 пикселей
-        projectiles.push({ x: player.x, y: player.y, vx: (dx / dist) * 450, vy: (dy / dist) * 450, radius: 4, damage: finalDamage, hitEnemies: [], maxDist: 450, traveled: 0 });
+        projectiles.push({ x: player.x, y: player.y, vx: (dx / dist) * player.weaponRange, vy: (dy / dist) * player.weaponRange, radius: 4, damage: finalDamage, hitEnemies: [], maxDist: player.weaponRange, traveled: 0 });
         if (player.hasMultiShot) {
             const angle = Math.atan2(dy, dx); const spread = 0.2;
-            projectiles.push({ x: player.x, y: player.y, vx: Math.cos(angle + spread) * 450, vy: Math.sin(angle + spread) * 450, radius: 4, damage: finalDamage, hitEnemies: [], maxDist: 450, traveled: 0 });
+            projectiles.push({ x: player.x, y: player.y, vx: Math.cos(angle + spread) * player.weaponRange, vy: Math.sin(angle + spread) * player.weaponRange, radius: 4, damage: finalDamage, hitEnemies: [], maxDist: player.weaponRange, traveled: 0 });
         }
         player.lastAttackTime = now;
     }
@@ -433,7 +431,6 @@ function update(dt, now) {
         p.x += p.vx * dt; p.y += p.vy * dt;
         p.traveled += moveStep;
 
-        // Если пуля пролетела максимальную дистанцию видимости — удаляем её
         if (p.traveled >= p.maxDist) { projectiles.splice(i, 1); continue; }
 
         let hitObstacle = obstacles.some(obs => Math.hypot(p.x - obs.x, p.y - obs.y) < p.radius + obs.radius);
@@ -534,7 +531,7 @@ function draw() {
         ctx.beginPath(); ctx.arc(b.x + 12, b.y - 5, 6, 0, Math.PI*2); ctx.fill();
     }
 
-    for (let p of projectiles) { ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fillStyle = '#ffea00'; ctx.fill(); }
+    for (let p of projectiles) { ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fillStyle = weaponsDatabase[currentWeaponKey].color; ctx.fill(); }
     for (let p of enemyProjectiles) { ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fillStyle = '#ff0000'; ctx.fill(); }
 
     if (player.invulnerableTimer <= 0 || Math.floor(player.invulnerableTimer * 10) % 2 === 0) {
