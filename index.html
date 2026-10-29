@@ -14,6 +14,16 @@
 </head>
 <body>
     <div id="app">
+        <!-- Верхняя панель ресурсов (Золото и Алмазы) -->
+        <div id="topBar" style="position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; z-index: 40; pointer-events: none;">
+            <div style="background: rgba(0,0,0,0.6); padding: 8px 20px; border-radius: 20px; color: #ffd700; font-weight: bold; border: 2px solid #ffd700; font-size: 16px;">
+                💰 <span id="goldDisplay">0</span>
+            </div>
+            <div style="background: rgba(0,0,0,0.6); padding: 8px 20px; border-radius: 20px; color: #00ffff; font-weight: bold; border: 2px solid #00ffff; font-size: 16px;">
+                💎 <span id="gemDisplay">0</span>
+            </div>
+        </div>
+
         <canvas id="gameCanvas"></canvas>
         <div id="joystickZone">
             <div id="joystickBase">
@@ -21,6 +31,7 @@
             </div>
         </div>
         
+        <!-- Главное меню -->
         <div id="mainMenu">
             <h1>ВЫБЕРИ ГЕРОЯ</h1>
             <button class="heroBtn" id="btnTank">
@@ -31,6 +42,27 @@
                 УБИЙЦА
                 <span>Быстрый, Пулемет, 3 Жизни</span>
             </button>
+            
+            <!-- Новая кнопка заданий -->
+            <button class="heroBtn" id="btnQuests" style="background: #ff8c00; margin-top: 30px; border-color: #ffb84d;">
+                📋 ЗАДАНИЯ И НАГРАДЫ
+            </button>
+        </div>
+
+        <!-- Экран заданий -->
+        <div id="questsScreen" style="display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: #1e1e24; flex-direction: column; justify-content: flex-start; align-items: center; z-index: 50; padding-top: 80px;">
+            <h2 style="color: #ffea00; margin-bottom: 20px; font-size: 28px;">ЗАДАНИЯ</h2>
+            
+            <!-- Пример одного задания -->
+            <div style="width: 85%; background: #2a2a35; padding: 20px; border-radius: 12px; margin-bottom: 15px; color: white; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;">
+                <div>
+                    <div style="font-weight: bold; font-size: 18px; margin-bottom: 5px;">Убить 10 врагов</div>
+                    <div style="font-size: 14px; color: #aaa;">Прогресс: <span id="questKillsProgress">0</span>/10</div>
+                </div>
+                <button id="btnClaimQuest1" style="padding: 10px 15px; background: #555; color: #fff; border: 2px solid #777; border-radius: 8px; font-weight: bold; font-size: 16px;">+50 💰</button>
+            </div>
+
+            <button class="heroBtn" id="btnBackToMenu" style="background: #dc3545; margin-top: auto; margin-bottom: 40px; width: 60%;">НАЗАД</button>
         </div>
 
         <div id="levelUpScreen">
@@ -38,8 +70,7 @@
             <div id="perksContainer"></div>
         </div>
 
-        <!-- Новый экран смерти -->
-        <div id="gameOverScreen" style="display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: rgba(0,0,0,0.9); flex-direction: column; justify-content: center; align-items: center; z-index: 50;">
+        <div id="gameOverScreen" style="display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: rgba(0,0,0,0.9); flex-direction: column; justify-content: center; align-items: center; z-index: 60;">
             <h2 style="color: #ff4a4a; margin-bottom: 30px; font-size: 40px;">ПОТРАЧЕНО</h2>
             <button class="perkBtn" id="btnRevive" style="background: #28a745;">ВОСКРЕСНУТЬ (1 раз)</button>
             <button class="perkBtn" id="btnGiveUp" style="background: #dc3545; margin-top: 20px;">В МЕНЮ</button>
