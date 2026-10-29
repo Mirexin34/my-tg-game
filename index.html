@@ -14,7 +14,6 @@
 </head>
 <body>
     <div id="app">
-        <!-- Верхняя панель ресурсов и Профиля -->
         <div id="topBar" style="position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; align-items: center; z-index: 40; pointer-events: none;">
             <div style="display: flex; gap: 10px;">
                 <div style="background: rgba(0,0,0,0.6); padding: 6px 15px; border-radius: 20px; color: #ffd700; font-weight: bold; border: 2px solid #ffd700; font-size: 14px;">
@@ -24,7 +23,6 @@
                     💎 <span id="gemDisplay">0</span>
                 </div>
             </div>
-            <!-- Индикатор уровня аккаунта -->
             <div style="background: rgba(0,0,0,0.7); padding: 6px 15px; border-radius: 20px; color: #ffea00; font-weight: bold; border: 2px solid #ffea00; font-size: 14px;">
                 ⭐ Укр. <span id="accountLevelDisplay">1</span>
             </div>
@@ -39,7 +37,18 @@
         
         <!-- Главное меню -->
         <div id="mainMenu" style="overflow-y: auto; padding: 20px 0;">
-            <h1>ВЫБЕРИ ГЕРОЯ</h1>
+            <h1>АРЕНА СМЕРТИ</h1>
+            
+            <!-- Выбор Мира / Главы -->
+            <div style="width: 85%; max-width: 350px; background: rgba(0,0,0,0.5); border: 2px solid #ffea00; border-radius: 12px; padding: 12px; margin-bottom: 20px; text-align: center; color: white;">
+                <div style="font-size: 14px; color: #aaa; margin-bottom: 5px;">ВЫБЕРИ ГЛАВУ</div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <button id="btnPrevChapter" style="background: #333; color: #fff; border: 1px solid #777; padding: 5px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">◄</button>
+                    <span id="chapterTitle" style="font-weight: bold; font-size: 16px; color: #ffea00;">Глава 1: Лес</span>
+                    <button id="btnNextChapter" style="background: #333; color: #fff; border: 1px solid #777; padding: 5px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">►</button>
+                </div>
+            </div>
+
             <button class="heroBtn" id="btnTank">
                 ТАНК (Открыт)
                 <span>Медленный, 10 Жизней</span>

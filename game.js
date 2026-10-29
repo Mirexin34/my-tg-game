@@ -39,8 +39,30 @@ const questsScreen = document.getElementById('questsScreen');
 const upgradesScreen = document.getElementById('upgradesScreen');
 const btnDailyReward = document.getElementById('btnDailyReward');
 const btnAssassin = document.getElementById('btnAssassin');
+const chapterTitle = document.getElementById('chapterTitle');
 
-// --- СИСТЕМА СОХРАНЕНИЯ И АККАУНТА ---
+// --- СИСТЕМА ГЛАВ И МИРОВ ---
+const chapters = [
+    { id: 0, name: "Глава 1: Лес", bg: "#1e1e24", grid: "rgba(255, 255, 255, 0.05)", border: "#ffea00", enemyMult: 1.0 },
+    { id: 1, name: "Глава 2: Пещера", bg: "#2a1515", grid: "rgba(255, 100, 100, 0.08)", border: "#ff4500", enemyMult: 1.3 },
+    { id: 2, name: "Глава 3: Замок", bg: "#1a152a", grid: "rgba(150, 100, 255, 0.08)", border: "#9932CC", enemyMult: 1.6 }
+];
+let currentChapterIndex = 0;
+
+document.getElementById('btnPrevChapter').addEventListener('click', () => {
+    currentChapterIndex = (currentChapterIndex - 1 + chapters.length) % chapters.length;
+    updateChapterUI();
+});
+document.getElementById('btnNextChapter').addEventListener('click', () => {
+    currentChapterIndex = (currentChapterIndex + 1) % chapters.length;
+    updateChapterUI();
+});
+
+function updateChapterUI() {
+    chapterTitle.innerText = chapters[currentChapterIndex].name;
+}
+
+// --- СОХРАНЕНИЕ ---
 let savedData = JSON.parse(localStorage.getItem('arenaDeathSave')) || { 
     gold: 0, gems: 0, totalKills: 0, quest1Claimed: false, maxWave: 1, quest2Claimed: false, bossesKilled: 0, quest3Claimed: false, upgHealth: 0, upgDamage: 0, lastDailyReward: 0, assassinUnlocked: false,
     accLevel: 1, accXP: 0, accMaxXP: 100
@@ -61,8 +83,7 @@ function addAccountXP(amount) {
         accLevel++;
         accXP -= accMaxXP;
         accMaxXP = Math.floor(accMaxXP * 1.5);
-        gold += 50; // Награда за уровень аккаунта
-        gems += 2;
+        gold += 50; gems += 2;
         spawnFloatingText(player.x, player.y - 50, `УРОВЕНЬ АККАУНТА ${accLevel}! (+50💰 +2💎)`, '#ffea00');
     }
     saveData();
@@ -110,6 +131,7 @@ function updateUI() {
     if (upgDamage >= 5) { btnUpgDamage.innerText = "МАКС."; btnUpgDamage.style.background = "#28a745"; btnUpgDamage.disabled = true; } else { btnUpgDamage.innerText = "150 💰"; btnUpgDamage.disabled = gold < 150; btnUpgDamage.style.background = gold >= 150 ? "#ff8c00" : "#555"; }
 }
 updateUI();
+updateChapterUI();
 
 btnDailyReward.addEventListener('click', () => { const now = Date.now(); if (now - lastDailyReward >= 86400000) { gold += 100; lastDailyReward = now; saveData(); } });
 document.getElementById('btnQuests').addEventListener('click', () => { mainMenu.style.display = 'none'; questsScreen.style.display = 'flex'; updateUI(); });
@@ -210,19 +232,21 @@ function spawnEnemy() {
     const angle = Math.random() * Math.PI * 2; const distance = Math.max(canvas.width, canvas.height) / 2 + 100;
     let spawnX = Math.max(20, Math.min(world.width - 20, player.x + Math.cos(angle) * distance)); let spawnY = Math.max(20, Math.min(world.height - 20, player.y + Math.sin(angle) * distance));
     
+    let mult = chapters[currentChapterIndex].enemyMult;
     let rand = Math.random();
-    let type = 'melee'; let speed = 120 + (wave * 5); let hp = 3 + (wave * 0.5);
+    let type = 'melee'; let speed = (120 + (wave * 5)) * mult; let hp = (3 + (wave * 0.5)) * mult;
 
-    if (wave > 1 && rand < 0.2) { type = 'ranged'; speed = 90; }
-    else if (wave > 2 && rand >= 0.2 && rand < 0.4) { type = 'jumper'; speed = 150; hp = hp * 0.8; }
-    else if (wave > 3 && rand >= 0.4 && rand < 0.5) { type = 'necromancer'; speed = 70; hp = hp * 1.5; }
+    if (wave > 1 && rand < 0.2) { type = 'ranged'; speed = 90 * mult; }
+    else if (wave > 2 && rand >= 0.2 && rand < 0.4) { type = 'jumper'; speed = 150 * mult; hp = hp * 0.8; }
+    else if (wave > 3 && rand >= 0.4 && rand < 0.5) { type = 'necromancer'; speed = 70 * mult; hp = hp * 1.5; }
 
     enemies.push({ x: spawnX, y: spawnY, radius: 15, hp: hp, speed: speed, type: type, lastAttackTime: 0, dashTimer: 0, spawnTimer: 0 });
 }
 
 function spawnBoss() { 
-    let bossMaxHp = 40 + (wave * 2);
-    bosses.push({ x: player.x + 400, y: player.y - 400, radius: 45, hp: bossMaxHp, maxHp: bossMaxHp, speed: 70, attackRate: 1, lastAttackTime: 0, specialTimer: 0 }); 
+    let mult = chapters[currentChapterIndex].enemyMult;
+    let bossMaxHp = (40 + (wave * 2)) * mult;
+    bosses.push({ x: player.x + 400, y: player.y - 400, radius: 45, hp: bossMaxHp, maxHp: bossMaxHp, speed: 70 * mult, attackRate: 1, lastAttackTime: 0, specialTimer: 0 }); 
 }
 
 function handleAttack(now) {
@@ -369,7 +393,7 @@ function update(dt, now) {
                 if (e.hp <= 0) { 
                     spawnParticles(e.x, e.y, e.type === 'ranged' ? '#ff8c00' : (e.type === 'jumper' ? '#00ced1' : '#ff4a4a')); 
                     generateDrop(e.x, e.y); enemies.splice(j, 1); totalKills++; 
-                    addAccountXP(10); // Даем опыт аккаунта за убийство моба
+                    addAccountXP(10);
                 }
                 if (hitSomething) break;
             }
@@ -382,7 +406,7 @@ function update(dt, now) {
                 if (!player.hasPiercing) { projectiles.splice(i, 1); hitSomething = true; } else { p.hitEnemies.push(b); }
                 if (b.hp <= 0) { 
                     spawnParticles(b.x, b.y, '#9932CC'); bosses.splice(j, 1); totalKills++; bossesKilled++; gems += 5; 
-                    addAccountXP(100); // Много опыта аккаунта за босса
+                    addAccountXP(100);
                     gameState = 'win'; endTouch(); 
                 }
                 if (hitSomething) break;
@@ -401,16 +425,17 @@ function generateDrop(x, y) {
 function draw() {
     if (gameState === 'menu') return; 
 
-    ctx.fillStyle = '#1e1e24'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    let currentChapter = chapters[currentChapterIndex];
+    ctx.fillStyle = currentChapter.bg; ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.save(); 
     let shakeX = (Math.random() - 0.5) * screenShake; let shakeY = (Math.random() - 0.5) * screenShake;
     ctx.translate(-camera.x + shakeX, -camera.y + shakeY);
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; ctx.lineWidth = 1; ctx.beginPath();
+    ctx.strokeStyle = currentChapter.grid; ctx.lineWidth = 1; ctx.beginPath();
     for (let i = 0; i <= world.width; i += 40) { ctx.moveTo(i, 0); ctx.lineTo(i, world.height); }
     for (let i = 0; i <= world.height; i += 40) { ctx.moveTo(0, i); ctx.lineTo(world.width, i); }
     ctx.stroke();
-    ctx.strokeStyle = '#ffea00'; ctx.lineWidth = 4; ctx.strokeRect(0, 0, world.width, world.height);
+    ctx.strokeStyle = currentChapter.border; ctx.lineWidth = 4; ctx.strokeRect(0, 0, world.width, world.height);
 
     for (let obs of obstacles) { ctx.beginPath(); ctx.arc(obs.x, obs.y, obs.radius, 0, Math.PI * 2); ctx.fillStyle = '#444'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#222'; ctx.stroke(); }
 
