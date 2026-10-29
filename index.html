@@ -41,6 +41,9 @@
                 <div style="background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; color: #00ffff; font-weight: bold; border: 1px solid #00ffff; font-size: 12px;">
                     💎 <span id="gemDisplay">0</span>
                 </div>
+                <div style="background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; color: #da70d6; font-weight: bold; border: 1px solid #da70d6; font-size: 12px;">
+                    ⚙️ <span id="partsDisplay">0</span>
+                </div>
             </div>
         </div>
 
@@ -66,65 +69,15 @@
             </div>
         </div>
 
-        <!-- МАГАЗИН (ГАЧА И РЕСУРСЫ) -->
+        <!-- МАГАЗИН -->
         <div id="shopScreen" class="screen" style="display: none; padding: 60px 15px; background: #1a1a24;">
-            <h2 style="color: #ffd700; text-align: center; margin-bottom: 15px;">МАГАЗИН</h2>
-            
-            <!-- Сундук S-Gear[cite: 21] -->
+            <h2 style="color: #ffd700; text-align: center; margin-bottom: 15px;">МАГАЗИН СУНДУКОВ</h2>
             <div style="background: linear-gradient(180deg, #d76d77, #3a1c71); border: 2px solid #ff8c00; border-radius: 14px; padding: 15px; margin-bottom: 15px; text-align: center;">
                 <div style="font-weight: bold; font-size: 18px; color: #fff; margin-bottom: 5px;">Сундук S-Gear</div>
-                <div style="font-size: 12px; color: #ffd700; margin-bottom: 15px;">Может дать S Epic снаряжение[cite: 21]</div>
                 <div style="display: flex; gap: 10px; justify-content: center;">
-                    <button onclick="openChest('sgear', 1)" style="flex:1; background: #28a745; color:#fff; border:none; padding:10px; border-radius:8px; font-weight:bold;">Нарисуй x1<br>💎 400[cite: 21]</button>
-                    <button onclick="openChest('sgear', 10)" style="flex:1; background: #28a745; color:#fff; border:none; padding:10px; border-radius:8px; font-weight:bold;">Нарисуй x10<br>💎 4000[cite: 21]</button>
+                    <button onclick="openChest('sgear', 1)" style="flex:1; background: #28a745; color:#fff; border:none; padding:10px; border-radius:8px; font-weight:bold;">💎 400</button>
+                    <button onclick="openChest('sgear', 10)" style="flex:1; background: #28a745; color:#fff; border:none; padding:10px; border-radius:8px; font-weight:bold;">💎 4000</button>
                 </div>
-            </div>
-
-            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                <!-- Серебряный сундук[cite: 21] -->
-                <div style="flex: 1; background: #2a2a35; border: 2px solid #aaa; border-radius: 14px; padding: 10px; text-align: center;">
-                    <div style="font-weight: bold; font-size: 14px; color: #aaa; margin-bottom: 5px;">Серебряный сундук[cite: 21]</div>
-                    <div style="font-size: 10px; color: #777; margin-bottom: 10px; height: 30px;">Включает обычное снаряжение[cite: 21]</div>
-                    <button onclick="openChest('silver', 1)" style="width:100%; background: #28a745; color:#fff; border:none; padding:8px; border-radius:8px; font-weight:bold;">Нарисуй x1<br>💎 80[cite: 22]</button>
-                </div>
-                <!-- Золотой сундук[cite: 21] -->
-                <div style="flex: 1; background: #2a2a35; border: 2px solid #9932CC; border-radius: 14px; padding: 10px; text-align: center;">
-                    <div style="font-weight: bold; font-size: 14px; color: #da70d6; margin-bottom: 5px;">Золотой сундук[cite: 21]</div>
-                    <div style="font-size: 10px; color: #777; margin-bottom: 10px; height: 30px;">Включает редкое или эпическое[cite: 21]</div>
-                    <button onclick="openChest('gold', 1)" style="width:100%; background: #28a745; color:#fff; border:none; padding:8px; border-radius:8px; font-weight:bold;">Нарисуй x1<br>💎 300[cite: 21]</button>
-                </div>
-            </div>
-
-            <h3 style="color: #00ffff; text-align: center; margin-top: 10px; margin-bottom: 10px;">РЕСУРСЫ[cite: 27]</h3>
-            
-            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                <div style="flex: 1; background: #2a2a35; border: 1px solid #ffd700; border-radius: 10px; padding: 10px; text-align: center;">
-                    <div style="font-size: 24px; margin-bottom: 5px;">💰</div>
-                    <div style="color: #fff; font-weight: bold; margin-bottom: 5px;">4000[cite: 27]</div>
-                    <button onclick="buyResource('gold', 4000, 20)" style="width:100%; background: #00bcd4; color:#fff; border:none; padding:5px; border-radius:5px; font-weight:bold;">💎 20[cite: 28]</button>
-                </div>
-                <div style="flex: 1; background: #2a2a35; border: 1px solid #ffd700; border-radius: 10px; padding: 10px; text-align: center;">
-                    <div style="font-size: 24px; margin-bottom: 5px;">💰💰</div>
-                    <div style="color: #fff; font-weight: bold; margin-bottom: 5px;">40000[cite: 27]</div>
-                    <button onclick="buyResource('gold', 40000, 200)" style="width:100%; background: #00bcd4; color:#fff; border:none; padding:5px; border-radius:5px; font-weight:bold;">💎 200[cite: 28]</button>
-                </div>
-            </div>
-
-            <div style="display: flex; gap: 10px;">
-                <div style="flex: 1; background: #2a2a35; border: 1px solid #00ff00; border-radius: 10px; padding: 10px; text-align: center;">
-                    <div style="font-size: 24px; margin-bottom: 5px;">⚡</div>
-                    <div style="color: #fff; font-weight: bold; margin-bottom: 5px;">10[cite: 28]</div>
-                    <button onclick="buyResource('energy', 10, 50)" style="width:100%; background: #00bcd4; color:#fff; border:none; padding:5px; border-radius:5px; font-weight:bold;">💎 50[cite: 28]</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Модальное окно результата гачи -->
-        <div id="gachaResult" class="modal-overlay">
-            <div class="modal-content" style="border-color: #00ff00;">
-                <h3 style="color:#00ff00; margin-top:0;">НАГРАДА ПОЛУЧЕНА!</h3>
-                <div id="gachaItemsList" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:20px;"></div>
-                <button onclick="document.getElementById('gachaResult').style.display='none'" style="background:#dc3545; color:#fff; border:none; padding:10px 30px; border-radius:10px; font-weight:bold; width:100%;">ЗАКРЫТЬ</button>
             </div>
         </div>
 
@@ -154,11 +107,58 @@
             </div>
         </div>
 
+        <!-- ГОРОД (НОВОЕ: РЫНОК, ПВП, БАЗА) -->
+        <div id="cityScreen" class="screen" style="display: none; padding: 60px 15px; background: #1a1a24;">
+            <h2 style="color: #00ffff; text-align: center; margin-bottom: 20px;">ГОРОД И СОЦИУМ</h2>
+            
+            <!-- РЫНОК -->
+            <div style="background: #2a2a35; border: 2px solid #ffd700; border-radius: 15px; padding: 15px; margin-bottom: 15px; text-align: center;">
+                <h3 style="color: #ffd700; margin: 0 0 5px 0;">🏪 Внутренний Рынок</h3>
+                <p style="color: #aaa; font-size: 12px; margin: 0 0 15px 0;">Продавайте излишки ресурсов торговцу.</p>
+                <button onclick="sellPartsOnMarket()" style="width: 100%; background: #28a745; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 16px;">
+                    Продать 10 ⚙️ за 1000 💰
+                </button>
+            </div>
+
+            <!-- ПВП АРЕНА -->
+            <div style="background: #2a2a35; border: 2px solid #ff4a4a; border-radius: 15px; padding: 15px; margin-bottom: 15px; text-align: center;">
+                <h3 style="color: #ff4a4a; margin: 0 0 5px 0;">⚔️ ПвП Арена</h3>
+                <p style="color: #aaa; font-size: 12px; margin: 0 0 15px 0;">Сражайтесь с фантомами других игроков (Авто-бой по БМ).</p>
+                <button onclick="startPvP()" style="width: 100%; background: #dc3545; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 16px;">
+                    Искать противника (10 ⚡)
+                </button>
+            </div>
+
+            <!-- ПРОКАЧКА БАЗЫ / ГИЛЬДИИ -->
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 1; background: #2a2a35; border: 1px solid #00bcd4; border-radius: 15px; padding: 15px; text-align: center; opacity: 0.7;">
+                    <div style="font-size: 24px; margin-bottom: 5px;">🏗️</div>
+                    <div style="color: #fff; font-weight: bold; font-size: 14px;">Моя База</div>
+                    <div style="color: #aaa; font-size: 10px; margin-top: 5px;">Скоро...</div>
+                </div>
+                <div style="flex: 1; background: #2a2a35; border: 1px solid #9932CC; border-radius: 15px; padding: 15px; text-align: center; opacity: 0.7;">
+                    <div style="font-size: 24px; margin-bottom: 5px;">🛡️</div>
+                    <div style="color: #fff; font-weight: bold; font-size: 14px;">Гильдии</div>
+                    <div style="color: #aaa; font-size: 10px; margin-top: 5px;">Скоро...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модалки (Гача) -->
+        <div id="gachaResult" class="modal-overlay">
+            <div class="modal-content" style="border-color: #00ff00;">
+                <h3 style="color:#00ff00; margin-top:0;">НАГРАДА ПОЛУЧЕНА!</h3>
+                <div id="gachaItemsList" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:20px;"></div>
+                <button onclick="document.getElementById('gachaResult').style.display='none'" style="background:#dc3545; color:#fff; border:none; padding:10px 30px; border-radius:10px; font-weight:bold; width:100%;">ЗАКРЫТЬ</button>
+            </div>
+        </div>
+
         <!-- НИЖНЯЯ ПАНЕЛЬ НАВИГАЦИИ -->
         <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 70px; background: #161622; border-top: 1px solid #333; display: flex; z-index: 50;">
             <button class="navBtn" onclick="switchTab('shopScreen', this)"><span style="font-size:24px; margin-bottom:4px;">🛒</span> Магазин</button>
             <button class="navBtn" onclick="switchTab('equipmentScreen', this)"><span style="font-size:24px; margin-bottom:4px;">🎒</span> Экипировка</button>
             <button class="navBtn active" onclick="switchTab('lobbyScreen', this)" style="color:#ffd700;"><span style="font-size:24px; margin-bottom:4px;">⚔️</span> Лобби</button>
+            <button class="navBtn" onclick="switchTab('cityScreen', this)"><span style="font-size:24px; margin-bottom:4px;">🏙️</span> Город</button>
         </div>
     </div>
     <script src="game.js"></script>
