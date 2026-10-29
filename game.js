@@ -1,13 +1,17 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
+try { tg.disableVerticalSwipes(); } catch(e) {} // Говорим Телеграму не закрывать окно свайпом
 tg.ready();
+
+// Жесткая блокировка скролла и системных жестов iOS (чтобы экран не "тянулся" вниз)
+document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 const world = { width: 2000, height: 2000 };
 const camera = { x: 0, y: 0 };
-let gameState = 'menu'; // ИГРА НАЧИНАЕТСЯ С МЕНЮ
+let gameState = 'menu'; 
 
 function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 window.addEventListener('resize', resize);
@@ -33,27 +37,19 @@ function startGame(heroClass) {
     mainMenu.style.display = 'none';
     gameState = 'playing';
     
-    // Сбрасываем мир
     enemies = []; projectiles = []; items = []; bosses = []; enemyProjectiles = [];
     wave = 1; enemiesInWave = 5; spawnedEnemies = 0;
     
-    // Настраиваем героя
     player.level = 1; player.xp = 0; player.maxXP = 5; player.buffTimer = 0;
     player.x = world.width / 2; player.y = world.height / 2;
     player.invulnerableTimer = 0;
 
     if (heroClass === 'tank') {
-        player.maxHp = 10;
-        player.hp = 10;
-        player.speed = 140; // Медленный
-        player.attackRate = 1.5; // Редкая стрельба
-        player.color = '#0088cc'; // Синий танк
+        player.maxHp = 10; player.hp = 10;
+        player.speed = 140; player.attackRate = 1.5; player.color = '#0088cc'; 
     } else if (heroClass === 'assassin') {
-        player.maxHp = 3;
-        player.hp = 3;
-        player.speed = 280; // Очень быстрый
-        player.attackRate = 4.0; // Пулемет
-        player.color = '#ff00ff'; // Розовый убийца
+        player.maxHp = 3; player.hp = 3;
+        player.speed = 280; player.attackRate = 4.0; player.color = '#ff00ff'; 
     }
 }
 
@@ -239,7 +235,7 @@ function generateDrop(x, y) {
 }
 
 function draw() {
-    if (gameState === 'menu') return; // Не рисуем игру под меню
+    if (gameState === 'menu') return; 
 
     ctx.fillStyle = '#1e1e24'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.save(); ctx.translate(-camera.x, -camera.y);
