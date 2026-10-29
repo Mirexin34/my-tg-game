@@ -15,27 +15,16 @@ const world = { width: 2000, height: 2000 };
 const camera = { x: 0, y: 0 };
 let gameState = 'menu'; 
 
-// --- ЭФФЕКТЫ ---
-let screenShake = 0; // Сила тряски экрана
-let particles = []; // Массив частиц взрыва
+let screenShake = 0; 
+let particles = []; 
 
-function addScreenShake(amount) {
-    screenShake = amount;
-}
+function addScreenShake(amount) { screenShake = amount; }
 
 function spawnParticles(x, y, color) {
     for (let i = 0; i < 15; i++) {
         const angle = Math.random() * Math.PI * 2;
         const speed = Math.random() * 200 + 50;
-        particles.push({
-            x: x,
-            y: y,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed,
-            life: 1.0,
-            color: color,
-            size: Math.random() * 4 + 2
-        });
+        particles.push({ x: x, y: y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, life: 1.0, color: color, size: Math.random() * 4 + 2 });
     }
 }
 
@@ -54,14 +43,18 @@ const btnGiveUp = document.getElementById('btnGiveUp');
 const questsScreen = document.getElementById('questsScreen');
 const upgradesScreen = document.getElementById('upgradesScreen');
 const btnDailyReward = document.getElementById('btnDailyReward');
+const btnAssassin = document.getElementById('btnAssassin');
+const assassinPriceDiv = document.getElementById('assassinPrice');
 
+// --- СИСТЕМА СОХРАНЕНИЯ ---
 let savedData = JSON.parse(localStorage.getItem('arenaDeathSave')) || { 
     gold: 0, gems: 0, 
     totalKills: 0, quest1Claimed: false,
     maxWave: 1, quest2Claimed: false,
     bossesKilled: 0, quest3Claimed: false,
     upgHealth: 0, upgDamage: 0,
-    lastDailyReward: 0 
+    lastDailyReward: 0,
+    assassinUnlocked: false // Сохранение разблокировки героя
 };
 let gold = savedData.gold || 0;
 let gems = savedData.gems || 0;
@@ -74,12 +67,13 @@ let quest3Claimed = savedData.quest3Claimed || false;
 let upgHealth = savedData.upgHealth || 0;
 let upgDamage = savedData.upgDamage || 0;
 let lastDailyReward = savedData.lastDailyReward || 0;
+let assassinUnlocked = savedData.assassinUnlocked || false;
 
 function saveData() {
     localStorage.setItem('arenaDeathSave', JSON.stringify({ 
         gold, gems, totalKills, quest1Claimed, 
         maxWave, quest2Claimed, bossesKilled, quest3Claimed,
-        upgHealth, upgDamage, lastDailyReward
+        upgHealth, upgDamage, lastDailyReward, assassinUnlocked
     }));
     updateUI();
 }
@@ -88,15 +82,28 @@ function updateUI() {
     document.getElementById('goldDisplay').innerText = gold;
     document.getElementById('gemDisplay').innerText = gems;
     
+    // Логика кнопки Убийцы
+    if (assassinUnlocked) {
+        btnAssassin.style.background = "#9932CC";
+        btnAssassin.style.borderColor = "#fff";
+        btnAssassin.innerHTML = `УБИЙЦА (Открыт)<span>Быстрый, Пулемет, 3 Жизни</span>`;
+    } else {
+        if (gems >= 15) {
+            btnAssassin.style.background = "#28a745"; // Зеленая, если хватает алмазов
+            btnAssassin.style.borderColor = "#2eb84d";
+            btnAssassin.innerHTML = `🔒 КУПИТЬ УБИЙЦУ<span>Быстрый, Пулемет, 3 Жизни</span><div style="margin-top: 8px; color: #fff; font-weight: bold;">Нажми, чтобы купить за 15 💎</div>`;
+        } else {
+            btnAssassin.style.background = "#555"; // Серая, если не хватает
+            btnAssassin.style.borderColor = "#777";
+            btnAssassin.innerHTML = `🔒 УБИЙЦА<span>Быстрый, Пулемет, 3 Жизни</span><div style="margin-top: 8px; color: #00ffff; font-weight: bold;">Цена: 15 💎</div>`;
+        }
+    }
+    
     const now = Date.now();
     if (now - lastDailyReward >= 86400000) {
-        btnDailyReward.innerText = "🎁 ЗАБРАТЬ (+100 💰)";
-        btnDailyReward.style.background = "#17a2b8";
-        btnDailyReward.disabled = false;
+        btnDailyReward.innerText = "🎁 ЗАБРАТЬ (+100 💰)"; btnDailyReward.style.background = "#17a2b8"; btnDailyReward.disabled = false;
     } else {
-        btnDailyReward.innerText = "🎁 ПРИХОДИ ЗАВТРА";
-        btnDailyReward.style.background = "#555";
-        btnDailyReward.disabled = true;
+        btnDailyReward.innerText = "🎁 ПРИХОДИ ЗАВТРА"; btnDailyReward.style.background = "#555"; btnDailyReward.disabled = true;
     }
 
     document.getElementById('questKillsProgress').innerText = Math.min(totalKills, 10);
@@ -131,11 +138,7 @@ updateUI();
 
 btnDailyReward.addEventListener('click', () => {
     const now = Date.now();
-    if (now - lastDailyReward >= 86400000) {
-        gold += 100;
-        lastDailyReward = now; 
-        saveData();
-    }
+    if (now - lastDailyReward >= 86400000) { gold += 100; lastDailyReward = now; saveData(); }
 });
 
 document.getElementById('btnQuests').addEventListener('click', () => { mainMenu.style.display = 'none'; questsScreen.style.display = 'flex'; updateUI(); });
@@ -150,10 +153,20 @@ document.getElementById('btnClaimQuest3').addEventListener('click', () => { if (
 document.getElementById('btnBuyHealth').addEventListener('click', () => { if (gold >= 100 && upgHealth < 5) { gold -= 100; upgHealth++; saveData(); } });
 document.getElementById('btnBuyDamage').addEventListener('click', () => { if (gold >= 150 && upgDamage < 5) { gold -= 150; upgDamage++; saveData(); } });
 
-let hasRevived = false;
-
 document.getElementById('btnTank').addEventListener('click', () => startGame('tank'));
-document.getElementById('btnAssassin').addEventListener('click', () => startGame('assassin'));
+
+// Покупка и выбор Убийцы
+btnAssassin.addEventListener('click', () => {
+    if (assassinUnlocked) {
+        startGame('assassin');
+    } else if (gems >= 15) {
+        gems -= 15;
+        assassinUnlocked = true;
+        saveData();
+    }
+});
+
+let hasRevived = false;
 
 btnRevive.addEventListener('click', () => {
     if (gold >= 50 && !hasRevived) {
@@ -263,19 +276,12 @@ function spawnEnemy() {
     let spawnY = Math.max(20, Math.min(world.height - 20, player.y + Math.sin(angle) * distance));
     
     let isRanged = Math.random() < 0.3; 
-    enemies.push({ 
-        x: spawnX, y: spawnY, radius: 15, hp: 3 + (wave * 0.5), speed: isRanged ? 90 : 120 + (wave * 5), 
-        type: isRanged ? 'ranged' : 'melee', lastAttackTime: 0
-    });
+    enemies.push({ x: spawnX, y: spawnY, radius: 15, hp: 3 + (wave * 0.5), speed: isRanged ? 90 : 120 + (wave * 5), type: isRanged ? 'ranged' : 'melee', lastAttackTime: 0 });
 }
 
 function spawnBoss() { 
     let bossMaxHp = 40 + (wave * 2);
-    bosses.push({ 
-        x: player.x + 400, y: player.y - 400, radius: 40, 
-        hp: bossMaxHp, maxHp: bossMaxHp, 
-        speed: 70, attackRate: 1, lastAttackTime: 0, specialTimer: 0
-    }); 
+    bosses.push({ x: player.x + 400, y: player.y - 400, radius: 40, hp: bossMaxHp, maxHp: bossMaxHp, speed: 70, attackRate: 1, lastAttackTime: 0, specialTimer: 0 }); 
 }
 
 function handleAttack(now) {
@@ -313,22 +319,14 @@ function update(dt, now) {
 
     if (player.invulnerableTimer > 0) player.invulnerableTimer -= dt;
     if (player.buffTimer > 0) player.buffTimer -= dt; 
-    if (screenShake > 0) screenShake -= dt * 30; // Затухание тряски экрана
+    if (screenShake > 0) screenShake -= dt * 30; 
     if (screenShake < 0) screenShake = 0;
 
-    for (let i = floatingTexts.length - 1; i >= 0; i--) {
-        floatingTexts[i].life -= dt; floatingTexts[i].y -= 30 * dt;
-        if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1);
-    }
+    for (let i = floatingTexts.length - 1; i >= 0; i--) { floatingTexts[i].life -= dt; floatingTexts[i].y -= 30 * dt; if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1); }
 
-    // Обновление частиц
     for (let i = particles.length - 1; i >= 0; i--) {
-        particles[i].x += particles[i].vx * dt;
-        particles[i].y += particles[i].vy * dt;
-        particles[i].life -= dt * 2.0; // Быстро исчезают
-        if (particles[i].life <= 0) {
-            particles.splice(i, 1);
-        }
+        particles[i].x += particles[i].vx * dt; particles[i].y += particles[i].vy * dt; particles[i].life -= dt * 2.0; 
+        if (particles[i].life <= 0) particles.splice(i, 1);
     }
 
     if (bosses.length === 0) { 
@@ -344,8 +342,7 @@ function update(dt, now) {
 
     if (input.isMoving && (input.x !== 0 || input.y !== 0)) {
         player.x += input.x * player.speed * dt; player.y += input.y * player.speed * dt;
-        player.x = Math.max(player.radius, Math.min(world.width - player.radius, player.x));
-        player.y = Math.max(player.radius, Math.min(world.height - player.radius, player.y));
+        player.x = Math.max(player.radius, Math.min(world.width - player.radius, player.x)); player.y = Math.max(player.radius, Math.min(world.height - player.radius, player.y));
     } else handleAttack(now);
 
     resolveObstacleCollision(player);
@@ -361,8 +358,7 @@ function update(dt, now) {
     }
 
     for (let i = enemies.length - 1; i >= 0; i--) {
-        let e = enemies[i];
-        const dx = player.x - e.x, dy = player.y - e.y, dist = Math.hypot(dx, dy);
+        let e = enemies[i]; const dx = player.x - e.x, dy = player.y - e.y, dist = Math.hypot(dx, dy);
         
         if (e.type === 'melee') {
             if (dist > 0) { e.x += (dx / dist) * e.speed * dt; e.y += (dy / dist) * e.speed * dt; }
@@ -370,8 +366,7 @@ function update(dt, now) {
             if (dist > 350) { e.x += (dx / dist) * e.speed * dt; e.y += (dy / dist) * e.speed * dt; } 
             else {
                 if ((now - e.lastAttackTime) / 1000 >= 2.5) { 
-                    enemyProjectiles.push({ x: e.x, y: e.y, vx: (dx / dist) * 250, vy: (dy / dist) * 250, radius: 6, damage: 1 });
-                    e.lastAttackTime = now;
+                    enemyProjectiles.push({ x: e.x, y: e.y, vx: (dx / dist) * 250, vy: (dy / dist) * 250, radius: 6, damage: 1 }); e.lastAttackTime = now;
                 }
             }
         }
@@ -380,36 +375,30 @@ function update(dt, now) {
 
         if (dist < player.radius + e.radius && player.invulnerableTimer <= 0) {
             player.hp -= 1; player.invulnerableTimer = 1;
-            spawnFloatingText(player.x, player.y - 20, "-1", "#ff0000");
-            addScreenShake(10); // Трясем экран
+            spawnFloatingText(player.x, player.y - 20, "-1", "#ff0000"); addScreenShake(10);
             if (player.hp <= 0) { triggerGameOver(); }
         }
     }
 
     for (let i = bosses.length - 1; i >= 0; i--) {
-        let b = bosses[i];
-        const dx = player.x - b.x, dy = player.y - b.y, dist = Math.hypot(dx, dy);
+        let b = bosses[i]; const dx = player.x - b.x, dy = player.y - b.y, dist = Math.hypot(dx, dy);
         if (dist > b.radius + player.radius) { b.x += (dx / dist) * b.speed * dt; b.y += (dy / dist) * b.speed * dt; }
         resolveObstacleCollision(b);
         
         if (dist < player.radius + b.radius && player.invulnerableTimer <= 0) { 
             player.hp -= 2; player.invulnerableTimer = 1; 
-            spawnFloatingText(player.x, player.y - 20, "-2", "#ff0000");
-            addScreenShake(15);
+            spawnFloatingText(player.x, player.y - 20, "-2", "#ff0000"); addScreenShake(15);
             if (player.hp <= 0) { triggerGameOver(); }
         }
         
         if ((now - b.lastAttackTime) / 1000 >= 1 / b.attackRate) { 
-            enemyProjectiles.push({ x: b.x, y: b.y, vx: (dx / dist) * 300, vy: (dy / dist) * 300, radius: 8, damage: 1 }); 
-            b.lastAttackTime = now; 
+            enemyProjectiles.push({ x: b.x, y: b.y, vx: (dx / dist) * 300, vy: (dy / dist) * 300, radius: 8, damage: 1 }); b.lastAttackTime = now; 
         }
 
         b.specialTimer += dt;
         if (b.specialTimer >= 5) {
             b.specialTimer = 0;
-            for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
-                enemyProjectiles.push({ x: b.x, y: b.y, vx: Math.cos(a) * 200, vy: Math.sin(a) * 200, radius: 8, damage: 1 });
-            }
+            for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) { enemyProjectiles.push({ x: b.x, y: b.y, vx: Math.cos(a) * 200, vy: Math.sin(a) * 200, radius: 8, damage: 1 }); }
         }
     }
 
@@ -420,9 +409,7 @@ function update(dt, now) {
         
         if (Math.hypot(p.x - player.x, p.y - player.y) < p.radius + player.radius && player.invulnerableTimer <= 0) {
             player.hp -= p.damage; player.invulnerableTimer = 1; 
-            spawnFloatingText(player.x, player.y - 20, `-${p.damage}`, "#ff0000");
-            addScreenShake(10);
-            enemyProjectiles.splice(i, 1);
+            spawnFloatingText(player.x, player.y - 20, `-${p.damage}`, "#ff0000"); addScreenShake(10); enemyProjectiles.splice(i, 1);
             if (player.hp <= 0) { triggerGameOver(); }
         }
     }
@@ -439,11 +426,9 @@ function update(dt, now) {
         for (let j = enemies.length - 1; j >= 0; j--) {
             let e = enemies[j];
             if (Math.hypot(p.x - e.x, p.y - e.y) < p.radius + e.radius) {
-                e.hp -= p.damage; 
-                spawnFloatingText(e.x, e.y - 20, p.damage.toFixed(1), "#ffffff");
-                projectiles.splice(i, 1); hit = true;
+                e.hp -= p.damage; spawnFloatingText(e.x, e.y - 20, p.damage.toFixed(1), "#ffffff"); projectiles.splice(i, 1); hit = true;
                 if (e.hp <= 0) { 
-                    spawnParticles(e.x, e.y, e.type === 'ranged' ? '#ff8c00' : '#ff4a4a'); // Эффект взрыва
+                    spawnParticles(e.x, e.y, e.type === 'ranged' ? '#ff8c00' : '#ff4a4a'); 
                     generateDrop(e.x, e.y); enemies.splice(j, 1); totalKills++; saveData(); 
                 }
                 break;
@@ -453,12 +438,12 @@ function update(dt, now) {
         for (let j = bosses.length - 1; j >= 0; j--) {
             let b = bosses[j];
             if (Math.hypot(p.x - b.x, p.y - b.y) < p.radius + b.radius) {
-                b.hp -= p.damage; 
-                spawnFloatingText(b.x, b.y - 40, p.damage.toFixed(1), "#ffffff");
-                projectiles.splice(i, 1);
+                b.hp -= p.damage; spawnFloatingText(b.x, b.y - 40, p.damage.toFixed(1), "#ffffff"); projectiles.splice(i, 1);
                 if (b.hp <= 0) { 
                     spawnParticles(b.x, b.y, '#9932CC');
-                    bosses.splice(j, 1); totalKills++; bossesKilled++; saveData(); gameState = 'win'; endTouch(); 
+                    bosses.splice(j, 1); totalKills++; bossesKilled++; 
+                    gems += 5; // Выдаем 5 алмазов за босса!
+                    saveData(); gameState = 'win'; endTouch(); 
                 }
                 break;
             }
@@ -479,9 +464,7 @@ function draw() {
     ctx.fillStyle = '#1e1e24'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.save(); 
     
-    // Применяем тряску экрана
-    let shakeX = (Math.random() - 0.5) * screenShake;
-    let shakeY = (Math.random() - 0.5) * screenShake;
+    let shakeX = (Math.random() - 0.5) * screenShake; let shakeY = (Math.random() - 0.5) * screenShake;
     ctx.translate(-camera.x + shakeX, -camera.y + shakeY);
 
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; ctx.lineWidth = 1; ctx.beginPath();
@@ -490,10 +473,7 @@ function draw() {
     ctx.stroke();
     ctx.strokeStyle = '#ffea00'; ctx.lineWidth = 4; ctx.strokeRect(0, 0, world.width, world.height);
 
-    for (let obs of obstacles) {
-        ctx.beginPath(); ctx.arc(obs.x, obs.y, obs.radius, 0, Math.PI * 2);
-        ctx.fillStyle = '#444'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#222'; ctx.stroke();
-    }
+    for (let obs of obstacles) { ctx.beginPath(); ctx.arc(obs.x, obs.y, obs.radius, 0, Math.PI * 2); ctx.fillStyle = '#444'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#222'; ctx.stroke(); }
 
     for (let item of items) { 
         ctx.beginPath(); ctx.arc(item.x, item.y, item.radius, 0, Math.PI * 2); 
@@ -501,15 +481,7 @@ function draw() {
         ctx.fill(); 
     }
 
-    // Отрисовка частиц взрыва
-    for (let p of particles) {
-        ctx.globalAlpha = p.life;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = p.color;
-        ctx.fill();
-        ctx.globalAlpha = 1.0;
-    }
+    for (let p of particles) { ctx.globalAlpha = p.life; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); ctx.globalAlpha = 1.0; }
 
     for (let e of enemies) {
         ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); ctx.fillStyle = e.type === 'ranged' ? '#ff8c00' : '#ff4a4a'; ctx.fill();
@@ -527,14 +499,7 @@ function draw() {
         ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
     }
 
-    for (let ft of floatingTexts) {
-        ctx.globalAlpha = ft.life; 
-        ctx.fillStyle = ft.color;
-        ctx.font = 'bold 20px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(ft.text, ft.x, ft.y);
-        ctx.globalAlpha = 1.0;
-    }
+    for (let ft of floatingTexts) { ctx.globalAlpha = ft.life; ctx.fillStyle = ft.color; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(ft.text, ft.x, ft.y); ctx.globalAlpha = 1.0; }
 
     ctx.restore();
 
@@ -549,16 +514,13 @@ function draw() {
 
     ctx.fillStyle = '#fff'; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'right';
     if (bosses.length > 0) { 
-        let b = bosses[0];
-        let bossBarWidth = canvas.width * 0.6; 
-        let bossBarX = (canvas.width - bossBarWidth) / 2;
+        let b = bosses[0]; let bossBarWidth = canvas.width * 0.6; let bossBarX = (canvas.width - bossBarWidth) / 2;
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; ctx.fillRect(bossBarX, 70, bossBarWidth, 25);
         ctx.fillStyle = '#ff0000'; ctx.fillRect(bossBarX, 70, bossBarWidth * (b.hp / b.maxHp), 25);
         ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.strokeRect(bossBarX, 70, bossBarWidth, 25);
         
         ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.font = 'bold 16px sans-serif';
         ctx.fillText(`БОСС: ${Math.ceil(b.hp)} / ${Math.ceil(b.maxHp)}`, canvas.width / 2, 88);
-        
         ctx.textAlign = 'right'; ctx.fillStyle = '#9932CC'; ctx.fillText(`ВОЛНА БОССА`, canvas.width - 20, 40); 
     }
     else { ctx.fillText(`Волна: ${wave}`, canvas.width - 20, 40); ctx.font = '14px sans-serif'; ctx.fillText(`Осталось врагов: ${enemiesInWave - spawnedEnemies + enemies.length}`, canvas.width - 20, 60); }
