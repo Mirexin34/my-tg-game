@@ -29,60 +29,86 @@ const gameOverScreen = document.getElementById('gameOverScreen');
 const btnRevive = document.getElementById('btnRevive');
 const btnGiveUp = document.getElementById('btnGiveUp');
 const questsScreen = document.getElementById('questsScreen');
+const upgradesScreen = document.getElementById('upgradesScreen');
 
 // --- СИСТЕМА СОХРАНЕНИЯ И ЭКОНОМИКА ---
-let savedData = JSON.parse(localStorage.getItem('arenaDeathSave')) || { gold: 0, gems: 0, totalKills: 0, quest1Claimed: false };
+let savedData = JSON.parse(localStorage.getItem('arenaDeathSave')) || { 
+    gold: 0, gems: 0, 
+    totalKills: 0, quest1Claimed: false,
+    maxWave: 1, quest2Claimed: false,
+    bossesKilled: 0, quest3Claimed: false,
+    upgHealth: 0, upgDamage: 0
+};
 let gold = savedData.gold || 0;
 let gems = savedData.gems || 0;
 let totalKills = savedData.totalKills || 0;
 let quest1Claimed = savedData.quest1Claimed || false;
+let maxWave = savedData.maxWave || 1;
+let quest2Claimed = savedData.quest2Claimed || false;
+let bossesKilled = savedData.bossesKilled || 0;
+let quest3Claimed = savedData.quest3Claimed || false;
+let upgHealth = savedData.upgHealth || 0;
+let upgDamage = savedData.upgDamage || 0;
 
 function saveData() {
-    localStorage.setItem('arenaDeathSave', JSON.stringify({ gold, gems, totalKills, quest1Claimed }));
+    localStorage.setItem('arenaDeathSave', JSON.stringify({ 
+        gold, gems, totalKills, quest1Claimed, 
+        maxWave, quest2Claimed, bossesKilled, quest3Claimed,
+        upgHealth, upgDamage
+    }));
     updateUI();
 }
 
 function updateUI() {
     document.getElementById('goldDisplay').innerText = gold;
     document.getElementById('gemDisplay').innerText = gems;
+    
+    // Задания
     document.getElementById('questKillsProgress').innerText = Math.min(totalKills, 10);
+    const btnQ1 = document.getElementById('btnClaimQuest1');
+    if (quest1Claimed) { btnQ1.innerText = "ВЫПОЛНЕНО"; btnQ1.style.background = "#28a745"; btnQ1.disabled = true; } 
+    else if (totalKills >= 10) { btnQ1.innerText = "ЗАБРАТЬ 50 💰"; btnQ1.style.background = "#ff8c00"; btnQ1.disabled = false; } 
+    else { btnQ1.innerText = "+50 💰"; btnQ1.style.background = "#555"; btnQ1.disabled = true; }
 
-    const btnClaim = document.getElementById('btnClaimQuest1');
-    if (quest1Claimed) {
-        btnClaim.innerText = "ВЫПОЛНЕНО";
-        btnClaim.style.background = "#28a745";
-        btnClaim.disabled = true;
-    } else if (totalKills >= 10) {
-        btnClaim.innerText = "ЗАБРАТЬ 50 💰";
-        btnClaim.style.background = "#ff8c00";
-        btnClaim.disabled = false;
-    } else {
-        btnClaim.innerText = "+50 💰";
-        btnClaim.style.background = "#555";
-        btnClaim.disabled = true;
-    }
+    document.getElementById('questWaveProgress').innerText = Math.min(maxWave, 5);
+    const btnQ2 = document.getElementById('btnClaimQuest2');
+    if (quest2Claimed) { btnQ2.innerText = "ВЫПОЛНЕНО"; btnQ2.style.background = "#28a745"; btnQ2.disabled = true; } 
+    else if (maxWave >= 5) { btnQ2.innerText = "ЗАБРАТЬ 100 💰"; btnQ2.style.background = "#ff8c00"; btnQ2.disabled = false; } 
+    else { btnQ2.innerText = "+100 💰"; btnQ2.style.background = "#555"; btnQ2.disabled = true; }
+
+    document.getElementById('questBossProgress').innerText = Math.min(bossesKilled, 1);
+    const btnQ3 = document.getElementById('btnClaimQuest3');
+    if (quest3Claimed) { btnQ3.innerText = "ВЫПОЛНЕНО"; btnQ3.style.background = "#28a745"; btnQ3.disabled = true; } 
+    else if (bossesKilled >= 1) { btnQ3.innerText = "ЗАБРАТЬ 200 💰"; btnQ3.style.background = "#ff8c00"; btnQ3.disabled = false; } 
+    else { btnQ3.innerText = "+200 💰"; btnQ3.style.background = "#555"; btnQ3.disabled = true; }
+
+    // Прокачка
+    document.getElementById('upgHealthLevel').innerText = upgHealth;
+    const btnUpgHealth = document.getElementById('btnBuyHealth');
+    if (upgHealth >= 5) { btnUpgHealth.innerText = "МАКС."; btnUpgHealth.style.background = "#28a745"; btnUpgHealth.disabled = true; }
+    else { btnUpgHealth.innerText = "100 💰"; btnUpgHealth.disabled = gold < 100; btnUpgHealth.style.background = gold >= 100 ? "#ff8c00" : "#555"; }
+
+    document.getElementById('upgDamageLevel').innerText = upgDamage;
+    const btnUpgDamage = document.getElementById('btnBuyDamage');
+    if (upgDamage >= 5) { btnUpgDamage.innerText = "МАКС."; btnUpgDamage.style.background = "#28a745"; btnUpgDamage.disabled = true; }
+    else { btnUpgDamage.innerText = "150 💰"; btnUpgDamage.disabled = gold < 150; btnUpgDamage.style.background = gold >= 150 ? "#ff8c00" : "#555"; }
 }
-updateUI(); // Обновляем интерфейс при старте
+updateUI();
 
-// --- НАВИГАЦИЯ ПО МЕНЮ ---
-document.getElementById('btnQuests').addEventListener('click', () => {
-    mainMenu.style.display = 'none';
-    questsScreen.style.display = 'flex';
-    updateUI();
-});
+// --- НАВИГАЦИЯ И КНОПКИ МЕНЮ ---
+document.getElementById('btnQuests').addEventListener('click', () => { mainMenu.style.display = 'none'; questsScreen.style.display = 'flex'; updateUI(); });
+document.getElementById('btnBackFromQuests').addEventListener('click', () => { questsScreen.style.display = 'none'; mainMenu.style.display = 'flex'; });
+document.getElementById('btnUpgrades').addEventListener('click', () => { mainMenu.style.display = 'none'; upgradesScreen.style.display = 'flex'; updateUI(); });
+document.getElementById('btnBackFromUpgrades').addEventListener('click', () => { upgradesScreen.style.display = 'none'; mainMenu.style.display = 'flex'; });
 
-document.getElementById('btnBackToMenu').addEventListener('click', () => {
-    questsScreen.style.display = 'none';
-    mainMenu.style.display = 'flex';
-});
+// Кнопки заданий
+document.getElementById('btnClaimQuest1').addEventListener('click', () => { if (totalKills >= 10 && !quest1Claimed) { gold += 50; quest1Claimed = true; saveData(); } });
+document.getElementById('btnClaimQuest2').addEventListener('click', () => { if (maxWave >= 5 && !quest2Claimed) { gold += 100; quest2Claimed = true; saveData(); } });
+document.getElementById('btnClaimQuest3').addEventListener('click', () => { if (bossesKilled >= 1 && !quest3Claimed) { gold += 200; quest3Claimed = true; saveData(); } });
 
-document.getElementById('btnClaimQuest1').addEventListener('click', () => {
-    if (totalKills >= 10 && !quest1Claimed) {
-        gold += 50;
-        quest1Claimed = true;
-        saveData();
-    }
-});
+// Кнопки прокачки
+document.getElementById('btnBuyHealth').addEventListener('click', () => { if (gold >= 100 && upgHealth < 5) { gold -= 100; upgHealth++; saveData(); } });
+document.getElementById('btnBuyDamage').addEventListener('click', () => { if (gold >= 150 && upgDamage < 5) { gold -= 150; upgDamage++; saveData(); } });
 
 let hasRevived = false;
 
@@ -91,75 +117,45 @@ document.getElementById('btnAssassin').addEventListener('click', () => startGame
 
 btnRevive.addEventListener('click', () => {
     if (gold >= 50 && !hasRevived) {
-        gold -= 50;
-        saveData();
-        hasRevived = true;
-        player.hp = player.maxHp;
-        player.invulnerableTimer = 3; 
-        gameOverScreen.style.display = 'none';
-        gameState = 'playing';
+        gold -= 50; saveData(); hasRevived = true;
+        player.hp = player.maxHp; player.invulnerableTimer = 3; 
+        gameOverScreen.style.display = 'none'; gameState = 'playing';
     }
 });
 
-btnGiveUp.addEventListener('click', () => {
-    gameOverScreen.style.display = 'none';
-    showMenu();
-});
+btnGiveUp.addEventListener('click', () => { gameOverScreen.style.display = 'none'; showMenu(); });
 
-function showMenu() {
-    gameState = 'menu';
-    mainMenu.style.display = 'flex';
-    updateUI();
-}
+function showMenu() { gameState = 'menu'; mainMenu.style.display = 'flex'; updateUI(); }
 
 function startGame(heroClass) {
-    mainMenu.style.display = 'none';
-    gameOverScreen.style.display = 'none';
-    gameState = 'playing';
+    mainMenu.style.display = 'none'; gameOverScreen.style.display = 'none'; gameState = 'playing';
     
     enemies = []; projectiles = []; items = []; bosses = []; enemyProjectiles = []; obstacles = [];
-    wave = 1; enemiesInWave = 5; spawnedEnemies = 0;
-    hasRevived = false; 
+    wave = 1; enemiesInWave = 5; spawnedEnemies = 0; hasRevived = false; 
     
     player.level = 1; player.xp = 0; player.maxXP = 5; player.buffTimer = 0;
-    player.x = world.width / 2; player.y = world.height / 2;
-    player.invulnerableTimer = 0;
+    player.x = world.width / 2; player.y = world.height / 2; player.invulnerableTimer = 0;
 
-    if (heroClass === 'tank') {
-        player.maxHp = 10; player.hp = 10;
-        player.speed = 140; player.attackRate = 1.5; player.color = '#0088cc'; 
-    } else if (heroClass === 'assassin') {
-        player.maxHp = 3; player.hp = 3;
-        player.speed = 280; player.attackRate = 4.0; player.color = '#ff00ff'; 
-    }
+    let baseHp = heroClass === 'tank' ? 10 : 3;
+    player.maxHp = baseHp + upgHealth; // ПРИМЕНЯЕМ ПРОКАЧКУ ЗДОРОВЬЯ
+    player.hp = player.maxHp;
+    
+    if (heroClass === 'tank') { player.speed = 140; player.attackRate = 1.5; player.color = '#0088cc'; } 
+    else if (heroClass === 'assassin') { player.speed = 280; player.attackRate = 4.0; player.color = '#ff00ff'; }
 
     for(let i = 0; i < 20; i++) {
-        let ox = Math.random() * world.width;
-        let oy = Math.random() * world.height;
-        if (Math.hypot(ox - player.x, oy - player.y) > 200) {
-            obstacles.push({ x: ox, y: oy, radius: 35 });
-        }
+        let ox = Math.random() * world.width; let oy = Math.random() * world.height;
+        if (Math.hypot(ox - player.x, oy - player.y) > 200) obstacles.push({ x: ox, y: oy, radius: 35 });
     }
 }
 
 function triggerGameOver() {
-    gameState = 'gameover';
-    endTouch();
-    gameOverScreen.style.display = 'flex';
-    if (hasRevived) {
-        btnRevive.style.display = 'none';
-    } else {
-        btnRevive.style.display = 'block';
-        btnRevive.innerText = `ВОСКРЕСНУТЬ (50 💰)`;
-        if (gold >= 50) {
-            btnRevive.style.background = '#28a745';
-            btnRevive.style.opacity = '1';
-            btnRevive.disabled = false;
-        } else {
-            btnRevive.style.background = '#555';
-            btnRevive.style.opacity = '0.5';
-            btnRevive.disabled = true;
-        }
+    gameState = 'gameover'; endTouch(); gameOverScreen.style.display = 'flex';
+    if (hasRevived) { btnRevive.style.display = 'none'; } 
+    else {
+        btnRevive.style.display = 'block'; btnRevive.innerText = `ВОСКРЕСНУТЬ (50 💰)`;
+        if (gold >= 50) { btnRevive.style.background = '#28a745'; btnRevive.style.opacity = '1'; btnRevive.disabled = false; } 
+        else { btnRevive.style.background = '#555'; btnRevive.style.opacity = '0.5'; btnRevive.disabled = true; }
     }
 }
 
@@ -169,11 +165,9 @@ const MAX_JOYSTICK_RADIUS = 50;
 
 joystickZone.addEventListener('touchstart', (e) => {
     if (gameState !== 'playing') return;
-    const touch = e.changedTouches[0];
-    input.isMoving = true;
+    const touch = e.changedTouches[0]; input.isMoving = true;
     joystickCenter.x = touch.clientX; joystickCenter.y = touch.clientY;
-    joystickBase.style.display = 'block';
-    joystickBase.style.left = `${joystickCenter.x}px`; joystickBase.style.top = `${joystickCenter.y}px`;
+    joystickBase.style.display = 'block'; joystickBase.style.left = `${joystickCenter.x}px`; joystickBase.style.top = `${joystickCenter.y}px`;
     joystickStick.style.transform = `translate(-50%, -50%)`;
 });
 
@@ -208,13 +202,10 @@ function triggerLevelUp() {
     let shuffled = availablePerks.sort(() => 0.5 - Math.random());
     let currentPerks = shuffled.slice(0, 3);
     
-    const container = document.getElementById('perksContainer');
-    container.innerHTML = '';
+    const container = document.getElementById('perksContainer'); container.innerHTML = '';
     
     for (let i = 0; i < 3; i++) {
-        const btn = document.createElement('button');
-        btn.className = 'perkBtn';
-        btn.innerText = currentPerks[i].name;
+        const btn = document.createElement('button'); btn.className = 'perkBtn'; btn.innerText = currentPerks[i].name;
         btn.onclick = () => { currentPerks[i].action(); levelUpScreen.style.display = 'none'; gameState = 'playing'; };
         container.appendChild(btn);
     }
@@ -230,11 +221,8 @@ function spawnEnemy() {
     
     let isRanged = Math.random() < 0.3; 
     enemies.push({ 
-        x: spawnX, y: spawnY, radius: 15, 
-        hp: 3 + (wave * 0.5), 
-        speed: isRanged ? 90 : 120 + (wave * 5), 
-        type: isRanged ? 'ranged' : 'melee',
-        lastAttackTime: 0
+        x: spawnX, y: spawnY, radius: 15, hp: 3 + (wave * 0.5), speed: isRanged ? 90 : 120 + (wave * 5), 
+        type: isRanged ? 'ranged' : 'melee', lastAttackTime: 0
     });
 }
 
@@ -251,22 +239,17 @@ function handleAttack(now) {
 
     if (nearestTarget) {
         const dx = nearestTarget.x - player.x, dy = nearestTarget.y - player.y, dist = Math.hypot(dx, dy);
-        projectiles.push({ x: player.x, y: player.y, vx: (dx / dist) * 500, vy: (dy / dist) * 500, radius: 4, damage: 1 });
+        // ПРИМЕНЯЕМ ПРОКАЧКУ УРОНА (+10% за каждый уровень прокачки)
+        let finalDamage = 1 * (1 + (upgDamage * 0.1));
+        projectiles.push({ x: player.x, y: player.y, vx: (dx / dist) * 500, vy: (dy / dist) * 500, radius: 4, damage: finalDamage });
         player.lastAttackTime = now;
     }
 }
 
 function resolveObstacleCollision(entity) {
     for (let obs of obstacles) {
-        const dx = entity.x - obs.x;
-        const dy = entity.y - obs.y;
-        const dist = Math.hypot(dx, dy);
-        const minDist = entity.radius + obs.radius;
-        if (dist < minDist) {
-            const overlap = minDist - dist;
-            entity.x += (dx / dist) * overlap;
-            entity.y += (dy / dist) * overlap;
-        }
+        const dx = entity.x - obs.x; const dy = entity.y - obs.y; const dist = Math.hypot(dx, dy); const minDist = entity.radius + obs.radius;
+        if (dist < minDist) { const overlap = minDist - dist; entity.x += (dx / dist) * overlap; entity.y += (dy / dist) * overlap; }
     }
 }
 
@@ -287,6 +270,7 @@ function update(dt, now) {
         if (spawnedEnemies < enemiesInWave && timeSinceLastSpawn >= SPAWN_INTERVAL) { spawnEnemy(); spawnedEnemies++; timeSinceLastSpawn = 0; }
         if (spawnedEnemies >= enemiesInWave && enemies.length === 0) {
             wave++;
+            if (wave > maxWave) { maxWave = wave; saveData(); } // Сохраняем рекорд волн
             if (wave % 5 === 0) spawnBoss(); 
             else { enemiesInWave += 3; spawnedEnemies = 0; }
         }
@@ -373,10 +357,7 @@ function update(dt, now) {
             if (Math.hypot(p.x - e.x, p.y - e.y) < p.radius + e.radius) {
                 e.hp -= p.damage; projectiles.splice(i, 1); hit = true;
                 if (e.hp <= 0) { 
-                    generateDrop(e.x, e.y); 
-                    enemies.splice(j, 1); 
-                    totalKills++; // Считаем убийства
-                    saveData();
+                    generateDrop(e.x, e.y); enemies.splice(j, 1); totalKills++; saveData();
                 }
                 break;
             }
@@ -387,11 +368,10 @@ function update(dt, now) {
             if (Math.hypot(p.x - b.x, p.y - b.y) < p.radius + b.radius) {
                 b.hp -= p.damage; projectiles.splice(i, 1);
                 if (b.hp <= 0) { 
-                    bosses.splice(j, 1); 
-                    totalKills++; 
+                    bosses.splice(j, 1); totalKills++; 
+                    bossesKilled++; // Сохраняем убийство босса
                     saveData();
-                    gameState = 'win'; 
-                    endTouch(); 
+                    gameState = 'win'; endTouch(); 
                 }
                 break;
             }
@@ -420,22 +400,17 @@ function draw() {
 
     for (let obs of obstacles) {
         ctx.beginPath(); ctx.arc(obs.x, obs.y, obs.radius, 0, Math.PI * 2);
-        ctx.fillStyle = '#444'; ctx.fill();
-        ctx.lineWidth = 3; ctx.strokeStyle = '#222'; ctx.stroke();
+        ctx.fillStyle = '#444'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#222'; ctx.stroke();
     }
 
     for (let item of items) { 
         ctx.beginPath(); ctx.arc(item.x, item.y, item.radius, 0, Math.PI * 2); 
-        if (item.type === 'xp') ctx.fillStyle = '#00ffff'; 
-        else if (item.type === 'hp') ctx.fillStyle = '#00ff00'; 
-        else if (item.type === 'buff') ctx.fillStyle = '#ffa500'; 
+        if (item.type === 'xp') ctx.fillStyle = '#00ffff'; else if (item.type === 'hp') ctx.fillStyle = '#00ff00'; else if (item.type === 'buff') ctx.fillStyle = '#ffa500'; 
         ctx.fill(); 
     }
 
     for (let e of enemies) {
-        ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); 
-        ctx.fillStyle = e.type === 'ranged' ? '#ff8c00' : '#ff4a4a'; 
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); ctx.fillStyle = e.type === 'ranged' ? '#ff8c00' : '#ff4a4a'; ctx.fill();
         ctx.fillStyle = '#fff'; ctx.fillRect(e.x - 15, e.y - 25, 30, 4);
         ctx.fillStyle = '#00ff00'; ctx.fillRect(e.x - 15, e.y - 25, 30 * (e.hp / (3 + (wave * 0.5))), 4);
     }
