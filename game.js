@@ -41,6 +41,7 @@ const equipmentScreen = document.getElementById('equipmentScreen');
 const btnDailyReward = document.getElementById('btnDailyReward');
 const btnAssassin = document.getElementById('btnAssassin');
 const chapterTitle = document.getElementById('chapterTitle');
+const bestSurvivalWaveDisplay = document.getElementById('bestSurvivalWave');
 
 // --- МИРЫ И ГЛАВЫ ---
 const chapters = [
@@ -60,22 +61,26 @@ document.getElementById('btnNextChapter').addEventListener('click', () => {
 });
 function updateChapterUI() { chapterTitle.innerText = chapters[currentChapterIndex].name; }
 
-// --- СИСТЕМА СОХРАНЕНИЯ И ЭКИПИРОВКИ ---
+// --- СИСТЕМА СОХРАНЕНИЯ И ВЫЖИВАНИЯ ---
 let savedData = JSON.parse(localStorage.getItem('arenaDeathSave')) || { 
     gold: 0, gems: 0, totalKills: 0, quest1Claimed: false, maxWave: 1, quest2Claimed: false, bossesKilled: 0, quest3Claimed: false, upgHealth: 0, upgDamage: 0, lastDailyReward: 0, assassinUnlocked: false,
     accLevel: 1, accXP: 0, accMaxXP: 100,
-    eqWeapon: false, eqArmor: false, eqRing: false
+    eqWeapon: false, eqArmor: false, eqRing: false,
+    bestSurvivalWave: 0
 };
 let gold = savedData.gold || 0; let gems = savedData.gems || 0; let totalKills = savedData.totalKills || 0; let quest1Claimed = savedData.quest1Claimed || false;
 let maxWave = savedData.maxWave || 1; let quest2Claimed = savedData.quest2Claimed || false; let bossesKilled = savedData.bossesKilled || 0; let quest3Claimed = savedData.quest3Claimed || false;
 let upgHealth = savedData.upgHealth || 0; let upgDamage = savedData.upgDamage || 0; let lastDailyReward = savedData.lastDailyReward || 0; let assassinUnlocked = savedData.assassinUnlocked || false;
 let accLevel = savedData.accLevel || 1; let accXP = savedData.accXP || 0; let accMaxXP = savedData.accMaxXP || 100;
 let eqWeapon = savedData.eqWeapon || false; let eqArmor = savedData.eqArmor || false; let eqRing = savedData.eqRing || false;
+let bestSurvivalWave = savedData.bestSurvivalWave || 0;
+
+let isSurvivalMode = false; // Флаг бесконечного режима
 
 function saveData() {
     localStorage.setItem('arenaDeathSave', JSON.stringify({ 
         gold, gems, totalKills, quest1Claimed, maxWave, quest2Claimed, bossesKilled, quest3Claimed, upgHealth, upgDamage, lastDailyReward, assassinUnlocked, accLevel, accXP, accMaxXP,
-        eqWeapon, eqArmor, eqRing
+        eqWeapon, eqArmor, eqRing, bestSurvivalWave
     }));
     updateUI();
 }
@@ -94,8 +99,8 @@ function updateUI() {
     document.getElementById('goldDisplay').innerText = gold;
     document.getElementById('gemDisplay').innerText = gems;
     document.getElementById('accountLevelDisplay').innerText = accLevel;
+    bestSurvivalWaveDisplay.innerText = bestSurvivalWave;
     
-    // Экипировка статусы
     const btnW = document.getElementById('btnBuyWeapon');
     if (eqWeapon) { document.getElementById('eqWeaponStatus').innerText = "Надето"; btnW.innerText = "КУПЛЕНО"; btnW.style.background = "#28a745"; btnW.disabled = true; } 
     else { document.getElementById('eqWeaponStatus').innerText = "Не куплен"; btnW.innerText = "300 💰"; btnW.style.background = gold >= 300 ? "#ff8c00" : "#555"; btnW.disabled = gold < 300; }
@@ -147,7 +152,7 @@ function updateUI() {
 updateUI();
 updateChapterUI();
 
-// Навигация и кнопки меню
+// Кнопки меню
 btnDailyReward.addEventListener('click', () => { const now = Date.now(); if (now - lastDailyReward >= 86400000) { gold += 100; lastDailyReward = now; saveData(); } });
 document.getElementById('btnQuests').addEventListener('click', () => { mainMenu.style.display = 'none'; questsScreen.style.display = 'flex'; updateUI(); });
 document.getElementById('btnBackFromQuests').addEventListener('click', () => { questsScreen.style.display = 'none'; mainMenu.style.display = 'flex'; });
@@ -156,7 +161,6 @@ document.getElementById('btnBackFromUpgrades').addEventListener('click', () => {
 document.getElementById('btnEquipment').addEventListener('click', () => { mainMenu.style.display = 'none'; equipmentScreen.style.display = 'flex'; updateUI(); });
 document.getElementById('btnBackFromEquipment').addEventListener('click', () => { equipmentScreen.style.display = 'none'; mainMenu.style.display = 'flex'; });
 
-// Покупка экипировки
 document.getElementById('btnBuyWeapon').addEventListener('click', () => { if (gold >= 300 && !eqWeapon) { gold -= 300; eqWeapon = true; saveData(); } });
 document.getElementById('btnBuyArmor').addEventListener('click', () => { if (gold >= 400 && !eqArmor) { gold -= 400; eqArmor = true; saveData(); } });
 document.getElementById('btnBuyRing').addEventListener('click', () => { if (gold >= 500 && !eqRing) { gold -= 500; eqRing = true; saveData(); } });
@@ -167,8 +171,14 @@ document.getElementById('btnClaimQuest3').addEventListener('click', () => { if (
 document.getElementById('btnBuyHealth').addEventListener('click', () => { if (gold >= 100 && upgHealth < 5) { gold -= 100; upgHealth++; saveData(); } });
 document.getElementById('btnBuyDamage').addEventListener('click', () => { if (gold >= 150 && upgDamage < 5) { gold -= 150; upgDamage++; saveData(); } });
 
-document.getElementById('btnTank').addEventListener('click', () => startGame('tank'));
-btnAssassin.addEventListener('click', () => { if (assassinUnlocked) { startGame('assassin'); } else if (gems >= 15) { gems -= 15; assassinUnlocked = true; saveData(); } });
+// Запуск обычной игры (Танк) и Бесконечного режима
+document.getElementById('btnTank').addEventListener('click', () => startGame('tank', false));
+document.getElementById('btnSurvival').addEventListener('click', () => startGame('tank', true));
+
+btnAssassin.addEventListener('click', () => {
+    if (assassinUnlocked) { startGame('assassin', false); } 
+    else if (gems >= 15) { gems -= 15; assassinUnlocked = true; saveData(); }
+});
 
 let hasRevived = false;
 btnRevive.addEventListener('click', () => {
@@ -180,10 +190,11 @@ function showMenu() { gameState = 'menu'; mainMenu.style.display = 'flex'; updat
 let floatingTexts = [];
 function spawnFloatingText(x, y, text, color) { floatingTexts.push({ x, y, text, color, life: 1.0 }); }
 
-function startGame(heroClass) {
+function startGame(heroClass, survival) {
     mainMenu.style.display = 'none'; gameOverScreen.style.display = 'none'; gameState = 'playing';
     enemies = []; projectiles = []; items = []; bosses = []; enemyProjectiles = []; obstacles = []; floatingTexts = []; particles = [];
     wave = 1; enemiesInWave = 5; spawnedEnemies = 0; hasRevived = false; screenShake = 0;
+    isSurvivalMode = survival;
     
     player.level = 1; player.xp = 0; player.maxXP = 5; player.buffTimer = 0;
     player.x = world.width / 2; player.y = world.height / 2; player.invulnerableTimer = 0;
@@ -192,7 +203,6 @@ function startGame(heroClass) {
     let baseHp = heroClass === 'tank' ? 10 : 3;
     let baseSpeed = heroClass === 'tank' ? 140 : 280;
 
-    // ПРИМЕНЯЕМ БОНУСЫ ЭКИПИРОВКИ И ПРОКАЧКИ
     let armorBonus = eqArmor ? 2 : 0;
     let ringBonus = eqRing ? 30 : 0;
 
@@ -210,6 +220,15 @@ function startGame(heroClass) {
 
 function triggerGameOver() {
     gameState = 'gameover'; endTouch(); gameOverScreen.style.display = 'flex';
+    
+    // Проверка и сохранение рекорда выживания
+    if (isSurvivalMode) {
+        if (wave > bestSurvivalWave) {
+            bestSurvivalWave = wave;
+            saveData();
+        }
+    }
+
     if (hasRevived) { btnRevive.style.display = 'none'; } 
     else {
         btnRevive.style.display = 'block'; btnRevive.innerText = `ВОСКРЕСНУТЬ (50 💰)`;
@@ -291,7 +310,6 @@ function handleAttack(now) {
 
     if (nearestTarget) {
         const dx = nearestTarget.x - player.x, dy = nearestTarget.y - player.y, dist = Math.hypot(dx, dy);
-        // ПРИМЕНЯЕМ БОНУС МЕЧА ЭКИПИРОВКИ (+0.5 урона) И ПРОКАЧКУ УРОНА
         let weaponBonus = eqWeapon ? 0.5 : 0;
         let finalDamage = (1 + weaponBonus) * (1 + (upgDamage * 0.1));
 
@@ -331,8 +349,14 @@ function update(dt, now) {
         timeSinceLastSpawn += dt;
         if (spawnedEnemies < enemiesInWave && timeSinceLastSpawn >= SPAWN_INTERVAL) { spawnEnemy(); spawnedEnemies++; timeSinceLastSpawn = 0; }
         if (spawnedEnemies >= enemiesInWave && enemies.length === 0) {
-            wave++; if (wave > maxWave) { maxWave = wave; saveData(); } 
-            if (wave % 5 === 0) spawnBoss(); else { enemiesInWave += 3; spawnedEnemies = 0; }
+            wave++; 
+            if (!isSurvivalMode) {
+                if (wave > maxWave) { maxWave = wave; saveData(); } 
+                if (wave % 5 === 0) spawnBoss(); else { enemiesInWave += 3; spawnedEnemies = 0; }
+            } else {
+                // БЕСКОНЕЧНЫЙ РЕЖИМ: только мобы, боссов нет, волны растут бесконечно
+                enemiesInWave += 2; spawnedEnemies = 0;
+            }
         }
     } else if (bosses.length === 0 && enemies.length === 0) { wave++; enemiesInWave += 3; spawnedEnemies = 0; }
 
