@@ -59,7 +59,7 @@ const defaultSave = {
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try { 
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal26') || 'null'); 
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal27') || 'null'); 
     if (loaded) Object.assign(savedData, loaded); 
 } catch(e) {}
 
@@ -76,7 +76,7 @@ if (!savedData.talentsLevels) savedData.talentsLevels = {};
 if (!savedData.seasonClaimed) savedData.seasonClaimed = {};
 
 function saveData() { 
-    localStorage.setItem('spekterSaveFinal26', JSON.stringify(savedData)); 
+    localStorage.setItem('spekterSaveFinal27', JSON.stringify(savedData)); 
     updateTopBar(); 
 }
 
@@ -162,6 +162,7 @@ function updateTopBar() {
 window.changeStage = function(dir) {
     savedData.stage = Math.max(1, Math.min(locationsConfig.length, savedData.stage + dir));
     saveData();
+    updateTopBar();
 };
 
 function showBmPopup(text) {
@@ -305,7 +306,7 @@ window.donateToGuildTreasury = function() {
     if (!savedData.guild.treasuryGold) savedData.guild.treasuryGold = 0;
     savedData.guild.treasuryGold += 500;
     if (!savedData.guild.tokens) savedData.guild.tokens = 0;
-    savedData.guild.tokens += 20; // бонусные личные жетоны за вклад
+    savedData.guild.tokens += 20; 
     saveData();
     switchHubTab('guild', document.querySelectorAll('.hub-tab-btn')[1]);
     showAlert("Вклад в казну гильдии успешно внесен (+20 жетонов)!");
@@ -490,144 +491,6 @@ window.upgradeBaseDefense = function() {
     showAlert("Защита базы усилена!");
 };
 
-let activeRaidBase = null;
-
-window.startBaseRaid = function(baseId) {
-    activeRaidBase = enemyBasesConfig.find(x => x.id === baseId);
-    if (!activeRaidBase) return;
-
-    let hm = document.getElementById('hubModal'); if(hm) hm.style.display = 'none';
-
-    document.querySelectorAll('.screen').forEach(s => s.style.display = 'none'); 
-    let tb = document.getElementById('topBar'); if(tb) tb.style.display = 'none'; 
-    let nb = document.getElementById('navBar'); if(nb) nb.style.display = 'none'; 
-    let brm = document.getElementById('battleResultModal'); if(brm) brm.style.display = 'none'; 
-    let bp = document.getElementById('btnPause'); if(bp) bp.style.display = 'flex'; 
-    let rcu = document.getElementById('roomCounterUI'); if(rcu) rcu.style.display = 'block'; 
-    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = savedData.guild ? 'flex' : 'none';
-
-    resize(); world.width = screenW; world.height = screenH;
-
-    let finalStats = getCalculatedStats(); 
-    player.maxHp = finalStats.hp; player.hp = finalStats.hp; player.atk = finalStats.atk; 
-    let wp = getItemData(savedData.equipped.weapon); 
-    if (wp && wp.fireRate) { 
-        currentWeaponStats = { fireRate: wp.fireRate, bullets: wp.bullets, projSpeed: wp.projSpeed, spread: wp.spread, isRocket: wp.isRocket }; 
-    } else { currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0, isRocket: false }; } 
-    
-    runLevel = 1; runXp = 0; runMaxXp = 100; 
-    runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
-    player.speed = 220; runLoot = { blueprints: {} }; 
-    
-    if(rcu) rcu.innerText = `ШТУРМ: База ${activeRaidBase.owner}`;
-    let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none'; 
-
-    player.x = 100; player.y = screenH / 2;
-    enemies = []; projectiles = []; floatingTexts = []; allyUnits = [];
-    roomState = 'base_raid_fighting'; portal = null; isBossStage = false; bossEntity = null;
-
-    for(let i=0; i<activeRaidBase.towersCount; i++) {
-        enemies.push({
-            x: screenW - 120, y: 100 + i * (screenH / (activeRaidBase.towersCount + 1)),
-            radius: 18, hp: 400, maxHp: 400, atk: 30, speed: 0,
-            isBoss: false, isBot: false, isTower: true, type: 'tower', icon: '🗼', angle: 0, lastAttack: 0
-        });
-    }
-    for(let i=0; i<activeRaidBase.guardsCount; i++) {
-        enemies.push({
-            x: screenW - 200 + (Math.random()*40-20), y: 80 + Math.random() * (screenH - 160),
-            radius: 14, hp: 200, maxHp: 200, atk: 20, speed: 120,
-            isBoss: false, isBot: false, isTower: false, type: 'zombie', icon: '🧟', angle: 0, lastAttack: 0
-        });
-    }
-
-    gameState = 'playing'; 
-    let cv = document.getElementById('gameCanvas'); if(cv) cv.style.display = 'block'; 
-    let jz = document.getElementById('joystickZone'); if(jz) jz.style.display = 'block'; 
-    lastTime = performance.now(); 
-    requestAnimationFrame(gameLoop);
-};
-
-let allyUnits = [];
-
-window.callGuildSupport = function() {
-    if (!savedData.guild) return;
-    let btn = document.getElementById('btnCallGuild');
-    if (btn) btn.style.display = 'none';
-
-    for(let i=0; i<2; i++) {
-        allyUnits.push({
-            x: player.x - 30 - (i * 20), y: player.y + (i === 0 ? 30 : -30),
-            radius: 16, hp: 400, maxHp: 400, atk: 60, speed: 200, aimingAngle: 0, lastAttack: 0
-        });
-    }
-    showAlert("Подмога согильдийцев прибыла на поле боя!");
-};
-
-window.joinGuild = function(guildId) {
-    let g = sampleGuilds.find(x => x.id === guildId);
-    if (!g) return;
-    savedData.guild = { id: g.id, name: g.name, level: g.level, membersCount: g.members + 1, tokens: 100, treasuryGold: 1200 };
-    saveData();
-    switchHubTab('guild', document.querySelectorAll('.hub-tab-btn')[1]);
-    showAlert(`Вы вступили в гильдию "${g.name}"!`);
-};
-
-window.leaveGuild = function() {
-    if (confirm("Вы действительно хотите покинуть гильдию?")) {
-        savedData.guild = null;
-        saveData();
-        switchHubTab('guild', document.querySelectorAll('.hub-tab-btn')[1]);
-        showAlert("Вы покинули гильдию.");
-    }
-};
-
-window.startGuildRaidBattle = function() {
-    let hm = document.getElementById('hubModal'); if(hm) hm.style.display = 'none';
-
-    document.querySelectorAll('.screen').forEach(s => s.style.display = 'none'); 
-    let tb = document.getElementById('topBar'); if(tb) tb.style.display = 'none'; 
-    let nb = document.getElementById('navBar'); if(nb) nb.style.display = 'none'; 
-    let brm = document.getElementById('battleResultModal'); if(brm) brm.style.display = 'none'; 
-    let bp = document.getElementById('btnPause'); if(bp) bp.style.display = 'flex'; 
-    let rcu = document.getElementById('roomCounterUI'); if(rcu) rcu.style.display = 'block'; 
-    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
-
-    resize(); world.width = screenW; world.height = screenH;
-
-    let finalStats = getCalculatedStats(); 
-    player.maxHp = finalStats.hp; player.hp = finalStats.hp; player.atk = finalStats.atk; 
-    let wp = getItemData(savedData.equipped.weapon); 
-    if (wp && wp.fireRate) { 
-        currentWeaponStats = { fireRate: wp.fireRate, bullets: wp.bullets, projSpeed: wp.projSpeed, spread: wp.spread, isRocket: wp.isRocket }; 
-    } else { currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0, isRocket: false }; } 
-    
-    runLevel = 1; runXp = 0; runMaxXp = 100; 
-    runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
-    player.speed = 220; runLoot = { blueprints: {} }; 
-    
-    if(rcu) rcu.innerText = `РЕЙД: ${guildRaidBoss.name}`;
-    let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none'; 
-
-    player.x = 100; player.y = screenH / 2;
-    enemies = []; projectiles = []; floatingTexts = []; allyUnits = []; obstacles = [];
-    roomState = 'guild_raid_fighting'; portal = null; isBossStage = true; 
-
-    bossEntity = {
-        x: screenW - 150, y: screenH / 2,
-        radius: guildRaidBoss.radius, hp: savedData.guildBossHp, maxHp: guildRaidBoss.hp,
-        atk: guildRaidBoss.atk, speed: guildRaidBoss.speed,
-        isBoss: true, isBot: false, type: 'boss', lastAttack: 0, angle: 0
-    };
-    enemies.push(bossEntity);
-
-    gameState = 'playing'; 
-    let cv = document.getElementById('gameCanvas'); if(cv) cv.style.display = 'block'; 
-    let jz = document.getElementById('joystickZone'); if(jz) jz.style.display = 'block'; 
-    lastTime = performance.now(); 
-    requestAnimationFrame(gameLoop);
-};
-
 window.renderInventory = function() { 
     const grid = document.getElementById('inventoryGrid'); 
     if(!grid) return;
@@ -698,55 +561,6 @@ window.upgradeAgency = function() {
     } else { showAlert("Недостаточно деталей!"); } 
 };
 
-window.startArenaBattle = function(botName) {
-    activeArenaBot = simulationBots.find(b => b.name === botName);
-    if (!activeArenaBot) return;
-
-    let hm = document.getElementById('hubModal'); if(hm) hm.style.display = 'none';
-
-    document.querySelectorAll('.screen').forEach(s => s.style.display = 'none'); 
-    let tb = document.getElementById('topBar'); if(tb) tb.style.display = 'none'; 
-    let nb = document.getElementById('navBar'); if(nb) nb.style.display = 'none'; 
-    let brm = document.getElementById('battleResultModal'); if(brm) brm.style.display = 'none'; 
-    let bp = document.getElementById('btnPause'); if(bp) bp.style.display = 'flex'; 
-    let rcu = document.getElementById('roomCounterUI'); if(rcu) rcu.style.display = 'block'; 
-    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
-
-    resize(); world.width = screenW; world.height = screenH;
-
-    let finalStats = getCalculatedStats(); 
-    player.maxHp = finalStats.hp; player.hp = finalStats.hp; player.atk = finalStats.atk; 
-    let wp = getItemData(savedData.equipped.weapon); 
-    if (wp && wp.fireRate) { 
-        currentWeaponStats = { fireRate: wp.fireRate, bullets: wp.bullets, projSpeed: wp.projSpeed, spread: wp.spread, isRocket: wp.isRocket }; 
-    } else { currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0, isRocket: false }; } 
-    
-    runLevel = 1; runXp = 0; runMaxXp = 100; 
-    runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
-    player.speed = 220; runLoot = { blueprints: {} }; 
-    
-    if(rcu) rcu.innerText = `ДУЭЛЬ: ${activeArenaBot.name}`;
-    let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none'; 
-
-    player.x = 100; player.y = screenH / 2;
-    enemies = []; projectiles = []; floatingTexts = []; allyUnits = []; obstacles = [];
-    roomState = 'pvp_fighting'; portal = null; isBossStage = false; bossEntity = null;
-
-    enemies.push({
-        x: screenW - 100, y: screenH / 2,
-        radius: 16, hp: activeArenaBot.hp, maxHp: activeArenaBot.hp,
-        atk: activeArenaBot.atk, speed: activeArenaBot.speed,
-        isBoss: false, isBot: true, name: activeArenaBot.name, icon: activeArenaBot.icon,
-        angle: 0, lastAttack: 0
-    });
-
-    gameState = 'playing'; 
-    let cv = document.getElementById('gameCanvas'); if(cv) cv.style.display = 'block'; 
-    let jz = document.getElementById('joystickZone'); if(jz) jz.style.display = 'block'; 
-    lastTime = performance.now(); 
-    requestAnimationFrame(gameLoop);
-};
-
 let pendingGold = 0, pendingParts = 0; 
 setInterval(() => { 
     updateEnergyTimerUI(); 
@@ -781,7 +595,9 @@ if(bcs) bcs.addEventListener('click', () => {
 
 updateTopBar();
 
-// ----------------- БОЕВОЙ ДВИЖОК CANVAS С ЛОКАЦИЯМИ И РАКЕТАМИ -----------------
+// ==========================================================================
+// БОЕВОЙ ДВИЖОК CANVAS (Единый инициализатор для всех режимов)
+// ==========================================================================
 const canvas = document.getElementById('gameCanvas'); 
 const ctx = canvas.getContext('2d');
 const joystickZone = document.getElementById('joystickZone'); 
@@ -804,6 +620,229 @@ const input = { x: 0, y: 0, isMoving: false, usingKeyboard: false };
 let joystickCenter = { x: 0, y: 0 }; 
 const MAX_JOYSTICK_RADIUS = 50; 
 
+// Игровые сущности
+let player = { x: 100, y: 200, radius: 15, speed: 220, hp: 1000, maxHp: 1000, atk: 150, attackRate: 1.5, aimingAngle: 0, lastAttackTime: 0 };
+let enemies = [];
+let projectiles = [];
+let floatingTexts = [];
+let allyUnits = [];
+let obstacles = [];
+let roomState = 'fighting';
+let currentRoom = 1;
+const maxRooms = 5;
+let isBossStage = false;
+let bossEntity = null;
+let killsInRoom = 0;
+let totalKillsInRun = 0;
+let revivesUsed = 0;
+let currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0, isRocket: false };
+let runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 };
+let portal = null;
+
+function prepareBattleUI(titleText) {
+    let hm = document.getElementById('hubModal'); if(hm) hm.style.display = 'none';
+    document.querySelectorAll('.screen').forEach(s => s.style.display = 'none'); 
+    let tb = document.getElementById('topBar'); if(tb) tb.style.display = 'none'; 
+    let nb = document.getElementById('navBar'); if(nb) nb.style.display = 'none'; 
+    let brm = document.getElementById('battleResultModal'); if(brm) brm.style.display = 'none'; 
+    let bp = document.getElementById('btnPause'); if(bp) bp.style.display = 'flex'; 
+    let rcu = document.getElementById('roomCounterUI'); if(rcu) { rcu.style.display = 'block'; rcu.innerText = titleText; }
+
+    resize(); 
+    world.width = screenW; 
+    world.height = screenH;
+
+    let finalStats = getCalculatedStats(); 
+    player.maxHp = finalStats.hp; 
+    player.hp = finalStats.hp; 
+    player.atk = finalStats.atk; 
+    player.x = 100;
+    player.y = screenH / 2;
+
+    let wp = getItemData(savedData.equipped.weapon); 
+    if (wp && wp.fireRate) { 
+        currentWeaponStats = { fireRate: wp.fireRate, bullets: wp.bullets, projSpeed: wp.projSpeed, spread: wp.spread, isRocket: wp.isRocket }; 
+    } else { currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0, isRocket: false }; } 
+    
+    runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
+    player.speed = 220;
+    enemies = []; projectiles = []; floatingTexts = []; allyUnits = []; obstacles = []; portal = null;
+}
+
+// Запуск обычной кампании
+window.startBattle = function() { 
+    if (savedData.energy < 5) { showAlert("Недостаточно энергии!"); return; } 
+    savedData.energy -= 5; 
+    saveData(); 
+
+    prepareBattleUI("Комната 1/5");
+    let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'block'; 
+    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
+
+    totalKillsInRun = 0; revivesUsed = 0; currentRoom = 1; 
+    startRoom(); 
+    
+    gameState = 'playing'; 
+    let cv = document.getElementById('gameCanvas'); if(cv) cv.style.display = 'block'; 
+    let jz = document.getElementById('joystickZone'); if(jz) jz.style.display = 'block'; 
+    lastTime = performance.now(); 
+    requestAnimationFrame(gameLoop); 
+};
+
+// Запуск дуэли на PvP арене
+let activeArenaBot = null;
+window.startArenaBattle = function(botName) {
+    activeArenaBot = simulationBots.find(b => b.name === botName);
+    if (!activeArenaBot) return;
+
+    prepareBattleUI(`ДУЭЛЬ: ${activeArenaBot.name}`);
+    let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none'; 
+    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
+
+    roomState = 'pvp_fighting'; isBossStage = false; bossEntity = null;
+    enemies.push({
+        x: screenW - 100, y: screenH / 2,
+        radius: 16, hp: activeArenaBot.hp, maxHp: activeArenaBot.hp,
+        atk: activeArenaBot.atk, speed: activeArenaBot.speed,
+        isBoss: false, isBot: true, name: activeArenaBot.name, icon: activeArenaBot.icon,
+        angle: 0, lastAttack: 0
+    });
+
+    gameState = 'playing'; 
+    let cv = document.getElementById('gameCanvas'); if(cv) cv.style.display = 'block'; 
+    let jz = document.getElementById('joystickZone'); if(jz) jz.style.display = 'block'; 
+    lastTime = performance.now(); 
+    requestAnimationFrame(gameLoop);
+};
+
+// Запуск рейд-босса гильдии
+window.startGuildRaidBattle = function() {
+    prepareBattleUI(`РЕЙД: ${guildRaidBoss.name}`);
+    let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none'; 
+    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = savedData.guild ? 'flex' : 'none';
+
+    roomState = 'guild_raid_fighting'; isBossStage = true; 
+    bossEntity = {
+        x: screenW - 150, y: screenH / 2,
+        radius: guildRaidBoss.radius, hp: savedData.guildBossHp, maxHp: guildRaidBoss.hp,
+        atk: guildRaidBoss.atk, speed: guildRaidBoss.speed,
+        isBoss: true, isBot: false, type: 'boss', lastAttack: 0, angle: 0
+    };
+    enemies.push(bossEntity);
+
+    gameState = 'playing'; 
+    let cv = document.getElementById('gameCanvas'); if(cv) cv.style.display = 'block'; 
+    let jz = document.getElementById('joystickZone'); if(jz) jz.style.display = 'block'; 
+    lastTime = performance.now(); 
+    requestAnimationFrame(gameLoop);
+};
+
+// Запуск штурма базы игрока
+let activeRaidBase = null;
+window.startBaseRaid = function(baseId) {
+    activeRaidBase = enemyBasesConfig.find(x => x.id === baseId);
+    if (!activeRaidBase) return;
+
+    prepareBattleUI(`ШТУРМ: База ${activeRaidBase.owner}`);
+    let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none'; 
+    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = savedData.guild ? 'flex' : 'none';
+
+    roomState = 'base_raid_fighting'; isBossStage = false; bossEntity = null;
+
+    for(let i=0; i<activeRaidBase.towersCount; i++) {
+        enemies.push({
+            x: screenW - 120, y: 100 + i * (screenH / (activeRaidBase.towersCount + 1)),
+            radius: 18, hp: 400, maxHp: 400, atk: 30, speed: 0,
+            isBoss: false, isBot: false, isTower: true, type: 'tower', icon: '🗼', angle: 0, lastAttack: 0
+        });
+    }
+    for(let i=0; i<activeRaidBase.guardsCount; i++) {
+        enemies.push({
+            x: screenW - 200 + (Math.random()*40-20), y: 80 + Math.random() * (screenH - 160),
+            radius: 14, hp: 200, maxHp: 200, atk: 20, speed: 120,
+            isBoss: false, isBot: false, isTower: false, type: 'zombie', icon: '🧟', angle: 0, lastAttack: 0
+        });
+    }
+
+    gameState = 'playing'; 
+    let cv = document.getElementById('gameCanvas'); if(cv) cv.style.display = 'block'; 
+    let jz = document.getElementById('joystickZone'); if(jz) jz.style.display = 'block'; 
+    lastTime = performance.now(); 
+    requestAnimationFrame(gameLoop);
+};
+
+// Логика комнат кампании
+function startRoom() {
+    roomState = 'fighting';
+    killsInRoom = 0;
+    enemies = [];
+    portal = null;
+    isBossStage = (currentRoom === maxRooms);
+    
+    let rcu = document.getElementById('roomCounterUI');
+    if(rcu) rcu.innerText = isBossStage ? `БОСС (Комната ${currentRoom}/5)` : `Комната ${currentRoom}/5`;
+
+    obstacles = [
+        { x: screenW * 0.35, y: screenH * 0.25, w: 40, h: 80 },
+        { x: screenW * 0.65, y: screenH * 0.55, w: 80, h: 40 }
+    ];
+
+    if (!isBossStage) {
+        let count = 2 + currentRoom;
+        let keys = Object.keys(enemyTypesConfig);
+        for(let i=0; i<count; i++) {
+            let tKey = keys[Math.floor(Math.random() * keys.length)];
+            let cfg = enemyTypesConfig[tKey];
+            enemies.push({
+                x: screenW - 100 - Math.random() * 150,
+                y: 80 + Math.random() * (screenH - 160),
+                radius: cfg.radius,
+                hp: 100 * cfg.hpMultiplier * savedData.stage,
+                maxHp: 100 * cfg.hpMultiplier * savedData.stage,
+                atk: 15 * savedData.stage,
+                speed: 100 * cfg.speedMultiplier,
+                type: tKey,
+                isBoss: false, isBot: false, isTower: false,
+                angle: 0, lastAttack: 0
+            });
+        }
+    } else {
+        spawnBoss();
+    }
+}
+
+function spawnBoss() {
+    bossEntity = {
+        x: screenW - 150, y: screenH / 2,
+        radius: 35,
+        hp: 800 * savedData.stage, maxHp: 800 * savedData.stage,
+        atk: 40 * savedData.stage,
+        speed: 70,
+        isBoss: true, isBot: false, isTower: false, type: 'boss',
+        angle: 0, lastAttack: 0
+    };
+    enemies.push(bossEntity);
+}
+
+function spawnSpecificWaveEnemy() {
+    let keys = Object.keys(enemyTypesConfig);
+    let tKey = keys[Math.floor(Math.random() * keys.length)];
+    let cfg = enemyTypesConfig[tKey];
+    enemies.push({
+        x: screenW - 80,
+        y: 80 + Math.random() * (screenH - 160),
+        radius: cfg.radius,
+        hp: 100 * cfg.hpMultiplier * savedData.stage,
+        maxHp: 100 * cfg.hpMultiplier * savedData.stage,
+        atk: 15 * savedData.stage,
+        speed: 100 * cfg.speedMultiplier,
+        type: tKey,
+        isBoss: false, isBot: false, isTower: false,
+        angle: 0, lastAttack: 0
+    });
+}
+
+// Джойстик и ввод
 function startInput(clientX, clientY) { 
     if (gameState !== 'playing') return; 
     input.usingKeyboard = false; 
@@ -903,47 +942,6 @@ window.fleeBattle = function() {
     let pm = document.getElementById('pauseModal'); if(pm) pm.style.display = 'none'; 
     let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none'; 
     showBattleResult(false, true); 
-};
-
-window.startBattle = function() { 
-    if (savedData.energy < 5) { showAlert("Недостаточно энергии!"); return; } 
-    savedData.energy -= 5; 
-    saveData(); 
-    document.querySelectorAll('.screen').forEach(s => s.style.display = 'none'); 
-    let tb = document.getElementById('topBar'); if(tb) tb.style.display = 'none'; 
-    let nb = document.getElementById('navBar'); if(nb) nb.style.display = 'none'; 
-    let brm = document.getElementById('battleResultModal'); if(brm) brm.style.display = 'none'; 
-    let bp = document.getElementById('btnPause'); if(bp) bp.style.display = 'flex'; 
-    let rcu = document.getElementById('roomCounterUI'); if(rcu) rcu.style.display = 'block'; 
-    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
-
-    resize(); 
-    world.width = screenW; 
-    world.height = screenH;
-
-    let finalStats = getCalculatedStats(); 
-    player.maxHp = finalStats.hp; 
-    player.hp = finalStats.hp; 
-    player.atk = finalStats.atk; 
-    let wp = getItemData(savedData.equipped.weapon); 
-    if (wp && wp.fireRate) { 
-        currentWeaponStats = { fireRate: wp.fireRate, bullets: wp.bullets, projSpeed: wp.projSpeed, spread: wp.spread, isRocket: wp.isRocket }; 
-    } else { currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0, isRocket: false }; } 
-    
-    runLevel = 1; runXp = 0; runMaxXp = 100; 
-    runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
-    player.speed = 220; 
-    runLoot = { blueprints: {} }; 
-    updateCombatUI(); 
-    let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'block'; 
-    totalKillsInRun = 0; revivesUsed = 0; currentRoom = 1; 
-    
-    startRoom(); 
-    gameState = 'playing'; 
-    let cv = document.getElementById('gameCanvas'); if(cv) cv.style.display = 'block'; 
-    let jz = document.getElementById('joystickZone'); if(jz) jz.style.display = 'block'; 
-    lastTime = performance.now(); 
-    requestAnimationFrame(gameLoop); 
 };
 
 function checkObstacleCollision(x, y, radius) {
@@ -1185,7 +1183,6 @@ function gameLoop(timestamp) {
 
         if (checkObstacleCollision(p.x, p.y, p.radius)) {
             if (p.isRocket) {
-                // АОЕ взрыв ракеты при столкновении со стеной
                 for (let j = enemies.length - 1; j >= 0; j--) {
                     let e = enemies[j];
                     if (Math.hypot(p.x - e.x, p.y - e.y) < 70) {
@@ -1212,7 +1209,6 @@ function gameLoop(timestamp) {
                     e.hp -= p.damage; 
                     
                     if (p.isRocket) {
-                        // АОЕ урон по площади при попадании во врага
                         for (let k = enemies.length - 1; k >= 0; k--) {
                             let nearby = enemies[k];
                             if (Math.hypot(p.x - nearby.x, p.y - nearby.y) < 80) {
@@ -1252,6 +1248,16 @@ function gameLoop(timestamp) {
     for (let obs of obstacles) {
         ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
         ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+    }
+
+    if (portal) {
+        ctx.fillStyle = '#00ffff';
+        ctx.beginPath();
+        ctx.arc(portal.x, portal.y, portal.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 3;
+        ctx.stroke();
     }
 
     ctx.strokeStyle = isBaseRaid ? '#e43f5a' : (isRaid ? '#ff4a4a' : (isPvp ? '#ff4a4a' : '#00ffff')); 
@@ -1325,10 +1331,143 @@ function gameLoop(timestamp) {
         ctx.fillStyle = ft.color; 
         ctx.font = 'bold 18px sans-serif'; 
         ctx.textAlign = 'center'; 
-        ctx.strokeStyle = '#000'; 
+        strokeStyle = '#000'; 
         ctx.lineWidth = 3; 
         ctx.strokeText(ft.text, ft.x, ft.y); 
         ctx.fillText(ft.text, ft.x, ft.y); 
         ctx.globalAlpha = 1.0; 
     }
 }
+
+// Управление завершением боя и уровнями
+let runLevel = 1, runXp = 0, runMaxXp = 100;
+let runLoot = { blueprints: {} };
+let revivesUsed = 0;
+
+function updateCombatUI() {
+    let xpBar = document.getElementById('combatXpBar');
+    let lvlTxt = document.getElementById('combatLevelText');
+    if(xpBar) xpBar.style.width = Math.min(100, (runXp / runMaxXp) * 100) + '%';
+    if(lvlTxt) lvlTxt.innerText = `УР. ${runLevel}`;
+}
+
+function checkLevelUp() {
+    if (runXp >= runMaxXp) {
+        runXp -= runMaxXp;
+        runLevel++;
+        runMaxXp = Math.floor(runMaxXp * 1.3);
+        updateCombatUI();
+        triggerLevelUpChoice();
+    } else {
+        updateCombatUI();
+    }
+}
+
+function triggerLevelUpChoice() {
+    gameState = 'paused';
+    let container = document.getElementById('skillCardsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    let shuffled = [...runSkillsPool].sort(() => 0.5 - Math.random()).slice(0, 3);
+    shuffled.forEach(skill => {
+        let btn = document.createElement('button');
+        btn.className = 'skill-card-btn';
+        btn.innerHTML = `<span style="font-size:24px;">${skill.icon}</span><div><div style="font-weight:bold; font-size:12px;">${skill.name}</div><div style="font-size:10px; color:#aaa;">${skill.desc}</div></div>`;
+        btn.onclick = () => {
+            applyRunSkill(skill.id);
+            document.getElementById('levelUpModal').style.display = 'none';
+            gameState = 'playing';
+            lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        };
+        container.appendChild(btn);
+    });
+
+    let lm = document.getElementById('levelUpModal');
+    if(lm) lm.style.display = 'flex';
+}
+
+function applyRunSkill(id) {
+    if (id === 'atk_up') runMods.atkMult += 0.15;
+    if (id === 'spd_up') player.speed *= 1.1;
+    if (id === 'vamp') runMods.vamp += 2;
+    if (id === 'regen') runMods.regen += 2;
+    if (id === 'max_hp') { player.maxHp *= 1.2; player.hp = player.maxHp; }
+    if (id === 'heal') player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.5);
+    showAlert(`Получен навык!`);
+}
+
+function triggerDeath() {
+    gameState = 'paused';
+    if (revivesUsed === 0) {
+        let rm = document.getElementById('reviveModal');
+        if(rm) rm.style.display = 'flex';
+    } else {
+        showBattleResult(false);
+    }
+}
+
+window.acceptRevive = function() {
+    if (savedData.gems >= 10) {
+        savedData.gems -= 10;
+        saveData();
+        revivesUsed++;
+        player.hp = player.maxHp;
+        let rm = document.getElementById('reviveModal'); if(rm) rm.style.display = 'none';
+        gameState = 'playing';
+        lastTime = performance.now();
+        requestAnimationFrame(gameLoop);
+    } else {
+        showAlert("Недостаточно алмазов!");
+    }
+};
+
+window.declineRevive = function() {
+    let rm = document.getElementById('reviveModal'); if(rm) rm.style.display = 'none';
+    showBattleResult(false);
+};
+
+window.showBattleResult = function(isWin, isFlee = false) {
+    gameState = 'menu';
+    let cv = document.getElementById('gameCanvas'); if(cv) cv.style.display = 'none';
+    let jz = document.getElementById('joystickZone'); if(jz) jz.style.display = 'none';
+    let bp = document.getElementById('btnPause'); if(bp) bp.style.display = 'none';
+    let rcu = document.getElementById('roomCounterUI'); if(rcu) rcu.style.display = 'none';
+    let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none';
+    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
+
+    let tb = document.getElementById('topBar'); if(tb) tb.style.display = 'flex';
+    let nb = document.getElementById('navBar'); if(nb) nb.style.display = 'flex';
+    let lobby = document.getElementById('lobbyScreen'); if(lobby) lobby.style.display = 'flex';
+
+    let goldReward = isWin ? savedData.stage * 300 : 50;
+    let partsReward = isWin ? savedData.stage * 25 : 5;
+
+    if (isWin) {
+        savedData.gold += goldReward;
+        savedData.parts += partsReward;
+        savedData.seasonXp += 40;
+        if (savedData.seasonXp >= savedData.seasonLevel * 100) {
+            savedData.seasonXp = 0;
+            savedData.seasonLevel++;
+            showAlert("Уровень Боевого пропуска повышен!");
+        }
+    }
+    saveData();
+
+    let content = document.getElementById('battleResultContent');
+    if (content) {
+        content.innerHTML = `
+            <h2 style="color:${isWin?'#00ff00':'#ff4a4a'}; margin-top:0;">${isWin ? 'ПОБЕДА!' : (isFlee ? 'ПОБЕГ ИЗ БОЯ' : 'ПОРАЖЕНИЕ')}</h2>
+            <p style="color:#aaa; font-size:12px;">Награды за вылазку:</p>
+            <div style="display:flex; justify-content:center; gap:15px; margin:15px 0;">
+                <div>💰 +${goldReward}</div>
+                <div>⚙️ +${partsReward}</div>
+            </div>
+            <button onclick="document.getElementById('battleResultModal').style.display='none'; switchTab('lobbyScreen', document.getElementById('navLobby'))" style="background:#28a745; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; width:100%; cursor:pointer;">В ЛОББИ</button>
+        `;
+    }
+    let brm = document.getElementById('battleResultModal');
+    if(brm) brm.style.display = 'flex';
+};
