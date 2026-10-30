@@ -51,7 +51,6 @@
             border-radius: 15px; font-weight: bold; font-size: 14px; display: none; z-index: 150;
         }
 
-        /* Шкала опыта в бою */
         #combatXpContainer {
             display: none; position: absolute; top: calc(55px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); 
             width: 80%; max-width: 400px; background: rgba(0,0,0,0.6); border: 2px solid #555; border-radius: 10px; height: 18px; z-index: 150;
@@ -69,6 +68,11 @@
             transition: 0.2s; color: white; width: 100%;
         }
         .skill-card-btn:active { transform: scale(0.95); border-color: #ffd700; }
+        
+        .craft-card {
+            background: #1e1e2c; border: 1px solid #555; border-radius: 10px; padding: 10px; margin-bottom: 10px;
+            display: flex; justify-content: space-between; align-items: center; text-align: left;
+        }
     </style>
 </head>
 <body>
@@ -93,16 +97,9 @@
         <canvas id="gameCanvas" style="display:none; position:absolute; top:0; left:0;"></canvas>
         <button id="btnPause" onclick="togglePause()">⏸</button>
         <div id="roomCounterUI">Комната 1/5</div>
-        
-        <!-- Контейнер для шкалы опыта -->
-        <div id="combatXpContainer">
-            <div id="combatXpBar"></div>
-            <div id="combatLevelText">УР. 1</div>
-        </div>
-
+        <div id="combatXpContainer"><div id="combatXpBar"></div><div id="combatLevelText">УР. 1</div></div>
         <div id="joystickZone"><div id="joystickBase"><div id="joystickStick"></div></div></div>
 
-        <!-- Модалки боя -->
         <div id="battleResultModal" class="modal-overlay"><div class="modal-content" id="battleResultContent"></div></div>
         
         <div id="pauseModal" class="modal-overlay">
@@ -122,18 +119,15 @@
             </div>
         </div>
 
-        <!-- Модалка Level Up -->
         <div id="levelUpModal" class="modal-overlay">
             <div class="modal-content" style="border-color: #ffd700;">
                 <h2 style="color: #ffd700; margin-top: 0; font-size: 26px; text-shadow: 0 0 10px #ffd700;">НОВЫЙ УРОВЕНЬ!</h2>
                 <p style="color: #aaa; font-size: 14px; margin-bottom: 20px;">Выберите улучшение на этот забег:</p>
-                <div id="skillCardsContainer" style="display: flex; flex-direction: column; gap: 10px;">
-                    <!-- Карточки навыков будут сгенерированы через JS -->
-                </div>
+                <div id="skillCardsContainer" style="display: flex; flex-direction: column; gap: 10px;"></div>
             </div>
         </div>
 
-        <!-- Экраны лобби -->
+        <!-- ЛОББИ И ДРУГИЕ ЭКРАНЫ -->
         <div id="lobbyScreen" class="screen" style="display: flex; background: url('https://img.freepik.com/free-vector/dark-hexagonal-background-with-gradient-color_79603-1409.jpg') center/cover;">
             <div style="display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.7); padding: 8px 12px; border-radius: 12px; border: 1px solid #444; width: fit-content; margin: 0 auto; margin-top: 10px;">
                 <div style="width: 40px; height: 40px; background: #555; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px;">🐱</div>
@@ -200,21 +194,6 @@
                         <button id="btnClaimVip" onclick="claimVipDaily()" style="display:none; background: #28a745; color:#fff; border:none; padding:5px 10px; border-radius:5px; font-weight:bold; margin-top:5px; font-size: 10px;">Собрать 💎</button>
                     </div>
                     <button id="btnBuyVip" onclick="buyVip()" style="background: #ffd700; color:#000; border:none; padding:10px 15px; border-radius:8px; font-weight:bold; font-size: 14px;">Купить</button>
-                </div>
-                <h3 style="color: #ffd700; text-align: center; margin-bottom: 10px;">ЕЖЕДНЕВНЫЙ МАГАЗИН</h3>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px;">
-                    <div style="background: #2a2a35; border: 1px solid #444; border-radius: 10px; padding: 10px; text-align: center;">
-                        <div style="font-size: 24px; margin-bottom: 5px;">🪖</div>
-                        <button onclick="buyDailyItem('h3', 1000)" style="width:100%; background: #00bcd4; color:#fff; border:none; padding:5px; border-radius:5px; font-weight:bold; font-size: 11px;">💎 1000</button>
-                    </div>
-                    <div style="background: #2a2a35; border: 1px solid #444; border-radius: 10px; padding: 10px; text-align: center;">
-                        <div style="font-size: 24px; margin-bottom: 5px;">🛡️</div>
-                        <button onclick="buyDailySkill('sk_shield', 800)" style="width:100%; background: #00bcd4; color:#fff; border:none; padding:5px; border-radius:5px; font-weight:bold; font-size: 11px;">💎 800</button>
-                    </div>
-                    <div style="background: #2a2a35; border: 1px solid #444; border-radius: 10px; padding: 10px; text-align: center;">
-                        <div style="font-size: 24px; margin-bottom: 5px;">⚙️</div>
-                        <button onclick="buyResource('parts', 50, 5000)" style="width:100%; background: #ffea00; color:#000; border:none; padding:5px; border-radius:5px; font-weight:bold; font-size: 11px;">💰 5000</button>
-                    </div>
                 </div>
                 <h3 style="color: #ff00ff; text-align: center; margin-bottom: 10px;">СУНДУКИ</h3>
                 <div style="background: linear-gradient(180deg, #d76d77, #3a1c71); border: 2px solid #ff8c00; border-radius: 14px; padding: 15px; margin-bottom: 15px; text-align: center;">
@@ -295,9 +274,12 @@
                     <h3 style="color: #fff; margin: 0 0 5px 0;">🎰 ЗОЛОТОЙ СЛОТ</h3>
                     <button onclick="spinGoldenSlot()" style="width: 100%; background: #fff; color: #ff6600; border: none; padding: 12px; border-radius: 10px; font-weight: bold;">Вращать (50 💎)</button>
                 </div>
-                <div style="background: #2a2a35; border: 2px solid #ffd700; border-radius: 15px; padding: 15px; text-align: center;">
-                    <h3 style="color: #ffd700; margin: 0 0 5px 0;">🏪 Рынок</h3>
-                    <button onclick="sellPartsOnMarket()" style="width: 100%; background: #28a745; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold;">Продать 10 ⚙️ за 1000 💰</button>
+                
+                <!-- НОВОЕ: ОРУЖЕЙНАЯ / КРАФТ -->
+                <div style="background: #2a2a35; border: 2px solid #00bcd4; border-radius: 15px; padding: 15px; text-align: center; margin-bottom: 20px;">
+                    <h3 style="color: #00bcd4; margin: 0 0 10px 0;">🛠️ Оружейная (Крафт)</h3>
+                    <p style="color: #aaa; font-size: 12px; margin-bottom: 10px;">Создавайте новое оружие за Золото и Детали.</p>
+                    <div id="craftingList"></div>
                 </div>
             </div>
         </div>

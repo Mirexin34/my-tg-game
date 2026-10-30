@@ -37,7 +37,7 @@ const defaultSave = {
 };
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
-try { let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal15') || 'null'); if (loaded) Object.assign(savedData, loaded); } catch(e) {}
+try { let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal16') || 'null'); if (loaded) Object.assign(savedData, loaded); } catch(e) {}
 if (!savedData.equipped.weapon) savedData.equipped.weapon = null;
 if (!savedData.equipped.drone) savedData.equipped.drone = null;
 
@@ -63,7 +63,7 @@ window.openEnergyShop = function() {
     }
 }
 
-function saveData() { localStorage.setItem('spekterSaveFinal15', JSON.stringify(savedData)); updateTopBar(); }
+function saveData() { localStorage.setItem('spekterSaveFinal16', JSON.stringify(savedData)); updateTopBar(); }
 
 function updateTopBar() {
     checkEnergyRegen(); document.getElementById('gemDisplay').innerText = savedData.gems; document.getElementById('goldDisplay').innerText = (savedData.gold > 1000) ? (savedData.gold / 1000).toFixed(1) + 'K' : savedData.gold;
@@ -74,18 +74,30 @@ window.switchTab = function(screenId, btnElement) {
     document.querySelectorAll('.screen').forEach(s => s.style.display = 'none'); document.getElementById(screenId).style.display = 'flex';
     if(btnElement) { document.querySelectorAll('.navBtn').forEach(b => { b.classList.remove('active'); }); btnElement.classList.add('active'); }
     if(screenId === 'equipmentScreen') renderInventory(); if(screenId === 'skillsScreen') renderSkills(); if(screenId === 'shopScreen') updateVIPUI();
+    if(screenId === 'cityScreen') renderCrafting();
 };
 
+// БАЗА ДАННЫХ ПРЕДМЕТОВ (Обновлено оружие)
 const itemDatabase = [
     { id: 'h1', type: 'helmet', rarity: 'normal', icon: '🧢', hp: 100, atk: 0 }, { id: 'h3', type: 'helmet', rarity: 'epic', icon: '🪖', hp: 800, atk: 50 },
     { id: 'a1', type: 'armor', rarity: 'normal', icon: '👕', hp: 200, atk: 0 }, { id: 'a3', type: 'armor', rarity: 'epic', icon: '🧥', hp: 1200, atk: 80 },
     { id: 'r1', type: 'ring', rarity: 'normal', icon: '💍', hp: 0, atk: 50 }, { id: 'r3', type: 'ring', rarity: 'epic', icon: '💍', hp: 0, atk: 400 },
     { id: 'b1', type: 'boots', rarity: 'normal', icon: '👞', hp: 50, atk: 0 }, { id: 'b3', type: 'boots', rarity: 'epic', icon: '🥾', hp: 400, atk: 60 },
-    { id: 'w1', type: 'weapon', rarity: 'normal', icon: '🔫', hp: 0, atk: 150 }, { id: 'w3', type: 'weapon', rarity: 'epic', icon: '⚔️', hp: 0, atk: 600 },
+    // НОВОЕ ОРУЖИЕ СО СТАТАМИ СТРЕЛЬБЫ
+    { id: 'w1', type: 'weapon', rarity: 'normal', icon: '🔫', hp: 0, atk: 150, fireRate: 1.0, bullets: 1, projSpeed: 600, spread: 0 },
+    { id: 'w2', type: 'weapon', rarity: 'rare', icon: '⚡', hp: 0, atk: 250, fireRate: 2.5, bullets: 1, projSpeed: 800, spread: 0.1 },
+    { id: 'w3', type: 'weapon', rarity: 'epic', icon: '☄️', hp: 0, atk: 200, fireRate: 0.8, bullets: 3, projSpeed: 650, spread: 0.25 },
     { id: 'd1', type: 'drone', rarity: 'rare', icon: '🛸', hp: 200, atk: 100 }
 ];
 
 const skillDatabase = [ { id: 'sk_light', rarity: 'rare', icon: '⚡' }, { id: 'sk_shield', rarity: 'epic', icon: '🛡️' }, { id: 'sk_fire', rarity: 'normal', icon: '🔥' } ];
+
+// РЕЦЕПТЫ КРАФТА
+const craftingRecipes = [
+    { id: 'w1', name: 'Базовый Пистолет', costGold: 1000, costParts: 50, reqStage: 1, icon: '🔫' },
+    { id: 'w2', name: 'Плазмо-винтовка', costGold: 5000, costParts: 250, reqStage: 2, icon: '⚡' },
+    { id: 'w3', name: 'Рельсотрон (Дробовик)', costGold: 15000, costParts: 800, reqStage: 4, icon: '☄️' }
+];
 
 function getItemData(itemId) { return itemDatabase.find(i => i.id === itemId) || itemDatabase[0]; }
 
@@ -101,6 +113,43 @@ function getCalculatedStats() {
     let finalHp = Math.floor((baseHp + flatHp) * (1 + percentBonus));
     return { atk: finalAtk, hp: finalHp };
 }
+
+// ОТОБРАЖЕНИЕ И ЛОГИКА КРАФТА
+window.renderCrafting = function() {
+    const list = document.getElementById('craftingList');
+    list.innerHTML = '';
+    craftingRecipes.forEach(recipe => {
+        const canCraft = savedData.stage >= recipe.reqStage && savedData.gold >= recipe.costGold && savedData.parts >= recipe.costParts;
+        list.innerHTML += `
+            <div class="craft-card">
+                <div>
+                    <div style="font-size: 24px; float: left; margin-right: 10px;">${recipe.icon}</div>
+                    <div style="font-weight: bold; color: #fff; font-size: 14px;">${recipe.name}</div>
+                    <div style="color: #aaa; font-size: 11px;">Этап: ${recipe.reqStage}+ | 💰 ${recipe.costGold} | ⚙️ ${recipe.costParts}</div>
+                </div>
+                <button onclick="craftWeapon('${recipe.id}')" ${canCraft ? '' : 'disabled'} 
+                        style="background: ${canCraft ? '#28a745' : '#555'}; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold;">
+                    Создать
+                </button>
+            </div>
+        `;
+    });
+};
+
+window.craftWeapon = function(recipeId) {
+    const recipe = craftingRecipes.find(r => r.id === recipeId);
+    if (!recipe) return;
+    if (savedData.stage >= recipe.reqStage && savedData.gold >= recipe.costGold && savedData.parts >= recipe.costParts) {
+        savedData.gold -= recipe.costGold;
+        savedData.parts -= recipe.costParts;
+        savedData.inventory.push({ uid: getUid(), id: recipe.id });
+        saveData();
+        renderCrafting();
+        showAlert(`Успешно создано: ${recipe.name}! Ищите в инвентаре.`);
+    } else {
+        showAlert("Недостаточно ресурсов или не достигнут нужный Этап!");
+    }
+};
 
 window.renderInventory = function() {
     const grid = document.getElementById('inventoryGrid'); grid.innerHTML = '';
@@ -207,25 +256,15 @@ window.addEventListener('keydown', (e) => { let code = e.code; if(code==='KeyW' 
 window.addEventListener('keyup', (e) => { let code = e.code; if(code==='KeyW' || code==='ArrowUp') keys.up = false; if(code==='KeyS' || code==='ArrowDown') keys.down = false; if(code==='KeyA' || code==='ArrowLeft') keys.left = false; if(code==='KeyD' || code==='ArrowRight') keys.right = false; updateKeyboardInput(); });
 function updateKeyboardInput() { if (gameState !== 'playing') return; let dx = 0, dy = 0; if (keys.up) dy -= 1; if (keys.down) dy += 1; if (keys.left) dx -= 1; if (keys.right) dx += 1; if (dx !== 0 || dy !== 0) { input.usingKeyboard = true; input.isMoving = true; let dist = Math.hypot(dx, dy); input.x = dx / dist; input.y = dy / dist; joystickBase.style.display = 'none'; } else if (input.usingKeyboard) { input.usingKeyboard = false; input.isMoving = false; input.x = 0; input.y = 0; } }
 
-// --- ПЕРЕМЕННЫЕ РОГАЛИКА (Сброс каждый забег) ---
-let runLevel = 1;
-let runXp = 0;
-let runMaxXp = 50;
-let runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 };
-let pendingLevelUps = 0;
-
-const runSkillsPool = [
-    { id: 'atk_up', name: 'Мощь', desc: '+15% к урону', icon: '⚔️' },
-    { id: 'spd_up', name: 'Ловкость', desc: '+10% к скорости бега', icon: '👟' },
-    { id: 'vamp', name: 'Вампиризм', desc: 'Восст. 2 HP за убийство', icon: '🦇' },
-    { id: 'regen', name: 'Регенерация', desc: 'Восст. 2 HP каждую секунду', icon: '❤️' },
-    { id: 'max_hp', name: 'Здоровяк', desc: '+20% к Макс. HP и лечение', icon: '🛡️' },
-    { id: 'heal', name: 'Аптечка', desc: 'Мгновенно лечит 50% HP', icon: '💊' }
-];
+let runLevel = 1; let runXp = 0; let runMaxXp = 50; let runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; let pendingLevelUps = 0;
+const runSkillsPool = [ { id: 'atk_up', name: 'Мощь', desc: '+15% к урону', icon: '⚔️' }, { id: 'spd_up', name: 'Ловкость', desc: '+10% к скорости бега', icon: '👟' }, { id: 'vamp', name: 'Вампиризм', desc: 'Восст. 2 HP за убийство', icon: '🦇' }, { id: 'regen', name: 'Регенерация', desc: 'Восст. 2 HP каждую секунду', icon: '❤️' }, { id: 'max_hp', name: 'Здоровяк', desc: '+20% к Макс. HP и лечение', icon: '🛡️' }, { id: 'heal', name: 'Аптечка', desc: 'Мгновенно лечит 50% HP', icon: '💊' } ];
 
 let currentRoom = 1; const maxRooms = 5; 
-let player = { x: 1000, y: 1000, radius: 15, speed: 200, hp: 100, maxHp: 100, atk: 10, attackRate: 2.5, lastAttackTime: 0 };
+// ДОБАВИЛИ aimingAngle для поворота графики
+let player = { x: 1000, y: 1000, radius: 15, speed: 200, hp: 100, maxHp: 100, atk: 10, attackRate: 2.5, lastAttackTime: 0, aimingAngle: 0 };
 let enemies = []; let projectiles = []; let floatingTexts = []; let killsInRoom = 0; let totalKillsInRun = 0; let revivesUsed = 0; let isBossStage = false; let bossEntity = null; let roomState = 'fighting'; let portal = null; 
+// ТЕКУЩЕЕ ОРУЖИЕ В ЗАБЕГЕ
+let currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0 };
 
 window.togglePause = function() { 
     if (gameState === 'playing') { gameState = 'paused'; document.getElementById('pauseModal').style.display = 'flex'; } 
@@ -238,24 +277,21 @@ window.startBattle = function() {
     savedData.energy -= 5; saveData();
     document.querySelectorAll('.screen').forEach(s => s.style.display = 'none'); document.getElementById('topBar').style.display = 'none'; document.getElementById('navBar').style.display = 'none'; document.getElementById('battleResultModal').style.display = 'none'; document.getElementById('btnPause').style.display = 'flex'; roomCounterUI.style.display = 'block';
     
-    // Сброс статов для нового забега
     let finalStats = getCalculatedStats(); 
     player.maxHp = finalStats.hp; player.hp = finalStats.hp; player.atk = finalStats.atk;
-    runLevel = 1; runXp = 0; runMaxXp = 50; runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 };
-    player.speed = 200; // базовая скорость
-    updateCombatUI();
-    document.getElementById('combatXpContainer').style.display = 'block';
+    
+    // Подгружаем статы оружия
+    let wp = getItemData(savedData.equipped.weapon);
+    if (wp && wp.fireRate) { currentWeaponStats = { fireRate: wp.fireRate, bullets: wp.bullets, projSpeed: wp.projSpeed, spread: wp.spread }; } 
+    else { currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0 }; }
 
+    runLevel = 1; runXp = 0; runMaxXp = 50; runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; player.speed = 200; updateCombatUI(); document.getElementById('combatXpContainer').style.display = 'block';
     totalKillsInRun = 0; revivesUsed = 0; currentRoom = 1; startRoom();
     gameState = 'playing'; canvas.style.display = 'block'; joystickZone.style.display = 'block';
     lastTime = performance.now(); requestAnimationFrame(gameLoop);
 };
 
-function startRoom() {
-    player.x = world.width / 2; player.y = world.height / 2; enemies = []; projectiles = []; floatingTexts = []; killsInRoom = 0; roomState = 'fighting'; portal = null;
-    isBossStage = (currentRoom === maxRooms); bossEntity = null; roomCounterUI.innerText = isBossStage ? 'БОСС КОМНАТА' : `Комната ${currentRoom}/${maxRooms}`;
-}
-
+function startRoom() { player.x = world.width / 2; player.y = world.height / 2; enemies = []; projectiles = []; floatingTexts = []; killsInRoom = 0; roomState = 'fighting'; portal = null; isBossStage = (currentRoom === maxRooms); bossEntity = null; roomCounterUI.innerText = isBossStage ? 'БОСС КОМНАТА' : `Комната ${currentRoom}/${maxRooms}`; }
 function spawnEnemy() { const angle = Math.random() * Math.PI * 2; const distance = Math.max(screenW, screenH) / 2 + 100; let mobHp = 50 + (savedData.stage * 30) + (currentRoom * 5); let mobAtk = 10 + (savedData.stage * 5); let mobSpeed = 100 + (savedData.stage * 2); enemies.push({ x: player.x + Math.cos(angle)*distance, y: player.y + Math.sin(angle)*distance, radius: 16, hp: mobHp, maxHp: mobHp, atk: mobAtk, speed: mobSpeed, isBoss: false }); }
 function spawnBoss() { const angle = Math.random() * Math.PI * 2; const distance = Math.max(screenW, screenH) / 2 + 100; let bossHp = (50 + (savedData.stage * 30)) * 10; let bossAtk = 20 + (savedData.stage * 10); bossEntity = { x: player.x + Math.cos(angle)*distance, y: player.y + Math.sin(angle)*distance, radius: 40, hp: bossHp, maxHp: bossHp, atk: bossAtk, speed: 90, isBoss: true, lastAttack: 0 }; enemies.push(bossEntity); }
 
@@ -272,64 +308,10 @@ function showBattleResult(isWin, isFlee = false) {
 }
 window.closeBattleResult = function() { document.getElementById('battleResultModal').style.display = 'none'; canvas.style.display = 'none'; joystickZone.style.display = 'none'; document.getElementById('lobbyScreen').style.display = 'flex'; document.getElementById('topBar').style.display = 'flex'; document.getElementById('navBar').style.display = 'flex'; };
 
-// --- ЛОГИКА ОПЫТА И ПРОКАЧКИ ---
-function updateCombatUI() {
-    let pct = Math.min(100, (runXp / runMaxXp) * 100);
-    document.getElementById('combatXpBar').style.width = pct + '%';
-    document.getElementById('combatLevelText').innerText = 'УР. ' + runLevel;
-}
-
-function checkLevelUp() {
-    while (runXp >= runMaxXp) {
-        runXp -= runMaxXp;
-        runLevel++;
-        runMaxXp = Math.floor(runMaxXp * 1.5);
-        pendingLevelUps++;
-    }
-    updateCombatUI();
-    if (pendingLevelUps > 0 && gameState === 'playing') {
-        gameState = 'paused';
-        renderLevelUpMenu();
-    }
-}
-
-function renderLevelUpMenu() {
-    document.getElementById('levelUpModal').style.display = 'flex';
-    let shuffled = [...runSkillsPool].sort(() => 0.5 - Math.random());
-    let choices = shuffled.slice(0, 3);
-    let container = document.getElementById('skillCardsContainer');
-    container.innerHTML = '';
-    choices.forEach(skill => {
-        let btn = document.createElement('button');
-        btn.className = "skill-card-btn";
-        btn.innerHTML = `<div style="font-size: 32px;">${skill.icon}</div>
-                         <div>
-                            <div style="font-weight: bold; font-size: 16px; color: #ffd700;">${skill.name}</div>
-                            <div style="font-size: 12px; color: #aaa; margin-top: 2px;">${skill.desc}</div>
-                         </div>`;
-        btn.onclick = () => selectRunSkill(skill.id);
-        container.appendChild(btn);
-    });
-}
-
-window.selectRunSkill = function(id) {
-    if (id === 'atk_up') runMods.atkMult += 0.15;
-    if (id === 'spd_up') { runMods.spdMult += 0.10; player.speed = 200 * runMods.spdMult; }
-    if (id === 'vamp') runMods.vamp += 2;
-    if (id === 'regen') runMods.regen += 2;
-    if (id === 'max_hp') { let bonus = Math.floor(player.maxHp * 0.2); player.maxHp += bonus; player.hp += bonus; }
-    if (id === 'heal') { player.hp = Math.min(player.maxHp, player.hp + (player.maxHp * 0.5)); }
-    
-    pendingLevelUps--;
-    if (pendingLevelUps > 0) {
-        renderLevelUpMenu(); 
-    } else {
-        document.getElementById('levelUpModal').style.display = 'none';
-        gameState = 'playing';
-        lastTime = performance.now();
-        requestAnimationFrame(gameLoop);
-    }
-}
+function updateCombatUI() { let pct = Math.min(100, (runXp / runMaxXp) * 100); document.getElementById('combatXpBar').style.width = pct + '%'; document.getElementById('combatLevelText').innerText = 'УР. ' + runLevel; }
+function checkLevelUp() { while (runXp >= runMaxXp) { runXp -= runMaxXp; runLevel++; runMaxXp = Math.floor(runMaxXp * 1.5); pendingLevelUps++; } updateCombatUI(); if (pendingLevelUps > 0 && gameState === 'playing') { gameState = 'paused'; renderLevelUpMenu(); } }
+function renderLevelUpMenu() { document.getElementById('levelUpModal').style.display = 'flex'; let choices = [...runSkillsPool].sort(() => 0.5 - Math.random()).slice(0, 3); let container = document.getElementById('skillCardsContainer'); container.innerHTML = ''; choices.forEach(skill => { let btn = document.createElement('button'); btn.className = "skill-card-btn"; btn.innerHTML = `<div style="font-size: 32px;">${skill.icon}</div><div><div style="font-weight: bold; font-size: 16px; color: #ffd700;">${skill.name}</div><div style="font-size: 12px; color: #aaa; margin-top: 2px;">${skill.desc}</div></div>`; btn.onclick = () => selectRunSkill(skill.id); container.appendChild(btn); }); }
+window.selectRunSkill = function(id) { if (id === 'atk_up') runMods.atkMult += 0.15; if (id === 'spd_up') { runMods.spdMult += 0.10; player.speed = 200 * runMods.spdMult; } if (id === 'vamp') runMods.vamp += 2; if (id === 'regen') runMods.regen += 2; if (id === 'max_hp') { let bonus = Math.floor(player.maxHp * 0.2); player.maxHp += bonus; player.hp += bonus; } if (id === 'heal') { player.hp = Math.min(player.maxHp, player.hp + (player.maxHp * 0.5)); } pendingLevelUps--; if (pendingLevelUps > 0) { renderLevelUpMenu(); } else { document.getElementById('levelUpModal').style.display = 'none'; gameState = 'playing'; lastTime = performance.now(); requestAnimationFrame(gameLoop); } }
 
 let lastTime = performance.now();
 function gameLoop(timestamp) {
@@ -337,33 +319,49 @@ function gameLoop(timestamp) {
     let dt = (timestamp - lastTime) / 1000; lastTime = timestamp; if (dt > 0.1) dt = 0.016; 
     
     if (roomState === 'fighting') {
-        // Пассивная регенерация
-        if (runMods.regen > 0 && player.hp < player.maxHp) {
-            player.hp = Math.min(player.maxHp, player.hp + (runMods.regen * dt));
-        }
-
+        if (runMods.regen > 0 && player.hp < player.maxHp) { player.hp = Math.min(player.maxHp, player.hp + (runMods.regen * dt)); }
         if (isBossStage) { if (!bossEntity && enemies.length === 0) spawnBoss(); } 
         else { if (enemies.length < 5 + savedData.stage && Math.random() < 1.2 * dt && killsInRoom < 15) spawnEnemy(); }
         if (enemies.length === 0 && (isBossStage ? bossEntity && bossEntity.isDead : killsInRoom >= 15)) { roomState = 'cleared'; portal = { x: world.width / 2, y: world.height / 2 - 200, radius: 40 }; }
     }
 
-    if (roomState === 'cleared' && portal) {
-        if (Math.hypot(player.x - portal.x, player.y - portal.y) < player.radius + portal.radius) {
-            ctx.restore(); 
-            if (currentRoom < maxRooms) { currentRoom++; startRoom(); } else { showBattleResult(true); } return;
-        }
-    }
+    if (roomState === 'cleared' && portal) { if (Math.hypot(player.x - portal.x, player.y - portal.y) < player.radius + portal.radius) { ctx.restore(); if (currentRoom < maxRooms) { currentRoom++; startRoom(); } else { showBattleResult(true); } return; } }
 
-    if (input.isMoving && (input.x !== 0 || input.y !== 0)) { player.x += input.x * player.speed * dt; player.y += input.y * player.speed * dt; player.x = Math.max(player.radius, Math.min(world.width - player.radius, player.x)); player.y = Math.max(player.radius, Math.min(world.height - player.radius, player.y)); } 
+    if (input.isMoving && (input.x !== 0 || input.y !== 0)) { 
+        player.x += input.x * player.speed * dt; player.y += input.y * player.speed * dt; 
+        player.x = Math.max(player.radius, Math.min(world.width - player.radius, player.x)); player.y = Math.max(player.radius, Math.min(world.height - player.radius, player.y)); 
+        // Поворот туда, куда идем, если не стреляем
+        if(timestamp - player.lastAttackTime > 500) {
+            player.aimingAngle = Math.atan2(input.y, input.x);
+        }
+    } 
     
-    if (enemies.length > 0 && (timestamp - player.lastAttackTime)/1000 >= 1/player.attackRate) { 
+    // ЛОГИКА СТРЕЛЬБЫ С УЧЕТОМ СТАТОВ ОРУЖИЯ
+    let actualFireRate = player.attackRate * currentWeaponStats.fireRate;
+    if (enemies.length > 0 && (timestamp - player.lastAttackTime)/1000 >= 1/actualFireRate) { 
         let target = null, minDist = Infinity; 
         for (let e of enemies) { const dist = Math.hypot(e.x - player.x, e.y - player.y); if (dist < 400 && dist < minDist) { minDist = dist; target = e; } } 
         if (target) { 
-            const dx = target.x - player.x, dy = target.y - player.y, dist = Math.hypot(dx, dy) || 0.001; 
-            // Применяем модификатор урона от навыков рогалика
+            const dx = target.x - player.x, dy = target.y - player.y;
+            player.aimingAngle = Math.atan2(dy, dx); // Персонаж целится во врага
+            
             let finalDamage = player.atk * runMods.atkMult;
-            projectiles.push({ x: player.x, y: player.y, vx: (dx/dist)*500, vy: (dy/dist)*500, radius: 5, damage: finalDamage, isEnemy: false }); 
+            let bullets = currentWeaponStats.bullets;
+            let spread = currentWeaponStats.spread;
+            
+            for (let b = 0; b < bullets; b++) {
+                // Вычисляем угол для каждой пули (особенно важно для дробовика)
+                let angleOffset = spread === 0 ? 0 : (b * spread) - (spread * (bullets - 1) / 2);
+                let finalAngle = player.aimingAngle + angleOffset;
+                
+                projectiles.push({ 
+                    x: player.x, y: player.y, 
+                    vx: Math.cos(finalAngle) * currentWeaponStats.projSpeed, 
+                    vy: Math.sin(finalAngle) * currentWeaponStats.projSpeed, 
+                    radius: 4, damage: finalDamage, isEnemy: false,
+                    angle: finalAngle 
+                }); 
+            }
             player.lastAttackTime = timestamp; 
         } 
     }
@@ -373,19 +371,15 @@ function gameLoop(timestamp) {
     for (let i = enemies.length - 1; i >= 0; i--) {
         let e = enemies[i]; 
         if (e.isDead) { 
-            enemies.splice(i, 1); killsInRoom++; totalKillsInRun++; 
-            // ОПЫТ И ВАМПИРИЗМ
-            runXp += e.isBoss ? 150 : 20;
-            if (runMods.vamp > 0) {
-                player.hp = Math.min(player.maxHp, player.hp + runMods.vamp);
-                floatingTexts.push({ x: player.x, y: player.y - 20, text: `+${runMods.vamp}`, color: "#00ff00", life: 1.0 });
-            }
-            checkLevelUp();
-            continue; 
+            enemies.splice(i, 1); killsInRoom++; totalKillsInRun++; runXp += e.isBoss ? 150 : 20;
+            if (runMods.vamp > 0) { player.hp = Math.min(player.maxHp, player.hp + runMods.vamp); floatingTexts.push({ x: player.x, y: player.y - 20, text: `+${runMods.vamp}`, color: "#00ff00", life: 1.0 }); }
+            checkLevelUp(); continue; 
         }
         const dx = player.x - e.x, dy = player.y - e.y, dist = Math.hypot(dx, dy) || 0.001; if (dist > 0) { e.x += (dx / dist) * e.speed * dt; e.y += (dy / dist) * e.speed * dt; }
         e.x = Math.max(e.radius, Math.min(world.width - e.radius, e.x)); e.y = Math.max(e.radius, Math.min(world.height - e.radius, e.y));
-        if (e.isBoss && (timestamp - e.lastAttack) > 2000) { for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) { projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a)*300, vy: Math.sin(a)*300, radius: 8, damage: e.atk, isEnemy: true }); } e.lastAttack = timestamp; }
+        e.angle = Math.atan2(dy, dx); // Враги смотрят на игрока
+
+        if (e.isBoss && (timestamp - e.lastAttack) > 2000) { for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) { projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a)*300, vy: Math.sin(a)*300, radius: 6, damage: e.atk, isEnemy: true, angle: a }); } e.lastAttack = timestamp; }
         if (dist < player.radius + e.radius) { player.hp -= e.atk; if (player.hp <= 0) { ctx.restore(); triggerDeath(); return; } e.x -= (dx/dist)*100; e.y -= (dy/dist)*100; }
     }
     
@@ -395,21 +389,61 @@ function gameLoop(timestamp) {
         else { for (let j = enemies.length - 1; j >= 0; j--) { let e = enemies[j]; if (Math.hypot(p.x - e.x, p.y - e.y) < p.radius + e.radius) { e.hp -= p.damage; floatingTexts.push({ x: e.x, y: e.y - 20, text: Math.floor(p.damage), color: "#fff", life: 1.0 }); projectiles.splice(i, 1); if (e.hp <= 0) { e.isDead = true; } break; } } }
     }
 
-    ctx.fillStyle = '#1e1e24'; ctx.fillRect(0, 0, screenW, screenH); ctx.save(); 
+    // --- ОТРИСОВКА ---
+    // Фон (Кибер-сетка)
+    ctx.fillStyle = '#0a0a10'; ctx.fillRect(0, 0, screenW, screenH); ctx.save(); 
     camera.x = Math.max(0, Math.min(world.width - screenW, player.x - screenW / 2)); camera.y = Math.max(0, Math.min(world.height - screenH, player.y - screenH / 2)); ctx.translate(-camera.x, -camera.y);
-    ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 10; ctx.strokeRect(0, 0, world.width, world.height); ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = 0; i <= world.width; i += 40) { ctx.moveTo(i, 0); ctx.lineTo(i, world.height); } for (let i = 0; i <= world.height; i += 40) { ctx.moveTo(0, i); ctx.lineTo(world.width, i); } ctx.stroke();
+    
+    ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 5; ctx.strokeRect(0, 0, world.width, world.height); 
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.1)'; ctx.lineWidth = 2; ctx.beginPath(); 
+    for (let i = 0; i <= world.width; i += 50) { ctx.moveTo(i, 0); ctx.lineTo(i, world.height); } 
+    for (let i = 0; i <= world.height; i += 50) { ctx.moveTo(0, i); ctx.lineTo(world.width, i); } ctx.stroke();
     
     if (roomState === 'cleared' && portal) { ctx.fillStyle = '#9932CC'; ctx.beginPath(); ctx.arc(portal.x, portal.y, portal.radius + Math.sin(timestamp/150)*5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#fff'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('ВЫХОД', portal.x, portal.y - 50); }
-    for (let e of enemies) { ctx.fillStyle = e.isBoss ? '#9932CC' : '#ff4a4a'; ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); ctx.fill(); if(e.isBoss) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); } let hpBarWidth = e.isBoss ? 60 : 30; ctx.fillStyle = '#ff0000'; ctx.fillRect(e.x - hpBarWidth/2, e.y - e.radius - 10, hpBarWidth, 4); ctx.fillStyle = '#00ff00'; ctx.fillRect(e.x - hpBarWidth/2, e.y - e.radius - 10, hpBarWidth * (Math.max(0, e.hp) / e.maxHp), 4); }
-    for (let p of projectiles) { ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fillStyle = p.isEnemy ? '#ff0000' : '#00ffff'; ctx.fill(); }
-    ctx.fillStyle = '#00ff00'; ctx.fillRect(player.x - player.radius, player.y - player.radius, player.radius * 2, player.radius * 2);
     
-    // ОТРИСОВКА ЦИФР ХП НАД ПОЛОСКОЙ
-    let pBarW = 60; 
-    ctx.fillStyle = '#ff0000'; ctx.fillRect(player.x - pBarW/2, player.y + player.radius + 10, pBarW, 8); 
-    ctx.fillStyle = '#00ff00'; ctx.fillRect(player.x - pBarW/2, player.y + player.radius + 10, pBarW * (Math.max(0, player.hp) / player.maxHp), 8);
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center'; 
-    ctx.fillText(`${Math.floor(player.hp)}/${player.maxHp}`, player.x, player.y + player.radius + 18);
+    // Враги (Меха-пауки)
+    for (let e of enemies) { 
+        ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(e.angle);
+        let color = e.isBoss ? '#9932CC' : '#ff4a4a';
+        // Ноги
+        ctx.fillStyle = '#444'; 
+        ctx.fillRect(-e.radius-5, -e.radius, 10, 5); ctx.fillRect(-e.radius-5, e.radius-5, 10, 5);
+        ctx.fillRect(e.radius-5, -e.radius, 10, 5); ctx.fillRect(e.radius-5, e.radius-5, 10, 5);
+        // Корпус
+        ctx.fillStyle = color; ctx.beginPath(); ctx.arc(0, 0, e.radius, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(0, 0, e.radius * 0.6, 0, Math.PI * 2); ctx.fill();
+        // Глаз
+        ctx.fillStyle = '#ffea00'; ctx.beginPath(); ctx.arc(e.radius*0.5, 0, e.radius * 0.3, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+        
+        let hpBarWidth = e.isBoss ? 60 : 30; ctx.fillStyle = '#ff0000'; ctx.fillRect(e.x - hpBarWidth/2, e.y - e.radius - 15, hpBarWidth, 4); ctx.fillStyle = '#00ff00'; ctx.fillRect(e.x - hpBarWidth/2, e.y - e.radius - 15, hpBarWidth * (Math.max(0, e.hp) / e.maxHp), 4); 
+    }
+    
+    // Снаряды (Трассеры)
+    for (let p of projectiles) { 
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle);
+        ctx.fillStyle = p.isEnemy ? '#ff0000' : '#00ffff'; 
+        ctx.shadowBlur = 10; ctx.shadowColor = p.isEnemy ? '#ff0000' : '#00ffff';
+        ctx.fillRect(-10, -p.radius, 20, p.radius*2); // Лазерная полоска
+        ctx.restore();
+    }
+    
+    // Герой (Агент с оружием)
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    ctx.rotate(player.aimingAngle);
+    
+    // Оружие
+    ctx.fillStyle = '#555'; ctx.fillRect(10, -5, 20, 10);
+    // Тело
+    ctx.fillStyle = '#00ffff'; ctx.beginPath(); ctx.arc(0, 0, player.radius, 0, Math.PI * 2); ctx.fill();
+    // Визор / Каска
+    ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(5, 0, player.radius*0.7, -Math.PI/2, Math.PI/2); ctx.fill();
+    ctx.restore();
+    
+    // ХП Героя
+    let pBarW = 60; ctx.fillStyle = '#ff0000'; ctx.fillRect(player.x - pBarW/2, player.y + player.radius + 10, pBarW, 8); ctx.fillStyle = '#00ff00'; ctx.fillRect(player.x - pBarW/2, player.y + player.radius + 10, pBarW * (Math.max(0, player.hp) / player.maxHp), 8);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(`${Math.floor(player.hp)}/${player.maxHp}`, player.x, player.y + player.radius + 18);
 
     for (let ft of floatingTexts) { ctx.globalAlpha = ft.life; ctx.fillStyle = ft.color; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.strokeText(ft.text, ft.x, ft.y); ctx.fillText(ft.text, ft.x, ft.y); ctx.globalAlpha = 1.0; }
     ctx.restore();
