@@ -20,14 +20,17 @@ document.addEventListener('DOMContentLoaded', () => {
     let progress = 0; 
     const bar = document.getElementById('splashProgress');
     const interval = setInterval(() => { 
-        progress += 10; 
+        progress += 15; 
         if(bar) bar.style.width = progress + '%'; 
         if (progress >= 100) { 
             clearInterval(interval); 
             let splash = document.getElementById('splashScreen');
-            if(splash) { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; }, 400); }
+            if(splash) { 
+                splash.style.opacity = '0'; 
+                setTimeout(() => { splash.style.display = 'none'; }, 400); 
+            }
         } 
-    }, 40);
+    }, 30);
 });
 
 let gameState = 'menu';
@@ -80,7 +83,9 @@ function checkEnergyRegen() {
         savedData.energy = Math.min(30, savedData.energy + regenAmount); 
         savedData.lastEnergyTime += regenAmount * (5 * 60 * 1000); 
         saveData(); 
-    } else if (savedData.energy >= 30) { savedData.lastEnergyTime = Date.now(); } 
+    } else if (savedData.energy >= 30) { 
+        savedData.lastEnergyTime = Date.now(); 
+    } 
 }
 
 function updateEnergyTimerUI() { 
@@ -102,8 +107,10 @@ window.openEnergyShop = function() {
     if (savedData.energy >= 30) { showAlert("У вас уже максимум энергии!"); return; } 
     if (confirm("Купить 10 Энергии за 50 💎?")) { 
         if (savedData.gems >= 50) { 
-            savedData.gems -= 50; savedData.energy = Math.min(30, savedData.energy + 10); 
-            saveData(); showAlert("Энергия восстановлена!"); 
+            savedData.gems -= 50; 
+            savedData.energy = Math.min(30, savedData.energy + 10); 
+            saveData(); 
+            showAlert("Энергия восстановлена!"); 
         } else { showAlert("Недостаточно алмазов!"); } 
     } 
 };
@@ -165,7 +172,7 @@ window.renderCrafting = function() {
         let hasBp = !recipe.reqBp || (savedData.blueprints[recipe.reqBp] || 0) > 0; 
         let canCraft = savedData.stage >= recipe.reqStage && savedData.gold >= recipe.costGold && savedData.parts >= recipe.costParts && hasBp; 
         let bpText = recipe.reqBp ? `<br><span style="color:${hasBp?'#00ff00':'#ff4a4a'}">📜 Чертеж: ${(savedData.blueprints[recipe.reqBp]||0)}/1</span>` : ''; 
-        list.innerHTML += `<div class="craft-card"><div><div style="font-size: 20px; float: left; margin-right: 6px;">${recipe.icon}</div><div style="font-weight: bold; color: #fff; font-size: 12px;">${recipe.name}</div><div style="color: #aaa; font-size: 9px;">💰 ${recipe.costGold} | ⚙️ ${recipe.costParts} ${bpText}</div></div><button onclick="craftWeapon('${recipe.id}')" ${canCraft ? '' : 'disabled'} style="background: ${canCraft ? '#28a745' : '#555'}; color: white; border: none; padding: 5px 8px; border-radius: 5px; font-weight: bold; cursor:pointer; font-size:10px;">Создать</button></div>`; 
+        list.innerHTML += `<div class="craft-card"><div><div style="font-size: 18px; float: left; margin-right: 6px;">${recipe.icon}</div><div style="font-weight: bold; color: #fff; font-size: 11px;">${recipe.name}</div><div style="color: #aaa; font-size: 9px;">💰 ${recipe.costGold} | ⚙️ ${recipe.costParts} ${bpText}</div></div><button onclick="craftWeapon('${recipe.id}')" ${canCraft ? '' : 'disabled'} style="background: ${canCraft ? '#28a745' : '#555'}; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; cursor:pointer; font-size:10px;">Создать</button></div>`; 
     }); 
 };
 
@@ -174,10 +181,13 @@ window.craftWeapon = function(recipeId) {
     if (!recipe) return; 
     let hasBp = !recipe.reqBp || (savedData.blueprints[recipe.reqBp] || 0) > 0; 
     if (savedData.stage >= recipe.reqStage && savedData.gold >= recipe.costGold && savedData.parts >= recipe.costParts && hasBp) { 
-        savedData.gold -= recipe.costGold; savedData.parts -= recipe.costParts; 
+        savedData.gold -= recipe.costGold; 
+        savedData.parts -= recipe.costParts; 
         if (recipe.reqBp) savedData.blueprints[recipe.reqBp] -= 1; 
         savedData.inventory.push({ uid: getUid(), id: recipe.id }); 
-        saveData(); renderCrafting(); showAlert(`Создано: ${recipe.name}!`); 
+        saveData(); 
+        renderCrafting(); 
+        showAlert(`Создано: ${recipe.name}!`); 
     } else { showAlert("Не хватает ресурсов!"); } 
 };
 
@@ -190,9 +200,11 @@ window.renderInventory = function() {
         const slot = document.getElementById(`slot-${type}`); 
         if (slot && savedData.equipped[type]) { 
             let data = getItemData(savedData.equipped[type]); 
-            slot.className = `eq-slot rarity-bg-${data.rarity}`; slot.innerHTML = `${data.icon}`; 
+            slot.className = `eq-slot rarity-bg-${data.rarity}`; 
+            slot.innerHTML = `${data.icon}`; 
         } else if(slot) { 
-            slot.className = 'eq-slot'; slot.innerHTML = `<span style="color:#555;">${slotIcons[type]}</span>`; 
+            slot.className = 'eq-slot'; 
+            slot.innerHTML = `<span style="color:#555;">${slotIcons[type]}</span>`; 
         } 
     }); 
     savedData.inventory.forEach(invItem => { 
@@ -211,13 +223,17 @@ window.equipItem = function(uid, type) {
     if (index === -1) return; 
     if (savedData.equipped[type]) savedData.inventory.push({ uid: getUid(), id: savedData.equipped[type] }); 
     savedData.equipped[type] = savedData.inventory[index].id; 
-    savedData.inventory.splice(index, 1); saveData(); renderInventory(); 
+    savedData.inventory.splice(index, 1); 
+    saveData(); 
+    renderInventory(); 
 };
 
 window.unequip = function(type) { 
     if (savedData.equipped[type]) { 
         savedData.inventory.push({ uid: getUid(), id: savedData.equipped[type] }); 
-        savedData.equipped[type] = null; saveData(); renderInventory(); 
+        savedData.equipped[type] = null; 
+        saveData(); 
+        renderInventory(); 
     } 
 };
 
@@ -230,26 +246,32 @@ window.renderSkills = function() {
         if(!data) return; 
         let div = document.createElement('div'); 
         div.className = `inv-item rarity-bg-${data.rarity}`; 
-        div.innerHTML = `${data.icon}`; grid.appendChild(div); 
+        div.innerHTML = `${data.icon}`; 
+        grid.appendChild(div); 
     }); 
 };
 
 window.upgradeAgency = function() { 
     let cost = (savedData.agencyLevel + 1) * 5; 
     if (savedData.parts >= cost) { 
-        savedData.parts -= cost; savedData.agencyLevel++; saveData(); showAlert("Агентство улучшено!"); 
+        savedData.parts -= cost; 
+        savedData.agencyLevel++; 
+        saveData(); 
+        showAlert("Агентство улучшено!"); 
     } else { showAlert("Недостаточно деталей!"); } 
 };
 
 window.openChest = function(chestType, amount) { 
     let cost = 400 * amount; 
     if (savedData.gems < cost) { showAlert("Недостаточно алмазов!"); return; } 
-    savedData.gems -= cost; let pulled = []; 
+    savedData.gems -= cost; 
+    let pulled = []; 
     for (let i = 0; i < amount; i++) { 
         let r = Math.random(), tr = r < 0.1 ? 'epic' : (r < 0.4 ? 'rare' : 'normal'); 
         let pool = itemDatabase.filter(x => x.rarity === tr); if(!pool.length) pool = itemDatabase; 
         let item = pool[Math.floor(Math.random()*pool.length)]; 
-        savedData.inventory.push({uid: getUid(), id: item.id}); pulled.push(item); 
+        savedData.inventory.push({uid: getUid(), id: item.id}); 
+        pulled.push(item); 
     } 
     saveData(); 
     const container = document.getElementById('gachaItemsList'); 
@@ -258,20 +280,13 @@ window.openChest = function(chestType, amount) {
         pulled.forEach(item => { 
             let div = document.createElement('div'); 
             div.className = `inv-item rarity-bg-${item.rarity}`; 
-            div.style.width = '50px'; div.style.height = '50px'; div.style.fontSize = '24px'; 
-            div.innerHTML = item.icon; container.appendChild(div); 
+            div.style.width = '45px'; div.style.height = '45px'; div.style.fontSize = '22px'; 
+            div.innerHTML = item.icon; 
+            container.appendChild(div); 
         }); 
     }
     let modal = document.getElementById('gachaResult'); if(modal) modal.style.display = 'flex'; 
 };
-
-window.updateVIPUI = function() {}; 
-window.buyVip = function() {}; 
-window.claimVipDaily = function() {}; 
-window.spinGoldenSlot = function() {}; 
-window.openEventsModal = function() {}; 
-window.claimProgress = function() {}; 
-window.claimMission = function() {};
 
 // ----------------- ЛОГИКА РЫНКА СЛИТКОВ -----------------
 window.openAuctionModal = function() {
@@ -292,10 +307,10 @@ window.renderMarketUI = function() {
         container.innerHTML += `
             <div style="background: #1e1e2c; border: 1px solid #444; border-radius: 8px; padding: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
                 <div style="text-align: left;">
-                    <div style="font-size: 14px;">${item.icon} <strong style="color:#fff; font-size:12px;">${item.name}</strong></div>
-                    <div style="color: #aaa; font-size: 9px; margin-top: 2px;">Лимит: <span style="color:${leftToday > 0 ? '#00ff00' : '#ff4a4a'}; font-weight:bold;">${leftToday}/${item.maxDaily}</span> | Цена: ${item.pricePerUnitGem} 💎</div>
+                    <div style="font-size: 13px;">${item.icon} <strong style="color:#fff; font-size:11px;">${item.name}</strong></div>
+                    <div style="color: #aaa; font-size: 9px; margin-top: 2px;">Лимит: <span style="color:${leftToday > 0 ? '#00ff00' : '#ff4a4a'}; font-weight:bold;">${leftToday}/${item.maxDaily}</span> | ${item.pricePerUnitGem} 💎</div>
                 </div>
-                <button onclick="buyMarketItem('${item.id}', 1)" ${leftToday <= 0 ? 'disabled' : ''} style="background: ${leftToday > 0 ? '#28a745' : '#555'}; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-weight: bold; font-size: 10px; cursor: pointer;">Купить</button>
+                <button onclick="buyMarketItem('${item.id}', 1)" ${leftToday <= 0 ? 'disabled' : ''} style="background: ${leftToday > 0 ? '#28a745' : '#555'}; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Купить</button>
             </div>
         `;
     });
@@ -313,7 +328,9 @@ window.buyMarketItem = function(itemId, qty) {
     savedData.gems -= cfg.pricePerUnitGem;
     savedData.marketLimits[itemId] = boughtToday + 1;
     savedData.parts += 10; 
-    saveData(); renderMarketUI(); showAlert("Успешно куплено!");
+    saveData(); 
+    renderMarketUI(); 
+    showAlert("Успешно куплено!");
 };
 
 // ----------------- ЛОГИКА АРЕНЫ И БОТОВ (PvP) -----------------
@@ -326,13 +343,13 @@ window.openArenaModal = function() {
         container.innerHTML += `
             <div style="background: #1e1e2c; border: 1px solid #555; border-radius: 8px; padding: 8px; display: flex; justify-content: space-between; align-items: center;">
                 <div style="text-align: left; display:flex; align-items:center; gap:8px;">
-                    <div style="font-size: 20px;">${bot.icon}</div>
+                    <div style="font-size: 18px;">${bot.icon}</div>
                     <div>
-                        <div style="color: #fff; font-weight: bold; font-size: 12px;">${bot.name}</div>
+                        <div style="color: #fff; font-weight: bold; font-size: 11px;">${bot.name}</div>
                         <div style="color: #00ff00; font-size: 9px;">⚔️ БМ: ${bot.bm} | ❤️ HP: ${bot.hp}</div>
                     </div>
                 </div>
-                <button onclick="startArenaBattle('${bot.name}')" style="background: #ff4a4a; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-weight: bold; font-size: 10px; cursor: pointer;">Атаковать</button>
+                <button onclick="startArenaBattle('${bot.name}')" style="background: #ff4a4a; color: white; border: none; padding: 5px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Атаковать</button>
             </div>
         `;
     });
@@ -341,7 +358,6 @@ window.openArenaModal = function() {
 };
 
 let activeArenaBot = null;
-
 window.startArenaBattle = function(botName) {
     activeArenaBot = simulationBots.find(b => b.name === botName);
     if (!activeArenaBot) return;
@@ -358,7 +374,9 @@ window.startArenaBattle = function(botName) {
     resize(); world.width = screenW; world.height = screenH;
 
     let finalStats = getCalculatedStats(); 
-    player.maxHp = finalStats.hp; player.hp = finalStats.hp; player.atk = finalStats.atk; 
+    player.maxHp = finalStats.hp; 
+    player.hp = finalStats.hp; 
+    player.atk = finalStats.atk; 
     let wp = getItemData(savedData.equipped.weapon); 
     if (wp && wp.fireRate) { 
         currentWeaponStats = { fireRate: wp.fireRate, bullets: wp.bullets, projSpeed: wp.projSpeed, spread: wp.spread }; 
@@ -366,7 +384,8 @@ window.startArenaBattle = function(botName) {
     
     runLevel = 1; runXp = 0; runMaxXp = 100; 
     runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
-    player.speed = 220; runLoot = { blueprints: {} }; 
+    player.speed = 220; 
+    runLoot = { blueprints: {} }; 
     
     if(rcu) rcu.innerText = `ДУЭЛЬ: ${activeArenaBot.name}`;
     let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none'; 
@@ -412,8 +431,10 @@ if(bs) bs.addEventListener('click', () => {
 let bcs = document.getElementById('btnClaimSweep');
 if(bcs) bcs.addEventListener('click', () => { 
     if (pendingGold > 0 || pendingParts > 0) { 
-        savedData.gold += pendingGold; savedData.parts += pendingParts; 
-        savedData.lastAFKTime = Date.now(); saveData(); 
+        savedData.gold += pendingGold; 
+        savedData.parts += pendingParts; 
+        savedData.lastAFKTime = Date.now(); 
+        saveData(); 
         showAlert(`Собрано: ${pendingGold} 💰 и ${pendingParts} ⚙️`); 
     } 
     let sm = document.getElementById('sweepModal'); if(sm) sm.style.display = 'none'; 
@@ -446,9 +467,11 @@ const MAX_JOYSTICK_RADIUS = 50;
 
 function startInput(clientX, clientY) { 
     if (gameState !== 'playing') return; 
-    input.usingKeyboard = false; input.isMoving = true; 
+    input.usingKeyboard = false; 
+    input.isMoving = true; 
     let rect = joystickZone.getBoundingClientRect(); 
-    joystickCenter.x = clientX - rect.left; joystickCenter.y = clientY - rect.top; 
+    joystickCenter.x = clientX - rect.left; 
+    joystickCenter.y = clientY - rect.top; 
     joystickBase.style.display = 'block'; 
     joystickBase.style.left = `${joystickCenter.x}px`; 
     joystickBase.style.top = `${joystickCenter.y}px`; 
@@ -461,15 +484,19 @@ function moveInput(clientX, clientY) {
     let dx = (clientX - rect.left) - joystickCenter.x, dy = (clientY - rect.top) - joystickCenter.y; 
     let dist = Math.hypot(dx, dy) || 0.001; 
     if (dist > MAX_JOYSTICK_RADIUS) { 
-        dx = (dx/dist)*MAX_JOYSTICK_RADIUS; dy = (dy/dist)*MAX_JOYSTICK_RADIUS; 
+        dx = (dx / dist) * MAX_JOYSTICK_RADIUS; 
+        dy = (dy / dist) * MAX_JOYSTICK_RADIUS; 
     } 
     joystickStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`; 
-    input.x = dx / MAX_JOYSTICK_RADIUS; input.y = dy / MAX_JOYSTICK_RADIUS; 
+    input.x = dx / MAX_JOYSTICK_RADIUS; 
+    input.y = dy / MAX_JOYSTICK_RADIUS; 
 }
 
 function stopInput() { 
     if (input.usingKeyboard) return; 
-    input.isMoving = false; input.x = 0; input.y = 0; 
+    input.isMoving = false; 
+    input.x = 0; 
+    input.y = 0; 
     joystickBase.style.display = 'none'; 
 }
 
@@ -483,42 +510,53 @@ window.addEventListener('mouseup', stopInput);
 const keys = { up: false, down: false, left: false, right: false }; 
 window.addEventListener('keydown', (e) => { 
     let code = e.code; 
-    if(code==='KeyW' || code==='ArrowUp') keys.up = true; 
-    if(code==='KeyS' || code==='ArrowDown') keys.down = true; 
-    if(code==='KeyA' || code==='ArrowLeft') keys.left = true; 
-    if(code==='KeyD' || code==='ArrowRight') keys.right = true; 
+    if(code === 'KeyW' || code === 'ArrowUp') keys.up = true; 
+    if(code === 'KeyS' || code === 'ArrowDown') keys.down = true; 
+    if(code === 'KeyA' || code === 'ArrowLeft') keys.left = true; 
+    if(code === 'KeyD' || code === 'ArrowRight') keys.right = true; 
     updateKeyboardInput(); 
 }); 
 
 window.addEventListener('keyup', (e) => { 
     let code = e.code; 
-    if(code==='KeyW' || code==='ArrowUp') keys.up = false; 
-    if(code==='KeyS' || code==='ArrowDown') keys.down = false; 
-    if(code==='KeyA' || code==='ArrowLeft') keys.left = false; 
-    if(code==='KeyD' || code==='ArrowRight') keys.right = false; 
+    if(code === 'KeyW' || code === 'ArrowUp') keys.up = false; 
+    if(code === 'KeyS' || code === 'ArrowDown') keys.down = false; 
+    if(code === 'KeyA' || code === 'ArrowLeft') keys.left = false; 
+    if(code === 'KeyD' || code === 'ArrowRight') keys.right = false; 
     updateKeyboardInput(); 
 });
 
 function updateKeyboardInput() { 
     if (gameState !== 'playing') return; 
     let dx = 0, dy = 0; 
-    if (keys.up) dy -= 1; if (keys.down) dy += 1; 
-    if (keys.left) dx -= 1; if (keys.right) dx += 1; 
+    if (keys.up) dy -= 1; 
+    if (keys.down) dy += 1; 
+    if (keys.left) dx -= 1; 
+    if (keys.right) dx += 1; 
     if (dx !== 0 || dy !== 0) { 
-        input.usingKeyboard = true; input.isMoving = true; 
-        let dist = Math.hypot(dx, dy); input.x = dx / dist; input.y = dy / dist; 
+        input.usingKeyboard = true; 
+        input.isMoving = true; 
+        let dist = Math.hypot(dx, dy); 
+        input.x = dx / dist; 
+        input.y = dy / dist; 
         joystickBase.style.display = 'none'; 
     } else if (input.usingKeyboard) { 
-        input.usingKeyboard = false; input.isMoving = false; input.x = 0; input.y = 0; 
+        input.usingKeyboard = false; 
+        input.isMoving = false; 
+        input.x = 0; 
+        input.y = 0; 
     } 
 }
 
 window.togglePause = function() { 
     if (gameState === 'playing') { 
-        gameState = 'paused'; let pm = document.getElementById('pauseModal'); if(pm) pm.style.display = 'flex'; 
+        gameState = 'paused'; 
+        let pm = document.getElementById('pauseModal'); if(pm) pm.style.display = 'flex'; 
     } else if (gameState === 'paused') { 
-        gameState = 'playing'; let pm = document.getElementById('pauseModal'); if(pm) pm.style.display = 'none'; 
-        lastTime = performance.now(); requestAnimationFrame(gameLoop); 
+        gameState = 'playing'; 
+        let pm = document.getElementById('pauseModal'); if(pm) pm.style.display = 'none'; 
+        lastTime = performance.now(); 
+        requestAnimationFrame(gameLoop); 
     } 
 };
 
@@ -527,9 +565,19 @@ window.fleeBattle = function() {
     showBattleResult(false, true); 
 };
 
+let player = { x: 100, y: 100, radius: 18, hp: 500, maxHp: 500, speed: 220, atk: 120, attackRate: 1.5, lastAttackTime: 0, aimingAngle: 0 };
+let enemies = [], projectiles = [], floatingTexts = [];
+let currentRoom = 1, maxRooms = 5, killsInRoom = 0, totalKillsInRun = 0, revivesUsed = 0;
+let roomState = 'fighting', portal = null, isBossStage = false, bossEntity = null;
+let currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0 };
+let runLevel = 1, runXp = 0, runMaxXp = 100;
+let runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 };
+let runLoot = { blueprints: {} };
+
 window.startBattle = function() { 
     if (savedData.energy < 5) { showAlert("Недостаточно энергии!"); return; } 
-    savedData.energy -= 5; saveData(); 
+    savedData.energy -= 5; 
+    saveData(); 
     document.querySelectorAll('.screen').forEach(s => s.style.display = 'none'); 
     let tb = document.getElementById('topBar'); if(tb) tb.style.display = 'none'; 
     let nb = document.getElementById('navBar'); if(nb) nb.style.display = 'none'; 
@@ -537,10 +585,14 @@ window.startBattle = function() {
     let bp = document.getElementById('btnPause'); if(bp) bp.style.display = 'flex'; 
     let rcu = document.getElementById('roomCounterUI'); if(rcu) rcu.style.display = 'block'; 
 
-    resize(); world.width = screenW; world.height = screenH;
+    resize(); 
+    world.width = screenW; 
+    world.height = screenH;
 
     let finalStats = getCalculatedStats(); 
-    player.maxHp = finalStats.hp; player.hp = finalStats.hp; player.atk = finalStats.atk; 
+    player.maxHp = finalStats.hp; 
+    player.hp = finalStats.hp; 
+    player.atk = finalStats.atk; 
     let wp = getItemData(savedData.equipped.weapon); 
     if (wp && wp.fireRate) { 
         currentWeaponStats = { fireRate: wp.fireRate, bullets: wp.bullets, projSpeed: wp.projSpeed, spread: wp.spread }; 
@@ -548,7 +600,8 @@ window.startBattle = function() {
     
     runLevel = 1; runXp = 0; runMaxXp = 100; 
     runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
-    player.speed = 220; runLoot = { blueprints: {} }; 
+    player.speed = 220; 
+    runLoot = { blueprints: {} }; 
     updateCombatUI(); 
     let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'block'; 
     totalKillsInRun = 0; revivesUsed = 0; currentRoom = 1; 
@@ -562,10 +615,16 @@ window.startBattle = function() {
 };
 
 function startRoom() { 
-    player.x = 100; player.y = screenH / 2; 
-    enemies = []; projectiles = []; floatingTexts = []; 
-    killsInRoom = 0; roomState = 'fighting'; portal = null; 
-    isBossStage = (currentRoom === maxRooms); bossEntity = null; 
+    player.x = 100; 
+    player.y = screenH / 2; 
+    enemies = []; 
+    projectiles = []; 
+    floatingTexts = []; 
+    killsInRoom = 0; 
+    roomState = 'fighting'; 
+    portal = null; 
+    isBossStage = (currentRoom === maxRooms); 
+    bossEntity = null; 
     let rcu = document.getElementById('roomCounterUI');
     if(rcu) rcu.innerText = isBossStage ? 'БОСС КОМНАТА' : `Комната ${currentRoom}/${maxRooms}`; 
 
@@ -578,7 +637,8 @@ function startRoom() {
 
 function spawnSpecificWaveEnemy() {
     let r = Math.random();
-    let type = 'zombie'; let cfg = enemyTypesConfig.zombie;
+    let type = 'zombie'; 
+    let cfg = enemyTypesConfig.zombie;
     if (savedData.stage >= 2 && r < 0.25) { type = 'dog'; cfg = enemyTypesConfig.dog; }
     else if (savedData.stage >= 2 && r >= 0.25 && r < 0.5) { type = 'shooter'; cfg = enemyTypesConfig.shooter; }
     else if (savedData.stage >= 3 && r >= 0.5) { type = 'kamikaze'; cfg = enemyTypesConfig.kamikaze; }
@@ -590,8 +650,17 @@ function spawnSpecificWaveEnemy() {
     enemies.push({ 
         x: screenW - 100 + (Math.random() * 60 - 30), 
         y: 80 + Math.random() * (screenH - 160), 
-        radius: cfg.radius, hp: mobHp, maxHp: mobHp, atk: mobAtk, speed: mobSpeed, 
-        isBoss: false, isBot: false, type: type, icon: cfg.icon, angle: 0, lastAttack: 0 
+        radius: cfg.radius, 
+        hp: mobHp, 
+        maxHp: mobHp, 
+        atk: mobAtk, 
+        speed: mobSpeed, 
+        isBoss: false, 
+        isBot: false, 
+        type: type, 
+        icon: cfg.icon, 
+        angle: 0, 
+        lastAttack: 0 
     }); 
 }
 
@@ -613,94 +682,111 @@ function triggerDeath() {
 window.acceptRevive = function() { 
     let cost = (revivesUsed + 1) * 10; 
     if (savedData.gems >= cost) { 
-        savedData.gems -= cost; saveData(); revivesUsed++; player.hp = player.maxHp; 
+        savedData.gems -= cost; 
+        saveData(); 
+        revivesUsed++; 
+        player.hp = player.maxHp; 
         let rm = document.getElementById('reviveModal'); if(rm) rm.style.display = 'none'; 
-        gameState = 'playing'; lastTime = performance.now(); requestAnimationFrame(gameLoop); 
+        gameState = 'playing'; 
+        lastTime = performance.now(); 
+        requestAnimationFrame(gameLoop); 
     } else { showAlert("Недостаточно алмазов!"); } 
 };
 
 window.declineRevive = function() { 
-    let rm = document.getElementById('reviveModal'); if(rm) rm.style.display = 'none'; showBattleResult(false); 
+    let rm = document.getElementById('reviveModal'); if(rm) rm.style.display = 'none'; 
+    showBattleResult(false); 
 };
 
-function showBattleResult(isWin, isFlee = false) { 
-    gameState = 'menu'; 
-    let bp = document.getElementById('btnPause'); if(bp) bp.style.display = 'none'; 
-    let rcu = document.getElementById('roomCounterUI'); if(rcu) rcu.style.display = 'none'; 
-    let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none'; 
-    
-    let isPvp = (roomState === 'pvp_fighting' || roomState === 'pvp_ended');
-    let goldReward = isPvp ? (isWin ? 2000 : 200) : (isWin ? (totalKillsInRun * 20 + 500) : (totalKillsInRun * 5)); 
-    let partsReward = isWin ? 30 : 5; 
-    
-    if (!isPvp) {
-        savedData.dailyKills += totalKillsInRun; 
-        if (isWin) savedData.stage++; 
+function checkLevelUp() {
+    if (runXp >= runMaxXp) {
+        runLevel++;
+        runXp -= runMaxXp;
+        runMaxXp = Math.floor(runMaxXp * 1.3);
+        openLevelUpModal();
     }
-    savedData.gold += goldReward; savedData.parts += partsReward; saveData(); 
+    updateCombatUI();
+}
 
-    let modalContent = document.getElementById('battleResultContent'); 
-    let titleColor = isWin ? '#00ff00' : '#ff4a4a'; 
-    let titleText = isWin ? (isPvp ? 'ПОБЕДА НА АРЕНЕ!' : 'ЭТАП ПРОЙДЕН!') : (isFlee ? 'ОТСТУПЛЕНИЕ' : 'ПОРАЖЕНИЕ'); 
-    if(modalContent) {
-        modalContent.style.borderColor = titleColor; 
-        modalContent.innerHTML = `<h2 style="color: ${titleColor}; margin-top: 0; font-size: 22px; font-style: italic;">${titleText}</h2><div style="background: #1e1e2c; padding: 10px; border-radius: 8px; margin-bottom: 12px;"><div style="display: flex; justify-content: center; gap: 12px; margin-top: 8px;"><div><span style="font-size:18px;">💰</span><br><strong style="color:#ffd700; font-size:12px;">+${goldReward}</strong></div><div><span style="font-size:18px;">⚙️</span><br><strong style="color:#da70d6; font-size:12px;">+${partsReward}</strong></div></div></div><button onclick="closeBattleResult()" style="background: ${titleColor}; color: #000; border: none; padding: 10px; border-radius: 8px; font-weight: bold; width: 100%; font-size: 14px; cursor: pointer;">ВЕРНУТЬСЯ В ЛОББИ</button>`; 
+function updateCombatUI() {
+    let bar = document.getElementById('combatXpBar');
+    let text = document.getElementById('combatLevelText');
+    if (bar) bar.style.width = Math.min(100, (runXp / runMaxXp) * 100) + '%';
+    if (text) text.innerText = `УР. ${runLevel}`;
+}
+
+function openLevelUpModal() {
+    gameState = 'paused';
+    const container = document.getElementById('skillCardsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    let shuffled = [...runSkillsPool].sort(() => 0.5 - Math.random()).slice(0, 3);
+    shuffled.forEach(skill => {
+        let btn = document.createElement('div');
+        btn.className = 'skill-card-btn';
+        btn.innerHTML = `<div style="font-size: 24px;">${skill.icon}</div><div><div style="font-weight: bold; font-size: 13px;">${skill.name}</div><div style="font-size: 10px; color: #aaa;">${skill.desc}</div></div>`;
+        btn.onclick = () => { applyRunSkill(skill.id); document.getElementById('levelUpModal').style.display = 'none'; gameState = 'playing'; lastTime = performance.now(); requestAnimationFrame(gameLoop); };
+        container.appendChild(btn);
+    });
+
+    let lm = document.getElementById('levelUpModal');
+    if (lm) lm.style.display = 'flex';
+}
+
+function applyRunSkill(skillId) {
+    if (skillId === 'atk_up') runMods.atkMult += 0.15;
+    if (skillId === 'spd_up') { runMods.spdMult += 0.1; player.speed += 20; }
+    if (skillId === 'vamp') runMods.vamp += 2;
+    if (skillId === 'regen') runMods.regen += 2;
+    if (skillId === 'max_hp') { player.maxHp = Math.floor(player.maxHp * 1.2); player.hp = player.maxHp; }
+    if (skillId === 'heal') { player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.5); }
+}
+
+function showBattleResult(isVictory, isFlee = false) {
+    gameState = 'paused';
+    let cv = document.getElementById('gameCanvas'); if(cv) cv.style.display = 'none';
+    let jz = document.getElementById('joystickZone'); if(jz) jz.style.display = 'none';
+    let bp = document.getElementById('btnPause'); if(bp) bp.style.display = 'none';
+    let rcu = document.getElementById('roomCounterUI'); if(rcu) rcu.style.display = 'none';
+    let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none';
+
+    let goldReward = isVictory ? (savedData.stage * 150 + totalKillsInRun * 15) : (totalKillsInRun * 5);
+    let partsReward = isVictory ? (savedData.stage * 10) : 0;
+
+    savedData.gold += goldReward;
+    savedData.parts += partsReward;
+    if (isVictory && roomState !== 'pvp_fighting') {
+        savedData.stage++;
     }
-    let brm = document.getElementById('battleResultModal'); if(brm) brm.style.display = 'flex'; 
+    savedData.dailyKills += totalKillsInRun;
+    saveData();
+
+    let content = document.getElementById('battleResultContent');
+    if (content) {
+        content.innerHTML = `
+            <h2 style="color: ${isVictory ? '#00ff00' : '#ff4a4a'}; margin-top:0;">${isVictory ? 'ПОБЕДА!' : (isFlee ? 'БОЙ ПРЕРВАН' : 'ПОРАЖЕНИЕ')}</h2>
+            <p style="font-size:12px; color:#aaa;">Уничтожено врагов: ${totalKillsInRun}</p>
+            <div style="background:#1a1a24; padding:10px; border-radius:8px; margin:10px 0; display:flex; justify-content:around;">
+                <div>💰 +${goldReward} Золота</div>
+                <div>⚙️ +${partsReward} Деталей</div>
+            </div>
+            <button onclick="closeBattleResult()" style="background:#28a745; color:#fff; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; width:100%; cursor:pointer;">В ЛОББИ</button>
+        `;
+    }
+    let brm = document.getElementById('battleResultModal');
+    if(brm) brm.style.display = 'flex';
 }
 
-window.closeBattleResult = function() { 
-    let brm = document.getElementById('battleResultModal'); if(brm) brm.style.display = 'none'; 
-    let cv = document.getElementById('gameCanvas'); if(cv) cv.style.display = 'none'; 
-    let jz = document.getElementById('joystickZone'); if(jz) jz.style.display = 'none'; 
-    let ls = document.getElementById('lobbyScreen'); if(ls) ls.style.display = 'flex'; 
-    let tb = document.getElementById('topBar'); if(tb) tb.style.display = 'flex'; 
-    let nb = document.getElementById('navBar'); if(nb) nb.style.display = 'flex'; 
-};
-
-function updateCombatUI() { 
-    let pct = Math.min(100, (runXp / runMaxXp) * 100); 
-    let xpb = document.getElementById('combatXpBar'); if(xpb) xpb.style.width = pct + '%'; 
-    let clt = document.getElementById('combatLevelText'); if(clt) clt.innerText = 'УР. ' + runLevel; 
-}
-
-function checkLevelUp() { 
-    while (runXp >= runMaxXp) { 
-        runXp -= runMaxXp; runLevel++; runMaxXp = Math.floor(runMaxXp * 1.6); pendingLevelUps++; 
-    } 
-    updateCombatUI(); 
-    if (pendingLevelUps > 0 && gameState === 'playing') { gameState = 'paused'; renderLevelUpMenu(); } 
-}
-
-function renderLevelUpMenu() { 
-    let lum = document.getElementById('levelUpModal'); if(lum) lum.style.display = 'flex'; 
-    let choices = [...runSkillsPool].sort(() => 0.5 - Math.random()).slice(0, 3); 
-    let container = document.getElementById('skillCardsContainer'); 
-    if(!container) return;
-    container.innerHTML = ''; 
-    choices.forEach(skill => { 
-        let btn = document.createElement('button'); 
-        btn.className = "skill-card-btn"; 
-        btn.innerHTML = `<div style="font-size: 22px;">${skill.icon}</div><div><div style="font-weight: bold; font-size: 13px; color: #ffd700;">${skill.name}</div><div style="font-size: 10px; color: #aaa;">${skill.desc}</div></div>`; 
-        btn.onclick = () => selectRunSkill(skill.id); 
-        container.appendChild(btn); 
-    }); 
-}
-
-window.selectRunSkill = function(id) { 
-    if (id === 'atk_up') runMods.atkMult += 0.15; 
-    if (id === 'spd_up') { runMods.spdMult += 0.10; player.speed = 220 * runMods.spdMult; } 
-    if (id === 'vamp') runMods.vamp += 2; 
-    if (id === 'regen') runMods.regen += 2; 
-    if (id === 'max_hp') { let bonus = Math.floor(player.maxHp * 0.2); player.maxHp += bonus; player.hp += bonus; } 
-    if (id === 'heal') { player.hp = Math.min(player.maxHp, player.hp + (player.maxHp * 0.5)); } 
-    pendingLevelUps--; 
-    if (pendingLevelUps > 0) { renderLevelUpMenu(); } 
-    else { let lum = document.getElementById('levelUpModal'); if(lum) lum.style.display = 'none'; gameState = 'playing'; lastTime = performance.now(); requestAnimationFrame(gameLoop); } 
+window.closeBattleResult = function() {
+    let brm = document.getElementById('battleResultModal'); if(brm) brm.style.display = 'none';
+    let tb = document.getElementById('topBar'); if(tb) tb.style.display = 'flex';
+    let nb = document.getElementById('navBar'); if(nb) nb.style.display = 'flex';
+    switchTab('lobbyScreen', document.getElementById('navLobby'));
+    gameState = 'menu';
 };
 
 let lastTime = performance.now(); 
-
 function gameLoop(timestamp) {
     if (gameState !== 'playing') return; 
     requestAnimationFrame(gameLoop);
@@ -744,7 +830,7 @@ function gameLoop(timestamp) {
     } 
     
     let actualFireRate = player.attackRate * currentWeaponStats.fireRate;
-    if (enemies.length > 0 && (timestamp - player.lastAttackTime)/1000 >= 1/actualFireRate) { 
+    if (enemies.length > 0 && (timestamp - player.lastAttackTime)/1000 >= 1 / actualFireRate) { 
         let target = null, minDist = Infinity; 
         for (let e of enemies) { 
             const dist = Math.hypot(e.x - player.x, e.y - player.y); 
@@ -754,7 +840,8 @@ function gameLoop(timestamp) {
             const dx = target.x - player.x, dy = target.y - player.y; 
             player.aimingAngle = Math.atan2(dy, dx); 
             let finalDamage = player.atk * runMods.atkMult; 
-            let bullets = currentWeaponStats.bullets; let spread = currentWeaponStats.spread;
+            let bullets = currentWeaponStats.bullets; 
+            let spread = currentWeaponStats.spread;
             for (let b = 0; b < bullets; b++) { 
                 let angleOffset = spread === 0 ? 0 : (b * spread) - (spread * (bullets - 1) / 2); 
                 let finalAngle = player.aimingAngle + angleOffset; 
@@ -774,7 +861,8 @@ function gameLoop(timestamp) {
     }
     
     for (let i = floatingTexts.length - 1; i >= 0; i--) { 
-        floatingTexts[i].life -= dt; floatingTexts[i].y -= 25 * dt; 
+        floatingTexts[i].life -= dt; 
+        floatingTexts[i].y -= 25 * dt; 
         if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1); 
     }
     
@@ -786,8 +874,15 @@ function gameLoop(timestamp) {
                 showBattleResult(true);
                 return;
             }
-            enemies.splice(i, 1); killsInRoom++; totalKillsInRun++; runXp += 15; 
-            checkLevelUp(); continue; 
+            enemies.splice(i, 1); 
+            killsInRoom++; 
+            totalKillsInRun++; 
+            runXp += 15; 
+            if (runMods.vamp > 0) {
+                player.hp = Math.min(player.maxHp, player.hp + runMods.vamp);
+            }
+            checkLevelUp(); 
+            continue; 
         }
         
         const dx = player.x - e.x, dy = player.y - e.y, dist = Math.hypot(dx, dy) || 0.001; 
@@ -803,13 +898,17 @@ function gameLoop(timestamp) {
                 e.lastAttack = timestamp; 
             }
         } else if (e.type === 'kamikaze') {
-            e.x += (dx / dist) * e.speed * 1.4 * dt; e.y += (dy / dist) * e.speed * 1.4 * dt;
+            e.x += (dx / dist) * e.speed * 1.4 * dt; 
+            e.y += (dy / dist) * e.speed * 1.4 * dt;
             if (dist < player.radius + e.radius + 10) { 
-                player.hp -= e.atk * 2.5; e.hp = 0; e.isDead = true; 
+                player.hp -= e.atk * 2.5; 
+                e.hp = 0; 
+                e.isDead = true; 
                 if (player.hp <= 0) { triggerDeath(); return; } 
             }
         } else {
-            e.x += (dx / dist) * e.speed * dt; e.y += (dy / dist) * e.speed * dt;
+            e.x += (dx / dist) * e.speed * dt; 
+            e.y += (dy / dist) * e.speed * dt;
             if (e.isBoss && (timestamp - e.lastAttack) > 2000) { 
                 for (let a = 0; a < Math.PI * 2; a += Math.PI / 3) { 
                     projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a)*280, vy: Math.sin(a)*280, radius: 6, damage: e.atk, isEnemy: true, angle: a }); 
@@ -827,7 +926,8 @@ function gameLoop(timestamp) {
     
     for (let i = projectiles.length - 1; i >= 0; i--) {
         let p = projectiles[i]; 
-        p.x += p.vx * dt; p.y += p.vy * dt; 
+        p.x += p.vx * dt; 
+        p.y += p.vy * dt; 
         if (p.x < 0 || p.x > screenW || p.y < 0 || p.y > screenH) { projectiles.splice(i, 1); continue; }
         
         if (p.isEnemy) { 
@@ -851,18 +951,24 @@ function gameLoop(timestamp) {
         }
     }
 
-    ctx.fillStyle = '#0a0a10'; ctx.fillRect(0, 0, screenW, screenH); 
+    ctx.fillStyle = '#0a0a10'; 
+    ctx.fillRect(0, 0, screenW, screenH); 
     
-    ctx.strokeStyle = 'rgba(0, 255, 255, 0.1)'; ctx.lineWidth = 1; ctx.beginPath(); 
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.1)'; 
+    ctx.lineWidth = 1; 
+    ctx.beginPath(); 
     for (let i = 0; i <= screenW; i += 50) { ctx.moveTo(i, 0); ctx.lineTo(i, screenH); } 
     for (let i = 0; i <= screenH; i += 50) { ctx.moveTo(0, i); ctx.lineTo(screenW, i); } 
     ctx.stroke();
 
-    ctx.strokeStyle = isPvp ? '#ff4a4a' : '#00ffff'; ctx.lineWidth = 3; ctx.strokeRect(0, 0, screenW, screenH);
+    ctx.strokeStyle = isPvp ? '#ff4a4a' : '#00ffff'; 
+    ctx.lineWidth = 3; 
+    ctx.strokeRect(0, 0, screenW, screenH);
     
     for (let e of enemies) { 
-        ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(e.angle);
-        
+        ctx.save(); 
+        ctx.translate(e.x, e.y); 
+        ctx.rotate(e.angle);
         if (e.isBot) {
             ctx.fillStyle = '#ff4a4a'; ctx.beginPath(); ctx.arc(0, 0, e.radius, 0, Math.PI * 2); ctx.fill();
             ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(5, 0, e.radius * 0.7, -Math.PI/2, Math.PI/2); ctx.fill();
@@ -884,13 +990,17 @@ function gameLoop(timestamp) {
     }
     
     for (let p of projectiles) { 
-        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle); 
+        ctx.save(); 
+        ctx.translate(p.x, p.y); 
+        ctx.rotate(p.angle); 
         ctx.fillStyle = p.isEnemy ? '#ff0000' : '#00ffff'; 
         ctx.fillRect(-8, -p.radius, 16, p.radius*2); 
         ctx.restore(); 
     }
     
-    ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(player.aimingAngle); 
+    ctx.save(); 
+    ctx.translate(player.x, player.y); 
+    ctx.rotate(player.aimingAngle); 
     ctx.fillStyle = '#555'; ctx.fillRect(10, -5, 20, 10); 
     ctx.fillStyle = '#00ffff'; ctx.beginPath(); ctx.arc(0, 0, player.radius, 0, Math.PI * 2); ctx.fill(); 
     ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(5, 0, player.radius*0.7, -Math.PI/2, Math.PI/2); ctx.fill(); 
@@ -903,8 +1013,14 @@ function gameLoop(timestamp) {
     ctx.fillText(`${Math.floor(player.hp)}/${player.maxHp}`, player.x, player.y + player.radius + 20);
     
     for (let ft of floatingTexts) { 
-        ctx.globalAlpha = ft.life; ctx.fillStyle = ft.color; ctx.font = 'bold 18px sans-serif'; 
-        ctx.textAlign = 'center'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3; 
-        ctx.strokeText(ft.text, ft.x, ft.y); ctx.fillText(ft.text, ft.x, ft.y); ctx.globalAlpha = 1.0; 
+        ctx.globalAlpha = ft.life; 
+        ctx.fillStyle = ft.color; 
+        ctx.font = 'bold 18px sans-serif'; 
+        ctx.textAlign = 'center'; 
+        ctx.strokeStyle = '#000'; 
+        ctx.lineWidth = 3; 
+        ctx.strokeText(ft.text, ft.x, ft.y); 
+        ctx.fillText(ft.text, ft.x, ft.y); 
+        ctx.globalAlpha = 1.0; 
     }
 }

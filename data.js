@@ -43,7 +43,7 @@ const enemyTypesConfig = {
     dog: { name: 'Собака-мутант', icon: '🐕', speedMultiplier: 1.5, hpMultiplier: 0.6, radius: 11, color: '#e84545' },
     shooter: { name: 'Плюющийся мутант', icon: '🧪', speedMultiplier: 0.7, hpMultiplier: 1.0, radius: 14, color: '#33abc5' },
     kamikaze: { name: 'Камикадзе', icon: '💣', speedMultiplier: 1.3, hpMultiplier: 0.5, radius: 13, color: '#ff8c00' }
-];
+};
 
 const marketSystemConfig = [
     { id: 'ingot_armor', name: 'Слиток брони', icon: '🛡️', maxDaily: 5, pricePerUnitGem: 20 },
@@ -51,7 +51,6 @@ const marketSystemConfig = [
     { id: 'ingot_ring', name: 'Слиток бижутерии', icon: '💍', maxDaily: 3, pricePerUnitGem: 35 }
 ];
 
-// База данных ботов-соперников для Арены и Рейдов
 const simulationBots = [
     { name: 'Патрик_328', bm: 120, hp: 600, atk: 45, speed: 190, icon: '🥷' },
     { name: 'Ржавый_Лом', bm: 180, hp: 850, atk: 70, speed: 170, icon: '🤖' },
