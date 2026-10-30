@@ -64,3 +64,14 @@ const sampleGuilds = [
     { id: 'g2', name: 'Атомный Легион', level: 5, members: 14, maxMembers: 20, leader: 'AtomKing' },
     { id: 'g3', name: 'Дети Пустоши', level: 1, members: 3, maxMembers: 10, leader: 'ScrapLord' }
 ];
+
+const guildQuestsConfig = [
+    { id: 'gq_1', title: 'Очистка секторов', target: 50, rewardTokens: 100, desc: 'Уничтожить 50 зомби в боях' },
+    { id: 'gq_2', title: 'Сбор ресурсов', target: 2000, rewardTokens: 150, desc: 'Заработать 2000 золота' }
+];
+
+const guildShopConfig = [
+    { id: 'gs_parts', name: 'Набор деталей (+50 шт)', icon: '⚙️', costTokens: 50, type: 'parts', amount: 50 },
+    { id: 'gs_gold', name: 'Кошель золота (+2000)', icon: '💰', costTokens: 80, type: 'gold', amount: 2000 },
+    { id: 'gs_gems', name: 'Кристаллы (+50 💎)', icon: '💎', costTokens: 150, type: 'gems', amount: 50 }
+];

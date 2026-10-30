@@ -52,12 +52,13 @@ const defaultSave = {
     beginnerClaimed: [false, false, false], serverProgressClaimed: [], seasonLevel: 1, seasonXp: 0, 
     missionKillsClaimed: false, lastAFKTime: Date.now(),
     marketLimits: {}, lastMarketReset: Date.now(), playerLots: [],
-    guild: null // { id, name, level, membersCount }
+    guild: null, // { id, name, level, membersCount, tokens: 0 }
+    guildQuestsProgress: {}, guildQuestsClaimed: {}
 };
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try { 
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal18') || 'null'); 
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal19') || 'null'); 
     if (loaded) Object.assign(savedData, loaded); 
 } catch(e) {}
 
@@ -66,9 +67,11 @@ if (!savedData.equipped.drone) savedData.equipped.drone = null;
 if (!savedData.blueprints) savedData.blueprints = {}; 
 if (!savedData.marketLimits) savedData.marketLimits = {};
 if (!savedData.playerLots) savedData.playerLots = [];
+if (!savedData.guildQuestsProgress) savedData.guildQuestsProgress = {};
+if (!savedData.guildQuestsClaimed) savedData.guildQuestsClaimed = {};
 
 function saveData() { 
-    localStorage.setItem('spekterSaveFinal18', JSON.stringify(savedData)); 
+    localStorage.setItem('spekterSaveFinal19', JSON.stringify(savedData)); 
     updateTopBar(); 
 }
 
@@ -160,12 +163,13 @@ function getCalculatedStats() {
         if (itemId) { let data = getItemData(itemId); flatAtk += data.atk; flatHp += data.hp; } 
     }); 
     let percentBonus = (savedData.agencyLevel * 2) / 100; 
+    if (savedData.guild) percentBonus += 0.05; // +5% от гильдии
     let finalAtk = Math.floor((baseAtk + flatAtk) * (1 + percentBonus)); 
     let finalHp = Math.floor((baseHp + flatHp) * (1 + percentBonus)); 
     return { atk: finalAtk, hp: finalHp }; 
 }
 
-// ----------------- ЛОГИКА ГИЛЬДИЙ -----------------
+// ----------------- ЛОГИКА ГИЛЬДИЙ И ЗАДАНИЙ -----------------
 window.openGuildModal = function() {
     renderGuildUI();
     let gm = document.getElementById('guildModal'); if(gm) gm.style.display = 'flex';
@@ -201,18 +205,54 @@ window.renderGuildUI = function() {
             <div style="max-height: 180px; overflow-y: auto;">${sampleListHTML}</div>
         `;
     } else {
+        let questsHTML = '';
+        guildQuestsConfig.forEach(q => {
+            let currentProg = savedData.guildQuestsProgress[q.id] || 0;
+            let isClaimed = savedData.guildQuestsClaimed[q.id] || false;
+            let canClaim = currentProg >= q.target && !isClaimed;
+
+            questsHTML += `
+                <div style="background: #1e1e2c; border: 1px solid #444; border-radius: 8px; padding: 8px; margin-bottom: 6px; text-align: left;">
+                    <div style="display:flex; justify-content:between; align-items:center;">
+                        <div style="color: #fff; font-weight: bold; font-size: 11px;">${q.title}</div>
+                        <div style="color: #da70d6; font-size: 10px; font-weight: bold;">💎 +${q.rewardTokens} жетонов</div>
+                    </div>
+                    <div style="color: #aaa; font-size: 9px; margin: 2px 0;">${q.desc}</div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                        <div style="color: #00ff00; font-size: 9px;">Прогресс: ${Math.min(currentProg, q.target)}/${q.target}</div>
+                        <button onclick="claimGuildQuest('${q.id}')" ${canClaim ? '' : 'disabled'} style="background: ${isClaimed ? '#555' : (canClaim ? '#28a745' : '#444')}; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer;">${isClaimed ? 'Получено' : 'Забрать'}</button>
+                    </div>
+                </div>
+            `;
+        });
+
+        let shopHTML = '';
+        guildShopConfig.forEach(item => {
+            shopHTML += `
+                <div style="background: #1e1e2c; border: 1px solid #444; border-radius: 8px; padding: 8px; margin-bottom: 6px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="text-align:left;">
+                        <div style="font-size:12px;">${item.icon} <strong style="color:#fff; font-size:11px;">${item.name}</strong></div>
+                        <div style="color:#da70d6; font-size:9px;">Цена: ${item.costTokens} жетонов</div>
+                    </div>
+                    <button onclick="buyGuildShopItem('${item.id}')" style="background: #da70d6; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Купить</button>
+                </div>
+            `;
+        });
+
         container.innerHTML = `
-            <div style="background: #1e1e2c; border: 1px solid #da70d6; border-radius: 8px; padding: 12px; text-align: center; margin-bottom: 10px;">
-                <h4 style="color: #da70d6; margin: 0 0 6px 0; font-size: 15px;">🛡️ ${savedData.guild.name}</h4>
-                <div style="color: #00ff00; font-size: 11px; margin-bottom: 4px;">Уровень штаба: ${savedData.guild.level}</div>
-                <div style="color: #ccc; font-size: 10px;">Участников в клане: ${savedData.guild.membersCount} / 20</div>
+            <div style="background: #1e1e2c; border: 1px solid #da70d6; border-radius: 8px; padding: 10px; text-align: center; margin-bottom: 8px;">
+                <h4 style="color: #da70d6; margin: 0 0 4px 0; font-size: 14px;">🛡️ ${savedData.guild.name}</h4>
+                <div style="color: #00ff00; font-size: 10px; margin-bottom: 2px;">Уровень: ${savedData.guild.level} | Участников: ${savedData.guild.membersCount}/20</div>
+                <div style="color: #da70d6; font-size: 11px; font-weight: bold;">🪙 Жетоны гильдии: ${savedData.guild.tokens || 0}</div>
             </div>
-            <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; margin-bottom: 10px; text-align: left;">
-                <div style="font-weight: bold; color: #ffd700; font-size: 11px; margin-bottom: 2px;">⚡ Бонусы гильдии:</div>
-                <div style="color: #aaa; font-size: 10px;">• +5% к боевой мощи во всех режимах</div>
-                <div style="color: #aaa; font-size: 10px;">• Ускорение патруля на 10%</div>
-            </div>
-            <button onclick="leaveGuild()" style="background: #dc3545; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; width: 100%; font-size: 11px; cursor: pointer;">Покинуть гильдию</button>
+            
+            <div style="font-weight: bold; font-size: 11px; color: #ffea00; margin-bottom: 4px; text-align: left;">📋 Задания клана:</div>
+            <div style="max-height: 130px; overflow-y: auto; margin-bottom: 8px;">${questsHTML}</div>
+
+            <div style="font-weight: bold; font-size: 11px; color: #00ffff; margin-bottom: 4px; text-align: left;">🛒 Лавка гильдии:</div>
+            <div style="max-height: 130px; overflow-y: auto; margin-bottom: 8px;">${shopHTML}</div>
+
+            <button onclick="leaveGuild()" style="background: #dc3545; color: white; border: none; padding: 6px; border-radius: 6px; font-weight: bold; width: 100%; font-size: 10px; cursor: pointer;">Покинуть гильдию</button>
         `;
     }
 };
@@ -225,7 +265,7 @@ window.createGuild = function() {
 
     savedData.gold -= 5000;
     savedData.gems -= 100;
-    savedData.guild = { id: 'custom_' + Date.now(), name: name, level: 1, membersCount: 1 };
+    savedData.guild = { id: 'custom_' + Date.now(), name: name, level: 1, membersCount: 1, tokens: 0 };
     saveData();
     renderGuildUI();
     showAlert("Гильдия успешно создана!");
@@ -234,7 +274,7 @@ window.createGuild = function() {
 window.joinGuild = function(guildId) {
     let g = sampleGuilds.find(x => x.id === guildId);
     if (!g) return;
-    savedData.guild = { id: g.id, name: g.name, level: g.level, membersCount: g.members + 1 };
+    savedData.guild = { id: g.id, name: g.name, level: g.level, membersCount: g.members + 1, tokens: 0 };
     saveData();
     renderGuildUI();
     showAlert(`Вы вступили в гильдию "${g.name}"!`);
@@ -247,6 +287,36 @@ window.leaveGuild = function() {
         renderGuildUI();
         showAlert("Вы покинули гильдию.");
     }
+};
+
+window.claimGuildQuest = function(qId) {
+    let q = guildQuestsConfig.find(x => x.id === qId);
+    if (!q || savedData.guildQuestsClaimed[qId]) return;
+    let prog = savedData.guildQuestsProgress[qId] || 0;
+    if (prog >= q.target) {
+        savedData.guildQuestsClaimed[qId] = true;
+        if (!savedData.guild.tokens) savedData.guild.tokens = 0;
+        savedData.guild.tokens += q.rewardTokens;
+        saveData();
+        renderGuildUI();
+        showAlert(`Получено +${q.rewardTokens} жетонов гильдии!`);
+    }
+};
+
+window.buyGuildShopItem = function(itemId) {
+    let item = guildShopConfig.find(x => x.id === itemId);
+    if (!item || !savedData.guild) return;
+    let currentTokens = savedData.guild.tokens || 0;
+    if (currentTokens < item.costTokens) { showAlert("Недостаточно жетонов гильдии!"); return; }
+
+    savedData.guild.tokens = currentTokens - item.costTokens;
+    if (item.type === 'parts') savedData.parts += item.amount;
+    if (item.type === 'gold') savedData.gold += item.amount;
+    if (item.type === 'gems') savedData.gems += item.amount;
+
+    saveData();
+    renderGuildUI();
+    showAlert(`Успешно куплено: ${item.name}!`);
 };
 
 window.renderCrafting = function() { 
@@ -847,6 +917,16 @@ function showBattleResult(isVictory, isFlee = false) {
         savedData.stage++;
     }
     savedData.dailyKills += totalKillsInRun;
+
+    // Учет прогресса заданий гильдии
+    if (savedData.guild) {
+        let killsProg = savedData.guildQuestsProgress['gq_1'] || 0;
+        savedData.guildQuestsProgress['gq_1'] = killsProg + totalKillsInRun;
+
+        let goldProg = savedData.guildQuestsProgress['gq_2'] || 0;
+        savedData.guildQuestsProgress['gq_2'] = goldProg + goldReward;
+    }
+
     saveData();
 
     let content = document.getElementById('battleResultContent');
@@ -1102,7 +1182,6 @@ function gameLoop(timestamp) {
     for (let ft of floatingTexts) { 
         ctx.globalAlpha = ft.life; 
         ctx.fillStyle = ft.color; 
-        str = 'bold 18px sans-serif'; 
         ctx.font = 'bold 18px sans-serif'; 
         ctx.textAlign = 'center'; 
         ctx.strokeStyle = '#000'; 
