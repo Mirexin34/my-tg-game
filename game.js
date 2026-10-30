@@ -1,5 +1,5 @@
 // ==========================================================================
-// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME)
+// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - FIXED)
 // ==========================================================================
 
 const tg = window.Telegram?.WebApp;
@@ -58,7 +58,7 @@ const defaultSave = {
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try { 
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal28') || 'null'); 
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal29') || 'null'); 
     if (loaded) Object.assign(savedData, loaded); 
 } catch(e) {}
 
@@ -76,7 +76,7 @@ if (!savedData.seasonClaimed) savedData.seasonClaimed = {};
 if (savedData.accountXp === undefined) savedData.accountXp = 0;
 
 function saveData() { 
-    localStorage.setItem('spekterSaveFinal28', JSON.stringify(savedData)); 
+    localStorage.setItem('spekterSaveFinal29', JSON.stringify(savedData)); 
     updateTopBar(); 
 }
 
@@ -140,7 +140,6 @@ function updateTopBar() {
     el = document.getElementById('accountLevelDisplay'); if(el) el.innerText = savedData.accountLevel; 
     el = document.getElementById('stageDisplay'); if(el) el.innerText = savedData.stage; 
 
-    // Обновление полоски опыта аккаунта
     let maxXp = savedData.accountLevel * 500;
     let xpBar = document.getElementById('accountXpBar');
     if (xpBar) xpBar.style.width = Math.min(100, (savedData.accountXp / maxXp) * 100) + '%';
@@ -195,7 +194,7 @@ window.switchTab = function(screenId, btnElement) {
 function getItemData(itemId) { return itemDatabase.find(i => i.id === itemId) || itemDatabase[0]; }
 
 function getCalculatedStats() { 
-    let baseAtk = 100 + (savedData.accountLevel * 15); // Усилено влияние уровня на БМ
+    let baseAtk = 100 + (savedData.accountLevel * 15); 
     let baseHp = 500 + (savedData.accountLevel * 80); 
     let flatAtk = 0; let flatHp = 0; 
     Object.values(savedData.equipped).forEach(itemId => { 
@@ -582,7 +581,7 @@ if(bcs) bcs.addEventListener('click', () => {
         savedData.parts += pendingParts; 
         savedData.lastAFKTime = Date.now(); 
         saveData(); 
-        showBmPopup(`Собрано АФК ресурсы!`); 
+        showBmPopup(`Ресурсы собраны!`); 
     } 
     let sm = document.getElementById('sweepModal'); if(sm) sm.style.display = 'none'; 
 });
@@ -590,7 +589,7 @@ if(bcs) bcs.addEventListener('click', () => {
 updateTopBar();
 
 // ==========================================================================
-// БОЕВОЙ ДВИЖОК CANVAS (Единый инициализатор для всех режимов)
+// БОЕВОЙ ДВИЖОК CANVAS (Продвинутый с процедурной генерацией комнат и обходом стен)
 // ==========================================================================
 
 const canvas = document.getElementById('gameCanvas'); 
@@ -650,7 +649,9 @@ function prepareBattleUI(titleText) {
     player.maxHp = finalStats.hp; 
     player.hp = finalStats.hp; 
     player.atk = finalStats.atk; 
-    player.x = 100;
+    
+    // Телепортируем игрока на безопасный левый край при старте вылазки
+    player.x = 80;
     player.y = screenH / 2;
 
     let wp = getItemData(savedData.equipped.weapon); 
@@ -668,7 +669,7 @@ window.startBattle = function() {
     savedData.energy -= 5; 
     saveData(); 
 
-    prepareBattleUI("Комната 1/5");
+    prepareBattleUI("Сектор 1/5");
     let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'block'; 
     let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
 
@@ -692,6 +693,7 @@ window.startArenaBattle = function(botName) {
     let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
 
     roomState = 'pvp_fighting'; isBossStage = false; bossEntity = null;
+    player.x = 80; player.y = screenH / 2;
     enemies.push({
         x: screenW * 0.8, y: screenH / 2,
         radius: 16, hp: activeArenaBot.hp, maxHp: activeArenaBot.hp,
@@ -713,6 +715,7 @@ window.startGuildRaidBattle = function() {
     let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = savedData.guild ? 'flex' : 'none';
 
     roomState = 'guild_raid_fighting'; isBossStage = true; 
+    player.x = 80; player.y = screenH / 2;
     bossEntity = {
         x: screenW * 0.8, y: screenH / 2,
         radius: guildRaidBoss.radius, hp: savedData.guildBossHp, maxHp: guildRaidBoss.hp,
@@ -738,6 +741,7 @@ window.startBaseRaid = function(baseId) {
     let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = savedData.guild ? 'flex' : 'none';
 
     roomState = 'base_raid_fighting'; isBossStage = false; bossEntity = null;
+    player.x = 80; player.y = screenH / 2;
 
     for(let i=0; i<activeRaidBase.towersCount; i++) {
         enemies.push({
@@ -769,23 +773,42 @@ function startRoom() {
     isBossStage = (currentRoom === maxRooms);
     
     let rcu = document.getElementById('roomCounterUI');
-    if(rcu) rcu.innerText = isBossStage ? `БОСС (Комната ${currentRoom}/5)` : `Комната ${currentRoom}/5`;
+    if(rcu) rcu.innerText = isBossStage ? `БОСС (Сектор ${currentRoom}/5)` : `Сектор ${currentRoom}/5`;
 
-    obstacles = [
-        { x: screenW * 0.35, y: screenH * 0.25, w: 40, h: 80 },
-        { x: screenW * 0.65, y: screenH * 0.55, w: 80, h: 40 }
+    // ПРОЦЕДУРНАЯ ГЕНЕРАЦИЯ ПРЕГРАД: В каждой новой комнате препятствия меняют свое положение
+    const layouts = [
+        [
+            { x: screenW * 0.3, y: screenH * 0.2, w: 40, h: 90 },
+            { x: screenW * 0.6, y: screenH * 0.6, w: 90, h: 40 }
+        ],
+        [
+            { x: screenW * 0.4, y: screenH * 0.4, w: 60, h: 60 },
+            { x: screenW * 0.7, y: screenH * 0.15, w: 50, h: 100 }
+        ],
+        [
+            { x: screenW * 0.25, y: screenH * 0.65, w: 100, h: 35 },
+            { x: screenW * 0.65, y: screenH * 0.25, w: 40, h: 90 }
+        ],
+        [
+            { x: screenW * 0.5, y: screenH * 0.3, w: 50, h: 50 },
+            { x: screenW * 0.3, y: screenH * 0.6, w: 70, h: 40 }
+        ]
     ];
+    obstacles = layouts[(currentRoom - 1) % layouts.length];
+
+    // При входе в новую комнату всегда возвращаем игрока на безопасный левый старт
+    player.x = 80;
+    player.y = screenH / 2;
 
     if (!isBossStage) {
-        // Увеличиваем количество мобов в зависимости от этапа
         let count = 2 + currentRoom + savedData.stage;
         let keys = Object.keys(enemyTypesConfig);
         for(let i=0; i<count; i++) {
             let tKey = keys[Math.floor(Math.random() * keys.length)];
             let cfg = enemyTypesConfig[tKey];
             enemies.push({
-                // ИСПРАВЛЕН СПАВН: Враги появляются строго в правой части экрана (от 60% ширины и правее)
-                x: screenW * 0.6 + Math.random() * (screenW * 0.3),
+                // Мобы спавнятся исключительно в правой половине экрана
+                x: screenW * 0.6 + Math.random() * (screenW * 0.35),
                 y: 80 + Math.random() * (screenH - 160),
                 radius: cfg.radius,
                 hp: 100 * cfg.hpMultiplier * savedData.stage,
@@ -821,8 +844,7 @@ function spawnSpecificWaveEnemy() {
     let tKey = keys[Math.floor(Math.random() * keys.length)];
     let cfg = enemyTypesConfig[tKey];
     enemies.push({
-        // ИСПРАВЛЕН СПАВН для волн
-        x: screenW * 0.8 + Math.random() * (screenW * 0.1),
+        x: screenW * 0.75 + Math.random() * (screenW * 0.2),
         y: 80 + Math.random() * (screenH - 160),
         radius: cfg.radius,
         hp: 100 * cfg.hpMultiplier * savedData.stage,
@@ -967,8 +989,6 @@ function gameLoop(timestamp) {
         if (isBossStage) { 
             if (!bossEntity && enemies.length === 0) spawnBoss(); 
         } else { 
-            let locCfg = locationsConfig.find(l => l.id === savedData.stage) || locationsConfig[0];
-            // ИСПРАВЛЕНА СКОРОСТЬ СПАВНА: На высоких локациях мобы прут сильнее
             let maxEnemiesOnScreen = 3 + (savedData.stage * 2);
             let totalEnemiesToKill = 12 + (savedData.stage * 2);
             let spawnChance = (0.5 + (savedData.stage * 0.1)) * dt;
@@ -1087,6 +1107,7 @@ function gameLoop(timestamp) {
         if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1); 
     }
     
+    // ИИ МОБОВ С ОБХОДОМ ПРЕГРАД И АГРО-ЗОНОЙ
     for (let i = enemies.length - 1; i >= 0; i--) {
         let e = enemies[i]; 
         if (e.isDead) { 
@@ -1133,12 +1154,14 @@ function gameLoop(timestamp) {
                 e.x = nx; e.y = ny;
             }
         } else if (e.type === 'shooter' && !e.isBoss) {
-            let nx = e.x + (dx / dist) * e.speed * dt;
-            let ny = e.y + (dy / dist) * e.speed * dt;
+            // Плюющийся мутант держит дистанцию или преследует
+            let moveFactor = dist > 200 ? 1 : -0.5;
+            let nx = e.x + (dx / dist) * e.speed * moveFactor * dt;
+            let ny = e.y + (dy / dist) * e.speed * moveFactor * dt;
             if (!checkObstacleCollision(nx, ny, e.radius)) {
                 e.x = nx; e.y = ny;
             }
-            if (dist < 350 && timestamp - e.lastAttack > 2200) { 
+            if (dist < 400 && timestamp - e.lastAttack > 2000) { 
                 projectiles.push({ x: e.x, y: e.y, vx: Math.cos(e.angle)*250, vy: Math.sin(e.angle)*250, radius: 5, damage: e.atk, isEnemy: true, angle: e.angle }); 
                 e.lastAttack = timestamp; 
             }
@@ -1152,11 +1175,25 @@ function gameLoop(timestamp) {
                 if (player.hp <= 0) { triggerDeath(); return; } 
             }
         } else {
-            let nx = e.x + (dx / dist) * e.speed * dt;
-            let ny = e.y + (dy / dist) * e.speed * dt;
-            if (!checkObstacleCollision(nx, ny, e.radius)) {
-                e.x = nx; e.y = ny;
+            // ОБХОД СТЕН ДЛЯ ОБЫЧНЫХ МОБОВ (Зомби / Собаки)
+            let moveX = (dx / dist) * e.speed * dt;
+            let moveY = (dy / dist) * e.speed * dt;
+
+            let nextX = e.x + moveX;
+            let nextY = e.y + moveY;
+
+            if (checkObstacleCollision(nextX, nextY, e.radius)) {
+                // Если уперлись в препятствие, пробуем обойти по вертикали или горизонтали
+                if (!checkObstacleCollision(e.x + moveX, e.y, e.radius)) {
+                    e.x += moveX;
+                } else if (!checkObstacleCollision(e.x, e.y + moveY, e.radius)) {
+                    e.y += moveY;
+                }
+            } else {
+                e.x = nextX;
+                e.y = nextY;
             }
+
             if (e.isBoss && (timestamp - e.lastAttack) > 2000) { 
                 for (let a = 0; a < Math.PI * 2; a += Math.PI / 3) { 
                     projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a)*280, vy: Math.sin(a)*280, radius: 6, damage: e.atk, isEnemy: true, angle: a }); 
@@ -1232,7 +1269,7 @@ function gameLoop(timestamp) {
     ctx.fillStyle = locCfg.bgStyle; 
     ctx.fillRect(0, 0, screenW, screenH); 
     
-    ctx.strokeStyle = 'rgba(0, 255, 255, 0.1)'; 
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.05)'; 
     ctx.lineWidth = 1; 
     ctx.beginPath(); 
     for (let i = 0; i <= screenW; i += 50) { ctx.moveTo(i, 0); ctx.lineTo(i, screenH); } 
@@ -1240,7 +1277,7 @@ function gameLoop(timestamp) {
     ctx.stroke();
 
     ctx.fillStyle = locCfg.wallColor;
-    ctx.strokeStyle = '#555566';
+    ctx.strokeStyle = '#665555';
     ctx.lineWidth = 2;
     for (let obs of obstacles) {
         ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
@@ -1248,7 +1285,7 @@ function gameLoop(timestamp) {
     }
 
     if (portal) {
-        ctx.fillStyle = '#00ffff';
+        ctx.fillStyle = '#00ffcc';
         ctx.beginPath();
         ctx.arc(portal.x, portal.y, portal.radius, 0, Math.PI * 2);
         ctx.fill();
@@ -1257,7 +1294,7 @@ function gameLoop(timestamp) {
         ctx.stroke();
     }
 
-    ctx.strokeStyle = isBaseRaid ? '#e43f5a' : (isRaid ? '#ff4a4a' : (isPvp ? '#ff4a4a' : '#00ffff')); 
+    ctx.strokeStyle = isBaseRaid ? '#e43f5a' : (isRaid ? '#ff4a4a' : (isPvp ? '#ff4a4a' : '#ffaa00')); 
     ctx.lineWidth = 3; 
     ctx.strokeRect(0, 0, screenW, screenH);
     
@@ -1273,7 +1310,7 @@ function gameLoop(timestamp) {
             ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(5, 0, e.radius * 0.7, -Math.PI/2, Math.PI/2); ctx.fill();
         } else {
             let cfg = enemyTypesConfig[e.type] || enemyTypesConfig.zombie;
-            let color = e.isBoss ? '#9932CC' : cfg.color;
+            let color = e.isBoss ? '#aa00ff' : cfg.color;
             ctx.fillStyle = color; ctx.beginPath(); ctx.arc(0, 0, e.radius, 0, Math.PI * 2); ctx.fill();
         }
         ctx.restore();
@@ -1300,7 +1337,7 @@ function gameLoop(timestamp) {
         ctx.save(); 
         ctx.translate(p.x, p.y); 
         ctx.rotate(p.angle); 
-        ctx.fillStyle = p.isEnemy ? '#ff0000' : (p.isRocket ? '#ff8c00' : '#00ffff'); 
+        ctx.fillStyle = p.isEnemy ? '#ff0000' : (p.isRocket ? '#ffaa00' : '#00ffcc'); 
         if (p.isRocket) {
             ctx.fillRect(-10, -5, 20, 10);
         } else {
@@ -1312,8 +1349,8 @@ function gameLoop(timestamp) {
     ctx.save(); 
     ctx.translate(player.x, player.y); 
     ctx.rotate(player.aimingAngle); 
-    ctx.fillStyle = '#555'; ctx.fillRect(10, -5, 20, 10); 
-    ctx.fillStyle = '#00ffff'; ctx.beginPath(); ctx.arc(0, 0, player.radius, 0, Math.PI * 2); ctx.fill(); 
+    ctx.fillStyle = '#444'; ctx.fillRect(10, -5, 20, 10); 
+    ctx.fillStyle = '#ffaa00'; ctx.beginPath(); ctx.arc(0, 0, player.radius, 0, Math.PI * 2); ctx.fill(); 
     ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(5, 0, player.radius*0.7, -Math.PI/2, Math.PI/2); ctx.fill(); 
     ctx.restore();
     
@@ -1391,8 +1428,7 @@ function applyRunSkill(id) {
     if (id === 'max_hp') { player.maxHp *= 1.2; player.hp = player.maxHp; }
     if (id === 'heal') player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.5);
     
-    // ИСПРАВЛЕН ALERT, который стопил игру. Теперь это всплывающее UI-уведомление!
-    showBmPopup("НАВЫК ПОЛУЧЕН! 🌟");
+    showBmPopup("МОДИФИКАТОР АКТИВИРОВАН! 🌟");
 }
 
 function triggerDeath() {
@@ -1441,7 +1477,6 @@ window.showBattleResult = function(isWin, isFlee = false) {
     let goldReward = isWin ? savedData.stage * 300 : 50;
     let partsReward = isWin ? savedData.stage * 25 : 5;
     
-    // ДОБАВЛЕН ОПЫТ АККАУНТА (Дается даже при поражении/побеге, но меньше)
     let accountXpReward = isWin ? savedData.stage * 150 : savedData.stage * 50;
     savedData.accountXp += accountXpReward;
     
@@ -1451,7 +1486,7 @@ window.showBattleResult = function(isWin, isFlee = false) {
         savedData.accountXp -= maxXp;
         savedData.accountLevel++;
         maxXp = savedData.accountLevel * 500;
-        levelUpMessage = `<div style="color:#00ffff; font-weight:bold; margin-top:8px;">УРОВЕНЬ АККАУНТА ПОВЫШЕН! (Ур. ${savedData.accountLevel})</div><div style="font-size: 10px; color: #00ff00;">Базовые характеристики навсегда улучшены!</div>`;
+        levelUpMessage = `<div style="color:#00ffcc; font-weight:bold; margin-top:8px;">УРОВЕНЬ СТАЛКЕРА ПОВЫШЕН! (Ур. ${savedData.accountLevel})</div><div style="font-size: 10px; color: #00ff66;">Характеристики убежища усилены!</div>`;
     }
 
     if (isWin) {
@@ -1469,15 +1504,15 @@ window.showBattleResult = function(isWin, isFlee = false) {
     let content = document.getElementById('battleResultContent');
     if (content) {
         content.innerHTML = `
-            <h2 style="color:${isWin?'#00ff00':'#ff4a4a'}; margin-top:0;">${isWin ? 'ПОБЕДА!' : (isFlee ? 'ПОБЕГ ИЗ БОЯ' : 'ПОРАЖЕНИЕ')}</h2>
-            <p style="color:#aaa; font-size:12px;">Награды за вылазку:</p>
+            <h2 style="color:${isWin?'#00ffcc':'#ff4a4a'}; margin-top:0;">${isWin ? 'ЗАЧИСТКА УСПЕШНА!' : (isFlee ? 'ЭВАКУАЦИЯ ИЗ ЗОНЫ' : 'СМЕРТЬ В ПУСТОШИ')}</h2>
+            <p style="color:#888; font-size:12px;">Добытые трофеи:</p>
             <div style="display:flex; justify-content:center; gap:15px; margin:10px 0;">
                 <div>💰 +${goldReward}</div>
                 <div>⚙️ +${partsReward}</div>
             </div>
-            <div style="color: #00ffff; font-size: 11px; margin-bottom: 10px;">🌟 Опыт аккаунта: +${accountXpReward}</div>
+            <div style="color: #00ffcc; font-size: 11px; margin-bottom: 10px;">🌟 Опыт сталкера: +${accountXpReward}</div>
             ${levelUpMessage}
-            <button onclick="document.getElementById('battleResultModal').style.display='none'; switchTab('lobbyScreen', document.getElementById('navLobby'))" style="background:#28a745; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; width:100%; cursor:pointer; margin-top: 15px;">В ЛОББИ</button>
+            <button onclick="document.getElementById('battleResultModal').style.display='none'; switchTab('lobbyScreen', document.getElementById('navLobby'))" style="background:#28a745; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; width:100%; cursor:pointer; margin-top: 15px;">В УБЕЖИЩЕ</button>
         `;
     }
     let brm = document.getElementById('battleResultModal');
