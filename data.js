@@ -1,5 +1,5 @@
 // ==========================================================================
-// БАЗЫ ДАННЫХ ИГРЫ (SPEKTER AGENCY: DATA - TITLES & RANKS)
+// БАЗЫ ДАННЫХ ИГРЫ (SPEKTER AGENCY: DATA - GUILDS & RAIDS)
 // ==========================================================================
 
 const itemDatabase = [
@@ -26,15 +26,10 @@ const titlesConfig = [
     { id: 't_legend', name: 'Легенда Пустоши', reqLevel: 15, bonusAtk: 600, bonusHp: 3000 }
 ];
 
-const petsConfig = [
-    { id: 'pet_drone', name: 'Боевой Дрон "Коршун"', icon: '🛸', atk: 80, fireRate: 1.2, speed: 250, range: 300 },
-    { id: 'pet_dog', name: 'Мутант-Пёс "Рекс"', icon: '🐕', atk: 120, fireRate: 0.9, speed: 280, range: 120 }
-];
-
 const locationsConfig = [
     { id: 1, name: 'Ржавые Пустоши', bgStyle: '#221e1e', wallColor: '#4d3e3e', particleColor: 'rgba(255, 140, 0, 0.25)', enemyMultiplier: 1.0, effect: 'dust' },
     { id: 2, name: 'Заброшенный Бункер', bgStyle: '#161c24', wallColor: '#283545', particleColor: 'rgba(0, 170, 255, 0.2)', enemyMultiplier: 1.4, effect: 'sparks' },
-    { id: '3', name: 'Токсичный Город', bgStyle: '#16241a', wallColor: '#284d32', particleColor: 'rgba(0, 255, 100, 0.2)', enemyMultiplier: 1.8, effect: 'poison' },
+    { id: 3, name: 'Токсичный Город', bgStyle: '#16241a', wallColor: '#284d32', particleColor: 'rgba(0, 255, 100, 0.2)', enemyMultiplier: 1.8, effect: 'poison' },
     { id: 4, name: 'Ядро Корпорации', bgStyle: '#241620', wallColor: '#4d283c', particleColor: 'rgba(255, 0, 150, 0.2)', enemyMultiplier: 2.3, effect: 'cyber' },
     { id: 5, name: 'Цитадель Омега', bgStyle: '#1f160a', wallColor: '#4d3916', particleColor: 'rgba(255, 215, 0, 0.3)', enemyMultiplier: 3.0, effect: 'storm' }
 ];
@@ -66,7 +61,7 @@ const enemyTypesConfig = {
     dog: { name: 'Мутант-Пёс', icon: '🐕', speedMultiplier: 1.5, hpMultiplier: 0.6, radius: 11, color: '#e84545' },
     shooter: { name: 'Кислотный плевун', icon: '🧪', speedMultiplier: 0.7, hpMultiplier: 1.0, radius: 14, color: '#33abc5' },
     kamikaze: { name: 'Камикадзе', icon: '💣', speedMultiplier: 1.3, hpMultiplier: 0.5, radius: 13, color: '#ff8c00' }
-};
+];
 
 const marketSystemConfig = [
     { id: 'ingot_armor', name: 'Слиток композита', icon: '🛡️', maxDaily: 5, pricePerUnitGem: 20 },
@@ -91,11 +86,11 @@ const sampleGuilds = [
 const guildRaidBoss = {
     name: 'Альфа-Мутант "Разрушитель"',
     icon: '👹',
-    hp: 15000,
+    hp: 25000,
     atk: 140,
     speed: 55,
     radius: 45,
-    rewardTokens: 250
+    rewardTokens: 500
 };
 
 const enemyBasesConfig = [

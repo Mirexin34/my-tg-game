@@ -1,5 +1,5 @@
 // ==========================================================================
-// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - WITH TITLES & RANKS)
+// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - GUILD & RAID BOSS)
 // ==========================================================================
 
 const tg = window.Telegram?.WebApp;
@@ -52,14 +52,14 @@ const defaultSave = {
     beginnerClaimed: [false, false, false], serverProgressClaimed: [], seasonLevel: 1, seasonXp: 0, 
     missionKillsClaimed: false, lastAFKTime: Date.now(),
     marketLimits: {}, lastMarketReset: Date.now(), playerLots: [],
-    guild: null, guildQuestsProgress: {}, guildQuestsClaimed: {}, guildBossHp: 15000,
+    guild: null, guildBossHp: 25000,
     baseDefense: { towers: 2, guards: 3 },
     talentsLevels: {}, seasonClaimed: {}
 };
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try { 
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal32') || 'null'); 
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal34') || 'null'); 
     if (loaded) Object.assign(savedData, loaded); 
 } catch(e) {}
 
@@ -68,9 +68,7 @@ if (!savedData.equipped.drone) savedData.equipped.drone = 'd1';
 if (!savedData.blueprints) savedData.blueprints = {}; 
 if (!savedData.marketLimits) savedData.marketLimits = {};
 if (!savedData.playerLots) savedData.playerLots = [];
-if (!savedData.guildQuestsProgress) savedData.guildQuestsProgress = {};
-if (!savedData.guildQuestsClaimed) savedData.guildQuestsClaimed = {};
-if (savedData.guildBossHp === undefined) savedData.guildBossHp = 15000;
+if (savedData.guildBossHp === undefined) savedData.guildBossHp = 25000;
 if (!savedData.baseDefense) savedData.baseDefense = { towers: 2, guards: 3 };
 if (!savedData.talentsLevels) savedData.talentsLevels = {};
 if (!savedData.seasonClaimed) savedData.seasonClaimed = {};
@@ -79,7 +77,7 @@ if (!savedData.unlockedTitles) savedData.unlockedTitles = ['t_rookie'];
 if (!savedData.equippedTitle) savedData.equippedTitle = 't_rookie';
 
 function saveData() { 
-    localStorage.setItem('spekterSaveFinal32', JSON.stringify(savedData)); 
+    localStorage.setItem('spekterSaveFinal34', JSON.stringify(savedData)); 
     updateTopBar(); 
 }
 
@@ -143,13 +141,16 @@ function updateTopBar() {
     el = document.getElementById('accountLevelDisplay'); if(el) el.innerText = savedData.accountLevel; 
     el = document.getElementById('stageDisplay'); if(el) el.innerText = savedData.stage; 
 
-    // Автоматическая проверка разблокировки новых титулов по уровню
     titlesConfig.forEach(t => {
         if (savedData.accountLevel >= t.reqLevel && !savedData.unlockedTitles.includes(t.id)) {
             savedData.unlockedTitles.push(t.id);
             showBmPopup(`🏆 НОВЫЙ ТИТУЛ: [${t.name}]!`);
         }
     });
+
+    let curTitleObj = titlesConfig.find(t => t.id === savedData.equippedTitle) || titlesConfig[0];
+    let tDisp = document.getElementById('equippedTitleDisplay');
+    if(tDisp) tDisp.innerText = curTitleObj.name;
 
     let maxXp = savedData.accountLevel * 500;
     let xpBar = document.getElementById('accountXpBar');
@@ -212,7 +213,6 @@ function getCalculatedStats() {
         if (itemId) { let data = getItemData(itemId); flatAtk += data.atk; flatHp += data.hp; } 
     }); 
     
-    // Добавление бонусов от выбранного титула
     let currentTitle = titlesConfig.find(t => t.id === savedData.equippedTitle);
     if (currentTitle) {
         flatAtk += currentTitle.bonusAtk;
@@ -355,6 +355,21 @@ window.switchHubTab = function(tabName, btnEl) {
         });
         content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #00ffff; margin-bottom: 4px;">🏪 Рынок слитков:</div>${marketHTML}`;
     }
+};
+
+window.joinGuild = function(gId) {
+    let g = sampleGuilds.find(x => x.id === gId) || sampleGuilds[0];
+    savedData.guild = { id: g.id, name: g.name, level: g.level, tokens: 100, treasuryGold: 1000 };
+    saveData();
+    switchHubTab('guild', document.querySelectorAll('.hub-tab-btn')[1]);
+    showBmPopup(`Вступили в гильдию "${g.name}"!`);
+};
+
+window.leaveGuild = function() {
+    savedData.guild = null;
+    saveData();
+    switchHubTab('guild', document.querySelectorAll('.hub-tab-btn')[1]);
+    showBmPopup("Вы покинули гильдию.");
 };
 
 window.donateToGuildTreasury = function() {
@@ -644,7 +659,7 @@ if(bcs) bcs.addEventListener('click', () => {
 updateTopBar();
 
 // ==========================================================================
-// БОЕВОЙ ДВИЖОК CANVAS (С ПОДДЕРЖКОЙ ТИТУЛОВ И БОЕВОГО ПИТОМЦА)
+// БОЕВОЙ ДВИЖОК CANVAS (ПОЛНАЯ СТАБИЛЬНОСТЬ И РЕЙДЫ ГИЛЬДИЙ)
 // ==========================================================================
 
 const canvas = document.getElementById('gameCanvas'); 
