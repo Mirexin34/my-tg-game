@@ -1,5 +1,5 @@
 // ==========================================================================
-// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - GUILD & RAID BOSS)
+// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - FULL BUNDLE)
 // ==========================================================================
 
 const tg = window.Telegram?.WebApp;
@@ -9,6 +9,7 @@ if (tg) {
 }
 
 const appContainer = document.getElementById('appContainer');
+
 window.showAlert = function(msg) { 
     if (tg && tg.showPopup) { 
         try { tg.showPopup({ title: 'Сообщение', message: msg, buttons: [{type: 'ok'}] }); } catch(e) { alert(msg); } 
@@ -131,6 +132,7 @@ window.openEnergyShop = function() {
 };
 
 let previousBm = 100;
+
 function updateTopBar() { 
     checkEnergyRegen(); 
     let el;
@@ -231,7 +233,6 @@ function getCalculatedStats() {
     return { atk: finalAtk, hp: finalHp }; 
 }
 
-// ----------------- МОДАЛКА ВЫБОРА ТИТУЛОВ -----------------
 window.openTitlesModal = function() {
     let container = document.getElementById('titlesListContainer');
     if(!container) return;
@@ -268,7 +269,6 @@ window.equipTitle = function(titleId) {
     showBmPopup("Титул успешно изменен!");
 };
 
-// ----------------- УМНЫЙ ХАБ С ВКЛАДКАМИ -----------------
 window.openHubModal = function() {
     let m = document.getElementById('hubModal');
     if(m) m.style.display = 'flex';
@@ -385,7 +385,6 @@ window.donateToGuildTreasury = function() {
     showBmPopup("+20 Жетонов гильдии!");
 };
 
-// ----------------- СИСТЕМА КРАФТА С ЧЕРТЕЖАМИ -----------------
 window.renderCrafting = function() { 
     const list = document.getElementById('craftingList'); 
     if(!list) return;
@@ -413,7 +412,6 @@ window.craftWeapon = function(recipeId) {
     } else { showAlert("Не хватает ресурсов или чертежа!"); } 
 };
 
-// ----------------- ДРЕВО ТАЛАНТОВ АГЕНТСТВА -----------------
 window.renderTalentsUI = function() {
     const container = document.getElementById('talentsContainer');
     if (!container) return;
@@ -453,7 +451,6 @@ window.upgradeTalent = function(tId) {
     showBmPopup(`Талант улучшен!`);
 };
 
-// ----------------- СЕЗОННЫЙ ПРОПУСК -----------------
 window.renderSeasonUI = function() {
     let lvlDisplay = document.getElementById('seasonLevelDisplay');
     let xpBar = document.getElementById('seasonXpBar');
@@ -493,7 +490,6 @@ window.claimSeasonReward = function(lvl) {
     showBmPopup(`Награда получена!`);
 };
 
-// ----------------- СОЧНАЯ ГАЧА -----------------
 window.openDropRatesModal = function() {
     let m = document.getElementById('dropRatesModal'); if(m) m.style.display = 'flex';
 };
@@ -659,7 +655,7 @@ if(bcs) bcs.addEventListener('click', () => {
 updateTopBar();
 
 // ==========================================================================
-// БОЕВОЙ ДВИЖОК CANVAS (ПОЛНАЯ СТАБИЛЬНОСТЬ И РЕЙДЫ ГИЛЬДИЙ)
+// БОЕВОЙ ДВИЖОК CANVAS
 // ==========================================================================
 
 const canvas = document.getElementById('gameCanvas'); 
@@ -683,8 +679,8 @@ const world = { width: 0, height: 0 };
 const input = { x: 0, y: 0, isMoving: false, usingKeyboard: false }; 
 let joystickCenter = { x: 0, y: 0 }; 
 const MAX_JOYSTICK_RADIUS = 50; 
-let player = { x: 100, y: 200, radius: 15, speed: 220, hp: 1000, maxHp: 1000, atk: 150, attackRate: 1.5, aimingAngle: 0, lastAttackTime: 0 };
 
+let player = { x: 100, y: 200, radius: 15, speed: 220, hp: 1000, maxHp: 1000, atk: 150, attackRate: 1.5, aimingAngle: 0, lastAttackTime: 0 };
 let enemies = [];
 let projectiles = [];
 let floatingTexts = [];
@@ -702,8 +698,8 @@ let currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0,
 let runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 };
 let portal = null;
 let activePet = null;
-
 let backgroundParticles = [];
+
 function initLocationParticles() {
     backgroundParticles = [];
     let count = 30;
@@ -1004,6 +1000,7 @@ window.addEventListener('keydown', (e) => {
     if(code === 'KeyD' || code === 'ArrowRight') keys.right = true; 
     updateKeyboardInput(); 
 }); 
+
 window.addEventListener('keyup', (e) => { 
     let code = e.code; 
     if(code === 'KeyW' || code === 'ArrowUp') keys.up = false; 
