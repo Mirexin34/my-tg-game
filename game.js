@@ -59,7 +59,7 @@ const defaultSave = {
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try { 
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal23') || 'null'); 
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal25') || 'null'); 
     if (loaded) Object.assign(savedData, loaded); 
 } catch(e) {}
 
@@ -76,7 +76,7 @@ if (!savedData.talentsLevels) savedData.talentsLevels = {};
 if (!savedData.seasonClaimed) savedData.seasonClaimed = {};
 
 function saveData() { 
-    localStorage.setItem('spekterSaveFinal23', JSON.stringify(savedData)); 
+    localStorage.setItem('spekterSaveFinal25', JSON.stringify(savedData)); 
     updateTopBar(); 
 }
 
@@ -190,7 +190,6 @@ function getCalculatedStats() {
     let percentBonus = (savedData.agencyLevel * 2) / 100; 
     if (savedData.guild) percentBonus += 0.05; 
     
-    // Бонусы от Древа Талантов
     let tAtkLvl = savedData.talentsLevels['t_atk'] || 0;
     let tHpLvl = savedData.talentsLevels['t_hp'] || 0;
     percentBonus += (tAtkLvl * 0.10);
@@ -199,6 +198,122 @@ function getCalculatedStats() {
     let finalHp = Math.floor((baseHp + flatHp) * (1 + percentBonus + (tHpLvl * 0.10))); 
     return { atk: finalAtk, hp: finalHp }; 
 }
+
+// ----------------- УМНЫЙ ХАБ С ВКЛАДКАМИ -----------------
+window.openHubModal = function() {
+    let m = document.getElementById('hubModal');
+    if(m) m.style.display = 'flex';
+    // Открываем вкладку рейдов по умолчанию
+    let firstBtn = document.querySelector('.hub-tab-btn');
+    if(firstBtn) switchHubTab('raid', firstBtn);
+};
+
+window.switchHubTab = function(tabName, btnEl) {
+    document.querySelectorAll('.hub-tab-btn').forEach(b => b.classList.remove('active'));
+    if(btnEl) btnEl.classList.add('active');
+
+    const content = document.getElementById('hubTabContent');
+    if(!content) return;
+
+    if (tabName === 'raid') {
+        let basesHTML = '';
+        enemyBasesConfig.forEach(b => {
+            let bpLabel = b.lootBp === 'bp_w2' ? 'Плазма' : 'Рельсотрон';
+            basesHTML += `
+                <div style="background: #1e1e2c; border: 1px solid #e43f5a; border-radius: 8px; padding: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="color: #fff; font-weight: bold; font-size: 11px;">🏰 ${b.owner}</div>
+                        <div style="color: #00ff00; font-size: 9px;">Защита БМ: ${b.defenseBm} | Турелей: ${b.towersCount}</div>
+                        <div style="color: #ffd700; font-size: 9px;">💰 ${b.lootGold} | ⚙️ ${b.lootParts} | 📜 ${bpLabel}</div>
+                    </div>
+                    <button onclick="startBaseRaid('${b.id}')" style="background: #e43f5a; color: white; border: none; padding: 5px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Штурм</button>
+                </div>
+            `;
+        });
+        content.innerHTML = `
+            <div style="background: #2a2a35; border: 1px solid #555; border-radius: 8px; padding: 8px; margin-bottom: 8px;">
+                <div style="color: #ffd700; font-weight: bold; font-size: 10px;">🛡️ Защита вашей базы: Турелей: ${savedData.baseDefense.towers} | Охрана: ${savedData.baseDefense.guards}</div>
+                <button onclick="upgradeBaseDefense()" style="background: #28a745; color: white; border: none; padding: 4px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 9px; cursor: pointer; margin-top: 4px;">Улучшить защиту (1000 💰)</button>
+            </div>
+            <div style="font-weight: bold; font-size: 11px; color: #ffea00; margin-bottom: 4px;">🎯 Доступные базы:</div>
+            ${basesHTML}
+        `;
+    } else if (tabName === 'guild') {
+        if (!savedData.guild) {
+            content.innerHTML = `
+                <p style="color: #ccc; font-size: 11px; margin-top: 0;">Вы не в гильдии.</p>
+                <button onclick="joinGuild('g1')" style="background: #da70d6; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 10px; cursor: pointer;">Вступить в "Стальные Тени"</button>
+            `;
+        } else {
+            content.innerHTML = `
+                <div style="background: #1e1e2c; border: 1px solid #da70d6; border-radius: 8px; padding: 8px; text-align: center; margin-bottom: 8px;">
+                    <div style="color: #da70d6; font-weight: bold; font-size: 12px;">🛡️ ${savedData.guild.name} (ур. ${savedData.guild.level})</div>
+                    <div style="color: #00ff00; font-size: 10px;">🪙 Жетоны: ${savedData.guild.tokens || 0}</div>
+                    <button onclick="startGuildRaidBattle()" style="background: #ff4a4a; color: white; border: none; padding: 5px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 10px; cursor: pointer; margin-top: 4px;">Атаковать рейд-босса (${savedData.guildBossHp}/${guildRaidBoss.hp} HP)</button>
+                </div>
+                <button onclick="leaveGuild()" style="background: #dc3545; color: white; border: none; padding: 5px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 9px; cursor: pointer;">Покинуть гильдию</button>
+            `;
+        }
+    } else if (tabName === 'arena') {
+        let arenaHTML = '';
+        simulationBots.forEach(bot => {
+            arenaHTML += `
+                <div style="background: #1e1e2c; border: 1px solid #555; border-radius: 8px; padding: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="color: #fff; font-weight: bold; font-size: 11px;">${bot.icon} ${bot.name}</div>
+                        <div style="color: #00ff00; font-size: 9px;">⚔️ БМ: ${bot.bm} | ❤️ HP: ${bot.hp}</div>
+                    </div>
+                    <button onclick="startArenaBattle('${bot.name}')" style="background: #ff4a4a; color: white; border: none; padding: 5px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Бой</button>
+                </div>
+            `;
+        });
+        content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #ffea00; margin-bottom: 4px;">⚔️ Противники на арене:</div>${arenaHTML}`;
+    } else if (tabName === 'market') {
+        let marketHTML = '';
+        marketSystemConfig.forEach(item => {
+            let boughtToday = savedData.marketLimits[item.id] || 0;
+            let leftToday = Math.max(0, item.maxDaily - boughtToday);
+            marketHTML += `
+                <div style="background: #1e1e2c; border: 1px solid #444; border-radius: 8px; padding: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-size: 12px;">${item.icon} <strong style="color:#fff; font-size:11px;">${item.name}</strong></div>
+                        <div style="color: #aaa; font-size: 9px;">Лимит: ${leftToday}/${item.maxDaily} | ${item.pricePerUnitGem} 💎</div>
+                    </div>
+                    <button onclick="buyMarketItem('${item.id}', 1)" ${leftToday <= 0 ? 'disabled' : ''} style="background: ${leftToday > 0 ? '#28a745' : '#555'}; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Купить</button>
+                </div>
+            `;
+        });
+        content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #00ffff; margin-bottom: 4px;">🏪 Рынок слитков:</div>${marketHTML}`;
+    }
+};
+
+// ----------------- СИСТЕМА КРАФТА С ЧЕРТЕЖАМИ -----------------
+window.renderCrafting = function() { 
+    const list = document.getElementById('craftingList'); 
+    if(!list) return;
+    list.innerHTML = ''; 
+    craftingRecipes.forEach(recipe => { 
+        let hasBp = !recipe.reqBp || (savedData.blueprints[recipe.reqBp] || 0) > 0; 
+        let canCraft = savedData.stage >= recipe.reqStage && savedData.gold >= recipe.costGold && savedData.parts >= recipe.costParts && hasBp; 
+        let bpText = recipe.reqBp ? `<br><span style="color:${hasBp?'#00ff00':'#ff4a4a'}">📜 ${recipe.bpName}: ${(savedData.blueprints[recipe.reqBp]||0)}/1</span>` : ''; 
+        list.innerHTML += `<div class="craft-card"><div><div style="font-size: 18px; float: left; margin-right: 6px;">${recipe.icon}</div><div style="font-weight: bold; color: #fff; font-size: 11px;">${recipe.name}</div><div style="color: #aaa; font-size: 9px;">💰 ${recipe.costGold} | ⚙️ ${recipe.costParts} ${bpText}</div></div><button onclick="craftWeapon('${recipe.id}')" ${canCraft ? '' : 'disabled'} style="background: ${canCraft ? '#28a745' : '#555'}; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; cursor:pointer; font-size:10px;">Создать</button></div>`; 
+    }); 
+};
+
+window.craftWeapon = function(recipeId) { 
+    const recipe = craftingRecipes.find(r => r.id === recipeId); 
+    if (!recipe) return; 
+    let hasBp = !recipe.reqBp || (savedData.blueprints[recipe.reqBp] || 0) > 0; 
+    if (savedData.stage >= recipe.reqStage && savedData.gold >= recipe.costGold && savedData.parts >= recipe.costParts && hasBp) { 
+        savedData.gold -= recipe.costGold; 
+        savedData.parts -= recipe.costParts; 
+        if (recipe.reqBp) savedData.blueprints[recipe.reqBp] -= 1; 
+        savedData.inventory.push({ uid: getUid(), id: recipe.id }); 
+        saveData(); 
+        renderCrafting(); 
+        showAlert(`Создано: ${recipe.name}!`); 
+    } else { showAlert("Не хватает ресурсов или чертежа!"); } 
+};
 
 // ----------------- ДРЕВО ТАЛАНТОВ АГЕНТСТВА -----------------
 window.renderTalentsUI = function() {
@@ -240,7 +355,7 @@ window.upgradeTalent = function(tId) {
     showAlert(`Талант "${t.name}" улучшен!`);
 };
 
-// ----------------- СЕЗОННЫЙ ПРОПУСК ("СЕЗОН 9") -----------------
+// ----------------- СЕЗОННЫЙ ПРОПУСК -----------------
 window.renderSeasonUI = function() {
     let lvlDisplay = document.getElementById('seasonLevelDisplay');
     let xpBar = document.getElementById('seasonXpBar');
@@ -320,37 +435,6 @@ window.openChest = function(chestType, amount) {
     }, 500);
 };
 
-// ----------------- РЫНОК СЛИТКОВ -----------------
-window.openAuctionModal = function() {
-    checkMarketDailyReset();
-    renderMarketUI();
-    let m = document.getElementById('auctionModal'); if(m) m.style.display = 'flex';
-};
-
-window.renderMarketUI = function() {
-    const container = document.getElementById('marketItemsContainer');
-    if (!container) return;
-    container.innerHTML = '';
-
-    marketSystemConfig.forEach(item => {
-        let boughtToday = savedData.marketLimits[item.id] || 0;
-        let leftToday = Math.max(0, item.maxDaily - boughtToday);
-
-        container.innerHTML += `
-            <div style="background: #1e1e2c; border: 1px solid #444; border-radius: 8px; padding: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
-                <div style="text-align: left;">
-                    <div style="font-size: 13px;">${item.icon} <strong style="color:#fff; font-size:11px;">${item.name}</strong></div>
-                    <div style="color: #aaa; font-size: 9px; margin-top: 2px;">Лимит: <span style="color:${leftToday > 0 ? '#00ff00' : '#ff4a4a'}; font-weight:bold;">${leftToday}/${item.maxDaily}</span> | ${item.pricePerUnitGem} 💎</div>
-                </div>
-                <div style="display:flex; gap:4px;">
-                    <button onclick="buyMarketItem('${item.id}', 1)" ${leftToday <= 0 ? 'disabled' : ''} style="background: ${leftToday > 0 ? '#28a745' : '#555'}; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">1 шт</button>
-                    <button onclick="buyMarketItem('${item.id}', ${leftToday})" ${leftToday <= 0 ? 'disabled' : ''} style="background: ${leftToday > 0 ? '#00bcd4' : '#555'}; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Макс</button>
-                </div>
-            </div>
-        `;
-    });
-};
-
 window.buyMarketItem = function(itemId, qty) {
     checkMarketDailyReset();
     let cfg = marketSystemConfig.find(x => x.id === itemId);
@@ -368,42 +452,8 @@ window.buyMarketItem = function(itemId, qty) {
     savedData.marketLimits[itemId] = boughtToday + buyCount;
     savedData.parts += 10 * buyCount; 
     saveData(); 
-    renderMarketUI(); 
+    switchHubTab('market', document.querySelectorAll('.hub-tab-btn')[3]);
     showAlert(`Успешно куплено (${buyCount} шт)!`);
-};
-
-window.openRaidModal = function() {
-    renderRaidUI();
-    let rm = document.getElementById('raidModal'); if(rm) rm.style.display = 'flex';
-};
-
-window.renderRaidUI = function() {
-    const container = document.getElementById('raidModalContent');
-    if (!container) return;
-
-    let basesHTML = '';
-    enemyBasesConfig.forEach(b => {
-        basesHTML += `
-            <div style="background: #1e1e2c; border: 1px solid #e43f5a; border-radius: 8px; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-                <div style="text-align: left;">
-                    <div style="color: #fff; font-weight: bold; font-size: 12px;">🏰 База: ${b.owner}</div>
-                    <div style="color: #00ff00; font-size: 9px;">⚔️ Защита БМ: ${b.defenseBm} | Турелей: ${b.towersCount}</div>
-                    <div style="color: #ffd700; font-size: 9px;">💰 Награда: ${b.lootGold} 💰 | ⚙️ ${b.lootParts} ⚙️</div>
-                </div>
-                <button onclick="startBaseRaid('${b.id}')" style="background: #e43f5a; color: white; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Штурм</button>
-            </div>
-        `;
-    });
-
-    container.innerHTML = `
-        <div style="background: #2a2a35; border: 1px solid #555; border-radius: 8px; padding: 8px; margin-bottom: 10px; text-align: left;">
-            <div style="color: #ffd700; font-weight: bold; font-size: 11px; margin-bottom: 2px;">🛡️ Ваша защита базы:</div>
-            <div style="color: #aaa; font-size: 10px;">Турели: ${savedData.baseDefense.towers} шт. | Охрана: ${savedData.baseDefense.guards} мутантов</div>
-            <button onclick="upgradeBaseDefense()" style="background: #28a745; color: white; border: none; padding: 5px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 10px; cursor: pointer; margin-top: 4px;">Улучшить защиту (1000 💰)</button>
-        </div>
-        <div style="font-weight: bold; font-size: 12px; color: #ffea00; margin-bottom: 6px; text-align: left;">🎯 Доступные для штурма базы:</div>
-        <div style="max-height: 220px; overflow-y: auto;">${basesHTML}</div>
-    `;
 };
 
 window.upgradeBaseDefense = function() {
@@ -412,7 +462,7 @@ window.upgradeBaseDefense = function() {
     savedData.baseDefense.towers += 1;
     savedData.baseDefense.guards += 1;
     saveData();
-    renderRaidUI();
+    switchHubTab('raid', document.querySelector('.hub-tab-btn'));
     showAlert("Защита базы усилена!");
 };
 
@@ -421,7 +471,7 @@ window.startBaseRaid = function(baseId) {
     activeRaidBase = enemyBasesConfig.find(x => x.id === baseId);
     if (!activeRaidBase) return;
 
-    let rm = document.getElementById('raidModal'); if(rm) rm.style.display = 'none';
+    let hm = document.getElementById('hubModal'); if(hm) hm.style.display = 'none';
 
     document.querySelectorAll('.screen').forEach(s => s.style.display = 'none'); 
     let tb = document.getElementById('topBar'); if(tb) tb.style.display = 'none'; 
@@ -488,118 +538,12 @@ window.callGuildSupport = function() {
     showAlert("Подмога согильдийцев прибыла на поле боя!");
 };
 
-window.openGuildModal = function() {
-    renderGuildUI();
-    let gm = document.getElementById('guildModal'); if(gm) gm.style.display = 'flex';
-};
-
-window.renderGuildUI = function() {
-    const container = document.getElementById('guildModalContent');
-    if (!container) return;
-
-    if (!savedData.guild) {
-        let sampleListHTML = '';
-        sampleGuilds.forEach(g => {
-            sampleListHTML += `
-                <div style="background: #1e1e2c; border: 1px solid #555; border-radius: 8px; padding: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
-                    <div style="text-align: left;">
-                        <div style="color: #fff; font-weight: bold; font-size: 12px;">🛡️ ${g.name}</div>
-                        <div style="color: #aaa; font-size: 9px;">Уровень: ${g.level} | Участников: ${g.members}/${g.maxMembers} | Глава: ${g.leader}</div>
-                    </div>
-                    <button onclick="joinGuild('${g.id}')" style="background: #da70d6; color: white; border: none; padding: 5px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Вступить</button>
-                </div>
-            `;
-        });
-
-        container.innerHTML = `
-            <p style="color: #ccc; font-size: 11px; margin-top: 0;">Вы не состоите ни в одной гильдии. Вступите в существующую или создайте собственную!</p>
-            <div style="background: #1e1e2c; border: 1px solid #da70d6; border-radius: 8px; padding: 10px; margin-bottom: 12px; text-align: left;">
-                <div style="color: #da70d6; font-weight: bold; font-size: 12px; margin-bottom: 4px;">🛠️ Создать свой клан</div>
-                <div style="color: #aaa; font-size: 9px; margin-bottom: 6px;">Стоимость: 5000 💰 и 100 💎</div>
-                <input id="newGuildNameInput" type="text" placeholder="Название гильдии" style="width: 100%; padding: 6px; background: #111; border: 1px solid #555; color: #fff; border-radius: 4px; box-sizing: border-box; margin-bottom: 6px; font-size: 11px;">
-                <button onclick="createGuild()" style="background: #28a745; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 11px; cursor: pointer;">Создать гильдию</button>
-            </div>
-            <div style="font-weight: bold; font-size: 12px; color: #ffea00; margin-bottom: 6px; text-align: left;">📋 Доступные гильдии:</div>
-            <div style="max-height: 180px; overflow-y: auto;">${sampleListHTML}</div>
-        `;
-    } else {
-        let questsHTML = '';
-        guildQuestsConfig.forEach(q => {
-            let currentProg = savedData.guildQuestsProgress[q.id] || 0;
-            let isClaimed = savedData.guildQuestsClaimed[q.id] || false;
-            let canClaim = currentProg >= q.target && !isClaimed;
-
-            questsHTML += `
-                <div style="background: #1e1e2c; border: 1px solid #444; border-radius: 8px; padding: 8px; margin-bottom: 6px; text-align: left;">
-                    <div style="display:flex; justify-content:between; align-items:center;">
-                        <div style="color: #fff; font-weight: bold; font-size: 11px;">${q.title}</div>
-                        <div style="color: #da70d6; font-size: 10px; font-weight: bold;">🪙 +${q.rewardTokens} жетонов</div>
-                    </div>
-                    <div style="color: #aaa; font-size: 9px; margin: 2px 0;">${q.desc}</div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
-                        <div style="color: #00ff00; font-size: 9px;">Прогресс: ${Math.min(currentProg, q.target)}/${q.target}</div>
-                        <button onclick="claimGuildQuest('${q.id}')" ${canClaim ? '' : 'disabled'} style="background: ${isClaimed ? '#555' : (canClaim ? '#28a745' : '#444')}; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer;">${isClaimed ? 'Получено' : 'Забрать'}</button>
-                    </div>
-                </div>
-            `;
-        });
-
-        let shopHTML = '';
-        guildShopConfig.forEach(item => {
-            shopHTML += `
-                <div style="background: #1e1e2c; border: 1px solid #444; border-radius: 8px; padding: 8px; margin-bottom: 6px; display:flex; justify-content:space-between; align-items:center;">
-                    <div style="text-align:left;">
-                        <div style="font-size:12px;">${item.icon} <strong style="color:#fff; font-size:11px;">${item.name}</strong></div>
-                        <div style="color:#da70d6; font-size:9px;">Цена: ${item.costTokens} жетонов</div>
-                    </div>
-                    <button onclick="buyGuildShopItem('${item.id}')" style="background: #da70d6; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Купить</button>
-                </div>
-            `;
-        });
-
-        container.innerHTML = `
-            <div style="background: #1e1e2c; border: 1px solid #da70d6; border-radius: 8px; padding: 10px; text-align: center; margin-bottom: 8px;">
-                <h4 style="color: #da70d6; margin: 0 0 4px 0; font-size: 14px;">🛡️ ${savedData.guild.name}</h4>
-                <div style="color: #00ff00; font-size: 10px; margin-bottom: 2px;">Уровень: ${savedData.guild.level} | Участников: ${savedData.guild.membersCount}/20</div>
-                <div style="color: #da70d6; font-size: 11px; font-weight: bold; margin-bottom: 6px;">🪙 Жетоны гильдии: ${savedData.guild.tokens || 0}</div>
-                <div style="background: #2a2a35; border: 1px solid #ff4a4a; padding: 8px; border-radius: 6px; margin-top: 6px;">
-                    <div style="color: #ff4a4a; font-weight: bold; font-size: 11px;">👹 Рейдовый босс: ${guildRaidBoss.name}</div>
-                    <div style="color: #aaa; font-size: 9px; margin: 2px 0;">HP Босса: ${savedData.guildBossHp} / ${guildRaidBoss.hp}</div>
-                    <button onclick="startGuildRaidBattle()" style="background: #ff4a4a; color: white; border: none; padding: 5px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 10px; cursor: pointer; margin-top: 4px;">АТАКОВАТЬ БОССА</button>
-                </div>
-            </div>
-            
-            <div style="font-weight: bold; font-size: 11px; color: #ffea00; margin-bottom: 4px; text-align: left;">📋 Задания клана:</div>
-            <div style="max-height: 120px; overflow-y: auto; margin-bottom: 8px;">${questsHTML}</div>
-
-            <div style="font-weight: bold; font-size: 11px; color: #00ffff; margin-bottom: 4px; text-align: left;">🛒 Лавка гильдии:</div>
-            <div style="max-height: 120px; overflow-y: auto; margin-bottom: 8px;">${shopHTML}</div>
-
-            <button onclick="leaveGuild()" style="background: #dc3545; color: white; border: none; padding: 6px; border-radius: 6px; font-weight: bold; width: 100%; font-size: 10px; cursor: pointer;">Покинуть гильдию</button>
-        `;
-    }
-};
-
-window.createGuild = function() {
-    let input = document.getElementById('newGuildNameInput');
-    let name = input ? input.value.trim() : '';
-    if (!name) { showAlert("Введите название гильдии!"); return; }
-    if (savedData.gold < 5000 || savedData.gems < 100) { showAlert("Недостаточно ресурсов (нужно 5000 💰 и 100 💎)!"); return; }
-
-    savedData.gold -= 5000;
-    savedData.gems -= 100;
-    savedData.guild = { id: 'custom_' + Date.now(), name: name, level: 1, membersCount: 1, tokens: 0 };
-    saveData();
-    renderGuildUI();
-    showAlert("Гильдия успешно создана!");
-};
-
 window.joinGuild = function(guildId) {
     let g = sampleGuilds.find(x => x.id === guildId);
     if (!g) return;
     savedData.guild = { id: g.id, name: g.name, level: g.level, membersCount: g.members + 1, tokens: 0 };
     saveData();
-    renderGuildUI();
+    switchHubTab('guild', document.querySelectorAll('.hub-tab-btn')[1]);
     showAlert(`Вы вступили в гильдию "${g.name}"!`);
 };
 
@@ -607,43 +551,13 @@ window.leaveGuild = function() {
     if (confirm("Вы действительно хотите покинуть гильдию?")) {
         savedData.guild = null;
         saveData();
-        renderGuildUI();
+        switchHubTab('guild', document.querySelectorAll('.hub-tab-btn')[1]);
         showAlert("Вы покинули гильдию.");
     }
 };
 
-window.claimGuildQuest = function(qId) {
-    let q = guildQuestsConfig.find(x => x.id === qId);
-    if (!q || savedData.guildQuestsClaimed[qId]) return;
-    let prog = savedData.guildQuestsProgress[qId] || 0;
-    if (prog >= q.target) {
-        savedData.guildQuestsClaimed[qId] = true;
-        if (!savedData.guild.tokens) savedData.guild.tokens = 0;
-        savedData.guild.tokens += q.rewardTokens;
-        saveData();
-        renderGuildUI();
-        showAlert(`Получено +${q.rewardTokens} жетонов гильдии!`);
-    }
-};
-
-window.buyGuildShopItem = function(itemId) {
-    let item = guildShopConfig.find(x => x.id === itemId);
-    if (!item || !savedData.guild) return;
-    let currentTokens = savedData.guild.tokens || 0;
-    if (currentTokens < item.costTokens) { showAlert("Недостаточно жетонов гильдии!"); return; }
-
-    savedData.guild.tokens = currentTokens - item.costTokens;
-    if (item.type === 'parts') savedData.parts += item.amount;
-    if (item.type === 'gold') savedData.gold += item.amount;
-    if (item.type === 'gems') savedData.gems += item.amount;
-
-    saveData();
-    renderGuildUI();
-    showAlert(`Успешно куплено: ${item.name}!`);
-};
-
 window.startGuildRaidBattle = function() {
-    let gm = document.getElementById('guildModal'); if(gm) gm.style.display = 'none';
+    let hm = document.getElementById('hubModal'); if(hm) hm.style.display = 'none';
 
     document.querySelectorAll('.screen').forEach(s => s.style.display = 'none'); 
     let tb = document.getElementById('topBar'); if(tb) tb.style.display = 'none'; 
@@ -670,7 +584,7 @@ window.startGuildRaidBattle = function() {
     let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none'; 
 
     player.x = 100; player.y = screenH / 2;
-    enemies = []; projectiles = []; floatingTexts = []; allyUnits = [];
+    enemies = []; projectiles = []; floatingTexts = []; allyUnits = []; obstacles = [];
     roomState = 'guild_raid_fighting'; portal = null; isBossStage = true; 
 
     bossEntity = {
@@ -686,33 +600,6 @@ window.startGuildRaidBattle = function() {
     let jz = document.getElementById('joystickZone'); if(jz) jz.style.display = 'block'; 
     lastTime = performance.now(); 
     requestAnimationFrame(gameLoop);
-};
-
-window.renderCrafting = function() { 
-    const list = document.getElementById('craftingList'); 
-    if(!list) return;
-    list.innerHTML = ''; 
-    craftingRecipes.forEach(recipe => { 
-        let hasBp = !recipe.reqBp || (savedData.blueprints[recipe.reqBp] || 0) > 0; 
-        let canCraft = savedData.stage >= recipe.reqStage && savedData.gold >= recipe.costGold && savedData.parts >= recipe.costParts && hasBp; 
-        let bpText = recipe.reqBp ? `<br><span style="color:${hasBp?'#00ff00':'#ff4a4a'}">📜 Чертеж: ${(savedData.blueprints[recipe.reqBp]||0)}/1</span>` : ''; 
-        list.innerHTML += `<div class="craft-card"><div><div style="font-size: 18px; float: left; margin-right: 6px;">${recipe.icon}</div><div style="font-weight: bold; color: #fff; font-size: 11px;">${recipe.name}</div><div style="color: #aaa; font-size: 9px;">💰 ${recipe.costGold} | ⚙️ ${recipe.costParts} ${bpText}</div></div><button onclick="craftWeapon('${recipe.id}')" ${canCraft ? '' : 'disabled'} style="background: ${canCraft ? '#28a745' : '#555'}; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; cursor:pointer; font-size:10px;">Создать</button></div>`; 
-    }); 
-};
-
-window.craftWeapon = function(recipeId) { 
-    const recipe = craftingRecipes.find(r => r.id === recipeId); 
-    if (!recipe) return; 
-    let hasBp = !recipe.reqBp || (savedData.blueprints[recipe.reqBp] || 0) > 0; 
-    if (savedData.stage >= recipe.reqStage && savedData.gold >= recipe.costGold && savedData.parts >= recipe.costParts && hasBp) { 
-        savedData.gold -= recipe.costGold; 
-        savedData.parts -= recipe.costParts; 
-        if (recipe.reqBp) savedData.blueprints[recipe.reqBp] -= 1; 
-        savedData.inventory.push({ uid: getUid(), id: recipe.id }); 
-        saveData(); 
-        renderCrafting(); 
-        showAlert(`Создано: ${recipe.name}!`); 
-    } else { showAlert("Не хватает ресурсов!"); } 
 };
 
 window.renderInventory = function() { 
@@ -785,35 +672,11 @@ window.upgradeAgency = function() {
     } else { showAlert("Недостаточно деталей!"); } 
 };
 
-window.openArenaModal = function() {
-    const container = document.getElementById('arenaBotsContainer');
-    if (!container) return;
-    container.innerHTML = '';
-
-    simulationBots.forEach(bot => {
-        container.innerHTML += `
-            <div style="background: #1e1e2c; border: 1px solid #555; border-radius: 8px; padding: 8px; display: flex; justify-content: space-between; align-items: center;">
-                <div style="text-align: left; display:flex; align-items:center; gap:8px;">
-                    <div style="font-size: 18px;">${bot.icon}</div>
-                    <div>
-                        <div style="color: #fff; font-weight: bold; font-size: 11px;">${bot.name}</div>
-                        <div style="color: #00ff00; font-size: 9px;">⚔️ БМ: ${bot.bm} | ❤️ HP: ${bot.hp}</div>
-                    </div>
-                </div>
-                <button onclick="startArenaBattle('${bot.name}')" style="background: #ff4a4a; color: white; border: none; padding: 5px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Атаковать</button>
-            </div>
-        `;
-    });
-
-    let am = document.getElementById('arenaModal'); if(am) am.style.display = 'flex';
-};
-
-let activeArenaBot = null;
 window.startArenaBattle = function(botName) {
     activeArenaBot = simulationBots.find(b => b.name === botName);
     if (!activeArenaBot) return;
 
-    let am = document.getElementById('arenaModal'); if(am) am.style.display = 'none';
+    let hm = document.getElementById('hubModal'); if(hm) hm.style.display = 'none';
 
     document.querySelectorAll('.screen').forEach(s => s.style.display = 'none'); 
     let tb = document.getElementById('topBar'); if(tb) tb.style.display = 'none'; 
@@ -840,7 +703,7 @@ window.startArenaBattle = function(botName) {
     let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none'; 
 
     player.x = 100; player.y = screenH / 2;
-    enemies = []; projectiles = []; floatingTexts = []; allyUnits = [];
+    enemies = []; projectiles = []; floatingTexts = []; allyUnits = []; obstacles = [];
     roomState = 'pvp_fighting'; portal = null; isBossStage = false; bossEntity = null;
 
     enemies.push({
@@ -892,7 +755,7 @@ if(bcs) bcs.addEventListener('click', () => {
 
 updateTopBar();
 
-// ----------------- БОЕВОЙ ДВИЖОК CANVAS -----------------
+// ----------------- БОЕВОЙ ДВИЖОК CANVAS С ПРЕПЯТСТВИЯМИ -----------------
 const canvas = document.getElementById('gameCanvas'); 
 const ctx = canvas.getContext('2d');
 const joystickZone = document.getElementById('joystickZone'); 
@@ -1016,15 +879,6 @@ window.fleeBattle = function() {
     showBattleResult(false, true); 
 };
 
-let player = { x: 100, y: 100, radius: 18, hp: 500, maxHp: 500, speed: 220, atk: 120, attackRate: 1.5, lastAttackTime: 0, aimingAngle: 0 };
-let enemies = [], projectiles = [], floatingTexts = [];
-let currentRoom = 1, maxRooms = 5, killsInRoom = 0, totalKillsInRun = 0, revivesUsed = 0;
-let roomState = 'fighting', portal = null, isBossStage = false, bossEntity = null;
-let currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0 };
-let runLevel = 1, runXp = 0, runMaxXp = 100;
-let runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 };
-let runLoot = { blueprints: {} };
-
 window.startBattle = function() { 
     if (savedData.energy < 5) { showAlert("Недостаточно энергии!"); return; } 
     savedData.energy -= 5; 
@@ -1077,6 +931,12 @@ function startRoom() {
     portal = null; 
     isBossStage = (currentRoom === maxRooms); 
     bossEntity = null; 
+
+    obstacles = [
+        { x: screenW * 0.4, y: screenH * 0.3, w: 50, h: 50 },
+        { x: screenW * 0.6, y: screenH * 0.7, w: 60, h: 40 }
+    ];
+
     let rcu = document.getElementById('roomCounterUI');
     if(rcu) rcu.innerText = isBossStage ? 'БОСС КОМНАТА' : `Комната ${currentRoom}/${maxRooms}`; 
 
@@ -1211,12 +1071,18 @@ function showBattleResult(isVictory, isFlee = false) {
 
     savedData.gold += goldReward;
     savedData.parts += partsReward;
+
+    if (isVictory && roomState === 'base_raid_fighting' && activeRaidBase && activeRaidBase.lootBp) {
+        let bpId = activeRaidBase.lootBp;
+        savedData.blueprints[bpId] = (savedData.blueprints[bpId] || 0) + 1;
+        showAlert(`Найден чертеж: ${bpId === 'bp_w2' ? 'Плазма' : 'Рельсотрон'}!`);
+    }
+
     if (isVictory && roomState !== 'pvp_fighting' && roomState !== 'guild_raid_fighting' && roomState !== 'base_raid_fighting') {
         savedData.stage++;
     }
     savedData.dailyKills += totalKillsInRun;
 
-    // Начисление опыта сезонного пропуска за убийства
     savedData.seasonXp += totalKillsInRun * 10;
     let requiredXpForNext = savedData.seasonLevel * 100;
     if (savedData.seasonXp >= requiredXpForNext) {
@@ -1258,6 +1124,19 @@ window.closeBattleResult = function() {
     gameState = 'menu';
 };
 
+function checkObstacleCollision(x, y, radius) {
+    for (let obs of obstacles) {
+        let closestX = Math.max(obs.x, Math.min(x, obs.x + obs.w));
+        let closestY = Math.max(obs.y, Math.min(y, obs.y + obs.h));
+        let distX = x - closestX;
+        let distY = y - closestY;
+        if ((distX * distX + distY * distY) < (radius * radius)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 let lastTime = performance.now(); 
 function gameLoop(timestamp) {
     if (gameState !== 'playing') return; 
@@ -1296,10 +1175,17 @@ function gameLoop(timestamp) {
     }
     
     if (input.isMoving && (input.x !== 0 || input.y !== 0)) { 
-        player.x += input.x * player.speed * dt; 
-        player.y += input.y * player.speed * dt; 
-        player.x = Math.max(player.radius, Math.min(screenW - player.radius, player.x)); 
-        player.y = Math.max(player.radius, Math.min(screenH - player.radius, player.y)); 
+        let nextX = player.x + input.x * player.speed * dt;
+        let nextY = player.y + input.y * player.speed * dt;
+        
+        nextX = Math.max(player.radius, Math.min(screenW - player.radius, nextX)); 
+        nextY = Math.max(player.radius, Math.min(screenH - player.radius, nextY));
+
+        if (!checkObstacleCollision(nextX, nextY, player.radius)) {
+            player.x = nextX;
+            player.y = nextY;
+        }
+
         if(timestamp - player.lastAttackTime > 500) { player.aimingAngle = Math.atan2(input.y, input.x); } 
     } 
     
@@ -1411,10 +1297,17 @@ function gameLoop(timestamp) {
         
         if (e.isBot || e.isTower) {
             if (e.isTower) continue;
-            if (dist > 180) { e.x += (dx / dist) * e.speed * dt; e.y += (dy / dist) * e.speed * dt; }
-            else { e.x -= (dy / dist) * e.speed * 0.5 * dt; e.y += (dx / dist) * e.speed * 0.5 * dt; }
+            let nx = e.x + (dx / dist) * e.speed * dt;
+            let ny = e.y + (dy / dist) * e.speed * dt;
+            if (!checkObstacleCollision(nx, ny, e.radius)) {
+                e.x = nx; e.y = ny;
+            }
         } else if (e.type === 'shooter' && !e.isBoss) {
-            if (dist > 220) { e.x += (dx / dist) * e.speed * dt; e.y += (dy / dist) * e.speed * dt; }
+            let nx = e.x + (dx / dist) * e.speed * dt;
+            let ny = e.y + (dy / dist) * e.speed * dt;
+            if (!checkObstacleCollision(nx, ny, e.radius)) {
+                e.x = nx; e.y = ny;
+            }
             if (dist < 350 && timestamp - e.lastAttack > 2200) { 
                 projectiles.push({ x: e.x, y: e.y, vx: Math.cos(e.angle)*250, vy: Math.sin(e.angle)*250, radius: 5, damage: e.atk, isEnemy: true, angle: e.angle }); 
                 e.lastAttack = timestamp; 
@@ -1429,8 +1322,11 @@ function gameLoop(timestamp) {
                 if (player.hp <= 0) { triggerDeath(); return; } 
             }
         } else {
-            e.x += (dx / dist) * e.speed * dt; 
-            e.y += (dy / dist) * e.speed * dt;
+            let nx = e.x + (dx / dist) * e.speed * dt;
+            let ny = e.y + (dy / dist) * e.speed * dt;
+            if (!checkObstacleCollision(nx, ny, e.radius)) {
+                e.x = nx; e.y = ny;
+            }
             if (e.isBoss && (timestamp - e.lastAttack) > 2000) { 
                 for (let a = 0; a < Math.PI * 2; a += Math.PI / 3) { 
                     projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a)*280, vy: Math.sin(a)*280, radius: 6, damage: e.atk, isEnemy: true, angle: a }); 
@@ -1451,6 +1347,11 @@ function gameLoop(timestamp) {
         p.x += p.vx * dt; 
         p.y += p.vy * dt; 
         if (p.x < 0 || p.x > screenW || p.y < 0 || p.y > screenH) { projectiles.splice(i, 1); continue; }
+
+        if (checkObstacleCollision(p.x, p.y, p.radius)) {
+            projectiles.splice(i, 1);
+            continue;
+        }
         
         if (p.isEnemy) { 
             if (Math.hypot(p.x - player.x, p.y - player.y) < p.radius + player.radius) { 
@@ -1486,6 +1387,14 @@ function gameLoop(timestamp) {
     for (let i = 0; i <= screenW; i += 50) { ctx.moveTo(i, 0); ctx.lineTo(i, screenH); } 
     for (let i = 0; i <= screenH; i += 50) { ctx.moveTo(0, i); ctx.lineTo(screenW, i); } 
     ctx.stroke();
+
+    ctx.fillStyle = '#2d2d3d';
+    ctx.strokeStyle = '#444455';
+    ctx.lineWidth = 2;
+    for (let obs of obstacles) {
+        ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+        ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+    }
 
     ctx.strokeStyle = isBaseRaid ? '#e43f5a' : (isRaid ? '#ff4a4a' : (isPvp ? '#ff4a4a' : '#00ffff')); 
     ctx.lineWidth = 3; 
