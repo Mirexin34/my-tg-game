@@ -8,39 +8,27 @@
     <style>
         body { margin: 0; padding: 0; background: #050508; font-family: sans-serif; overflow: hidden; user-select: none; width: 100vw; height: 100vh; }
         #appContainer { width: 100%; height: 100%; position: relative; background: #1a1a24; overflow: hidden; }
-        
-        /* Экраны меню адаптированы под горизонтальный формат с прокруткой */
         .screen { display: none; width: 100%; height: 100%; flex-direction: column; overflow-y: auto; padding: calc(60px + env(safe-area-inset-top)) 20px calc(80px + env(safe-area-inset-bottom)); box-sizing: border-box; position: absolute; top: 0; left: 0; background: #1a1a24; }
-        
         .navBtn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: none; border: none; font-size: 11px; font-weight: bold; cursor: pointer; color: #777; transition: 0.2s; }
         .navBtn.active { color: #ffd700; transform: scale(1.1); }
-        
         .eq-slot { width: 60px; height: 60px; background: #2a2a35; border: 2px solid #555; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 26px; position: relative; cursor: pointer; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
         .inv-item { width: 100%; aspect-ratio: 1; background: #333; border: 2px solid #555; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; position: relative; }
-        
         .rarity-bg-normal { background: linear-gradient(135deg, #444, #222); border-color: #aaa; }
         .rarity-bg-rare { background: linear-gradient(135deg, #4169e1, #00008b); border-color: #00bfff; }
         .rarity-bg-epic { background: linear-gradient(135deg, #9370db, #4b0082); border-color: #da70d6; }
         .rarity-bg-legendary { background: linear-gradient(135deg, #ffd700, #ff8c00); border-color: #ffff00; }
-        
         .stat-badge { position: absolute; bottom: 2px; right: 4px; font-size: 9px; font-weight: bold; color: white; background: rgba(0,0,0,0.7); padding: 2px 4px; border-radius: 4px; }
-        
         .modal-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; }
         .modal-content { background: #2a2a35; border: 2px solid #ffea00; border-radius: 20px; padding: 20px; width: 85%; max-width: 450px; max-height: 85%; overflow-y: auto; text-align: center; color: white; position: relative; }
-        
         .event-btn { background: linear-gradient(135deg, #ff00ff, #8a2be2); color: white; border: none; padding: 10px; border-radius: 12px; font-weight: bold; width: 100%; font-size: 15px; cursor: pointer; box-shadow: 0 4px 10px rgba(138,43,226,0.5); }
-        
         #joystickZone { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; touch-action: none; display: none; }
         #joystickBase { position: absolute; width: 90px; height: 90px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; transform: translate(-50%, -50%); display: none; pointer-events: none; }
         #joystickStick { position: absolute; top: 50%; left: 50%; width: 35px; height: 35px; background: rgba(255,255,255,0.8); border-radius: 50%; transform: translate(-50%, -50%); }
-        
         #btnPause { position: absolute; top: 15px; right: 20px; width: 38px; height: 38px; background: rgba(0,0,0,0.5); border: 2px solid #fff; border-radius: 10px; color: #fff; font-size: 18px; font-weight: bold; display: none; z-index: 150; cursor: pointer; align-items: center; justify-content: center; }
         #roomCounterUI { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); border: 1px solid #ffd700; color: #ffd700; padding: 4px 14px; border-radius: 15px; font-weight: bold; font-size: 13px; display: none; z-index: 150; }
-        
         #combatXpContainer { display: none; position: absolute; top: 18px; left: 20%; width: 60%; max-width: 350px; background: rgba(0,0,0,0.6); border: 2px solid #555; border-radius: 10px; height: 16px; z-index: 150; }
         #combatXpBar { width: 0%; height: 100%; background: linear-gradient(90deg, #00bfff, #00ffff); border-radius: 8px; transition: width 0.3s ease-out; }
         #combatLevelText { position: absolute; top: -2px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 12px; font-weight: bold; text-shadow: 1px 1px 2px #000; }
-        
         .skill-card-btn { background: #2a2a35; border: 2px solid #555; border-radius: 10px; padding: 12px; display: flex; align-items: center; gap: 12px; cursor: pointer; text-align: left; transition: 0.2s; color: white; width: 100%; }
         .skill-card-btn:active { transform: scale(0.95); border-color: #ffd700; }
         .craft-card { background: #1e1e2c; border: 1px solid #555; border-radius: 10px; padding: 8px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; text-align: left; }
@@ -54,7 +42,6 @@
             <div style="width: 50%; height: 8px; background: #333; border-radius: 4px; overflow: hidden;"><div id="splashProgress" style="width: 0%; height: 100%; background: #00ffff; box-shadow: 0 0 10px #00ffff; transition: 0.1s;"></div></div>
         </div>
 
-        <!-- ВЕРХНЯЯ ПАНЕЛЬ РЕСУРСОВ -->
         <div id="topBar" style="position: absolute; top: 10px; left: 15px; right: 15px; display: flex; justify-content: space-between; align-items: center; z-index: 1000;">
             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; pointer-events: none;">
                 <div style="background: rgba(0,0,0,0.8); padding: 3px 8px; border-radius: 20px; color: #00ff00; font-weight: bold; border: 1px solid #32cd32; font-size: 11px; pointer-events: auto; cursor: pointer; display: flex; align-items: center; gap: 4px;" onclick="openEnergyShop()">
@@ -99,7 +86,7 @@
             </div>
         </div>
 
-        <!-- ЛОББИ (ГЛАВНЫЙ ЭКРАН) -->
+        <!-- ЛОББИ -->
         <div id="lobbyScreen" class="screen" style="display: flex; background: url('https://img.freepik.com/free-vector/dark-hexagonal-background-with-gradient-color_79603-1409.jpg') center/cover;">
             <div style="display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.7); padding: 6px 12px; border-radius: 12px; border: 1px solid #444; width: fit-content; margin: 0 auto; margin-top: 5px;">
                 <div style="width: 35px; height: 35px; background: #555; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px;">🐱</div>
@@ -203,13 +190,23 @@
             </div>
         </div>
 
+        <!-- ГОРОД (РЫНОК + АРЕНА С БОТАМИ) -->
         <div id="cityScreen" class="screen">
             <div style="max-width: 500px; margin: 0 auto; width: 100%;">
                 <h2 style="color: #00ffff; text-align: center; margin-top:0; font-size:18px;">ГОРОД</h2>
+                
+                <!-- Кнопка Арены с ботами -->
+                <div style="background: linear-gradient(135deg, #8b0000, #4a0000); border: 2px solid #ff4a4a; border-radius: 12px; padding: 12px; text-align: center; margin-bottom: 12px;">
+                    <h3 style="color: #ff4a4a; margin: 0 0 4px 0; font-size:15px;">⚔️ ТЕСТОВАЯ АРЕНА (PvP с ботами)</h3>
+                    <p style="color: #ddd; font-size: 11px; margin-bottom: 8px;">Сразитесь с выжившими сталкерами за рейтинг и золото!</p>
+                    <button onclick="openArenaModal()" style="width: 100%; background: #ff4a4a; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size:13px;">ВЫЙТИ НА АРЕНУ</button>
+                </div>
+
                 <div style="background: linear-gradient(135deg, #1f4068, #162447); border: 2px solid #00ffff; border-radius: 12px; padding: 12px; text-align: center; margin-bottom: 12px;">
                     <h3 style="color: #00ffff; margin: 0 0 4px 0; font-size:15px;">🏪 РЫНОК СЛИТКОВ</h3>
                     <button onclick="openAuctionModal()" style="width: 100%; background: #00bcd4; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size:13px;">ОТКРЫТЬ РЫНОК</button>
                 </div>
+
                 <div style="background: #2a2a35; border: 2px solid #00bcd4; border-radius: 12px; padding: 12px; text-align: center;">
                     <h3 style="color: #00bcd4; margin: 0 0 8px 0; font-size:15px;">🛠️ Оружейная (Крафт)</h3>
                     <div id="craftingList"></div>
@@ -217,12 +214,22 @@
             </div>
         </div>
         
+        <!-- МОДАЛКА АРЕНЫ С БОТАМИ -->
+        <div id="arenaModal" class="modal-overlay">
+            <div class="modal-content" style="border-color: #ff4a4a; max-width: 480px;">
+                <button onclick="document.getElementById('arenaModal').style.display='none'" style="position:absolute; top:8px; right:8px; background:#dc3545; color:white; border:none; padding:4px 8px; border-radius:5px; font-weight:bold; cursor:pointer;">X</button>
+                <h3 style="color: #ff4a4a; margin-top:0; font-size:17px;">⚔️ ВЫБОР СОПЕРНИКА (АРЕНА)</h3>
+                <p style="color: #aaa; font-size: 11px; margin-bottom: 10px;">Выберите противника для тестового дуэльного боя:</p>
+                <div id="arenaBotsContainer" style="max-height: 280px; overflow-y: auto; margin-bottom: 10px; display:flex; flex-direction:column; gap:8px;"></div>
+                <button onclick="document.getElementById('arenaModal').style.display='none'" style="background: #555; color: #fff; border: none; padding: 8px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; font-size:13px;">ЗАКРЫТЬ</button>
+            </div>
+        </div>
+
         <!-- МОДАЛКА РЫНКА -->
         <div id="auctionModal" class="modal-overlay">
             <div class="modal-content" style="border-color: #00ffff; max-width: 480px;">
                 <button onclick="document.getElementById('auctionModal').style.display='none'" style="position:absolute; top:8px; right:8px; background:#dc3545; color:white; border:none; padding:4px 8px; border-radius:5px; font-weight:bold; cursor:pointer;">X</button>
                 <h3 style="color: #00ffff; margin-top:0; font-size:17px;">🏪 РЫНОК СЛИТКОВ</h3>
-                <p style="color: #aaa; font-size: 11px; margin-bottom: 10px;">Лимиты поставок обновляются каждые 24 часа.</p>
                 <div id="marketItemsContainer" style="max-height: 280px; overflow-y: auto; margin-bottom: 10px;"></div>
                 <button onclick="document.getElementById('auctionModal').style.display='none'" style="background: #28a745; color: #fff; border: none; padding: 8px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; font-size:13px;">ЗАКРЫТЬ</button>
             </div>
