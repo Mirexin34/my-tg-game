@@ -49,7 +49,8 @@ const defaultSave = {
     skillsInventory: [], equippedSkills: [null, null, null, null, null, null], blueprints: {},
     lastEnergyTime: Date.now(), agencyLevel: 0, dailyKills: 0, vipActive: false, vipLastClaim: 0, 
     beginnerClaimed: [false, false, false], serverProgressClaimed: [], seasonLevel: 1, seasonXp: 0, 
-    missionKillsClaimed: false, lastAFKTime: Date.now()
+    missionKillsClaimed: false, lastAFKTime: Date.now(),
+    marketLimits: {}, lastMarketReset: Date.now(), playerLots: []
 };
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
@@ -61,6 +62,18 @@ try {
 if (!savedData.equipped.weapon) savedData.equipped.weapon = null; 
 if (!savedData.equipped.drone) savedData.equipped.drone = null; 
 if (!savedData.blueprints) savedData.blueprints = {}; 
+if (!savedData.marketLimits) savedData.marketLimits = {};
+if (!savedData.playerLots) savedData.playerLots = [];
+
+function checkMarketDailyReset() {
+    let now = Date.now();
+    if (now - savedData.lastMarketReset > 86400000) {
+        savedData.marketLimits = {};
+        savedData.lastMarketReset = now;
+        saveData();
+    }
+}
+checkMarketDailyReset();
 
 function checkEnergyRegen() { 
     let diff = Date.now() - savedData.lastEnergyTime; 
@@ -436,8 +449,87 @@ window.claimMission = function(type) {
     } 
 };
 
+// ----------------- ЛОГИКА РЫНКА И АУКЦИОНА -----------------
 window.openAuctionModal = function() {
+    checkMarketDailyReset();
+    renderMarketUI();
     document.getElementById('auctionModal').style.display = 'flex';
+};
+
+window.renderMarketUI = function() {
+    const container = document.getElementById('marketItemsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    marketSystemConfig.forEach(item => {
+        let boughtToday = savedData.marketLimits[item.id] || 0;
+        let leftToday = Math.max(0, item.maxDaily - boughtToday);
+
+        container.innerHTML += `
+            <div style="background: #1e1e2c; border: 1px solid #444; border-radius: 12px; padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="text-align: left;">
+                    <div style="font-size: 18px;">${item.icon} <strong style="color:#fff; font-size:14px;">${item.name}</strong></div>
+                    <div style="color: #aaa; font-size: 11px; margin-top: 3px;">Доступно сегодня: <span style="color:${leftToday > 0 ? '#00ff00' : '#ff4a4a'}; font-weight:bold;">${leftToday}/${item.maxDaily}</span></div>
+                    <div style="color: #00ffff; font-size: 11px;">Цена: ${item.pricePerUnitGem} 💎 / шт.</div>
+                </div>
+                <div style="display: flex; gap: 5px; align-items: center;">
+                    <button onclick="buyMarketItem('${item.id}', 1)" ${leftToday <= 0 ? 'disabled' : ''} style="background: ${leftToday > 0 ? '#28a745' : '#555'}; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer;">Купить 1</button>
+                    <button onclick="buyMarketItemMax('${item.id}')" ${leftToday <= 0 ? 'disabled' : ''} style="background: ${leftToday > 0 ? '#00bcd4' : '#555'}; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer;">Макс</button>
+                </div>
+            </div>
+        `;
+    });
+};
+
+window.buyMarketItem = function(itemId, qty) {
+    checkMarketDailyReset();
+    let cfg = marketSystemConfig.find(x => x.id === itemId);
+    if (!cfg) return;
+
+    let boughtToday = savedData.marketLimits[itemId] || 0;
+    let leftToday = Math.max(0, cfg.maxDaily - boughtToday);
+    let amountToBuy = Math.min(qty, leftToday);
+
+    if (amountToBuy <= 0) {
+        showAlert("Лимит покупок на сегодня исчерпан!");
+        return;
+    }
+
+    let cost = amountToBuy * cfg.pricePerUnitGem;
+    if (savedData.gems < cost) {
+        showAlert("Недостаточно алмазов (💎)!");
+        return;
+    }
+
+    savedData.gems -= cost;
+    savedData.marketLimits[itemId] = boughtToday + amountToBuy;
+    savedData.parts += amountToBuy * 10; 
+    saveData();
+    renderMarketUI();
+    showAlert(`Успешно куплено: ${amountToBuy} шт. (${cfg.name})!`);
+};
+
+window.buyMarketItemMax = function(itemId) {
+    checkMarketDailyReset();
+    let cfg = marketSystemConfig.find(x => x.id === itemId);
+    if (!cfg) return;
+
+    let boughtToday = savedData.marketLimits[itemId] || 0;
+    let leftToday = Math.max(0, cfg.maxDaily - boughtToday);
+    if (leftToday <= 0) {
+        showAlert("Лимит покупок на сегодня исчерпан!");
+        return;
+    }
+
+    let affordableQty = Math.floor(savedData.gems / cfg.pricePerUnitGem);
+    let finalQty = Math.min(leftToday, affordableQty);
+
+    if (finalQty <= 0) {
+        showAlert("Недостаточно алмазов для покупки даже 1 шт.!");
+        return;
+    }
+
+    buyMarketItem(itemId, finalQty);
 };
 
 let pendingGold = 0, pendingParts = 0; 
@@ -579,7 +671,7 @@ function updateKeyboardInput() {
 
 let runLevel = 1; 
 let runXp = 0; 
-let runMaxXp = 100; // Увеличен порог опыта для замедления прокачки
+let runMaxXp = 100; 
 let runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
 let pendingLevelUps = 0; 
 let runLoot = { blueprints: {} };
@@ -672,10 +764,8 @@ function startRoom() {
 function spawnEnemy() { 
     const angle = Math.random() * Math.PI * 2; 
     const distance = Math.max(screenW, screenH) / 2 + 100; 
-    
-    // Выбор типа врага на основе конфигурации
     let r = Math.random();
-    let type = 'zombie'; // По умолчанию медленный зомби
+    let type = 'zombie'; 
     let cfg = enemyTypesConfig.zombie;
 
     if (savedData.stage >= 2 && r < 0.25) { type = 'dog'; cfg = enemyTypesConfig.dog; }
@@ -748,7 +838,6 @@ function showBattleResult(isWin, isFlee = false) {
     roomCounterUI.style.display = 'none'; 
     document.getElementById('combatXpContainer').style.display = 'none'; 
     
-    // Награды (при победе полные, при поражении/отступлении — утешительные крохи)
     let goldReward = isWin ? (totalKillsInRun * 20 + 500) : (totalKillsInRun * 5); 
     let partsReward = isWin ? 30 : 5; 
     
@@ -861,7 +950,6 @@ function gameLoop(timestamp) {
         if (isBossStage) { 
             if (!bossEntity && enemies.length === 0) spawnBoss(); 
         } else { 
-            // Спавн врагов чуть реже, чтобы локация не зачищалась за 10 секунд
             if (enemies.length < 4 + savedData.stage && Math.random() < 0.8 * dt && killsInRoom < 15) spawnEnemy(); 
         }
         if (enemies.length === 0 && (isBossStage ? bossEntity && bossEntity.isDead : killsInRoom >= 15)) { 
@@ -932,7 +1020,7 @@ function gameLoop(timestamp) {
             enemies.splice(i, 1); 
             killsInRoom++; 
             totalKillsInRun++; 
-            runXp += e.isBoss ? 120 : 12; // Снижено получение опыта для плавности
+            runXp += e.isBoss ? 120 : 12; 
             if (runMods.vamp > 0) { 
                 player.hp = Math.min(player.maxHp, player.hp + runMods.vamp); 
                 floatingTexts.push({ x: player.x, y: player.y - 20, text: `+${runMods.vamp}`, color: "#00ff00", life: 1.0 }); 
@@ -961,7 +1049,6 @@ function gameLoop(timestamp) {
                 if (player.hp <= 0) { ctx.restore(); triggerDeath(); return; } 
             }
         } else {
-            // Зомби и быстрые собаки
             e.x += (dx / dist) * e.speed * dt; 
             e.y += (dy / dist) * e.speed * dt;
             if (e.isBoss && (timestamp - e.lastAttack) > 2000) { 
@@ -1055,7 +1142,6 @@ function gameLoop(timestamp) {
             ctx.arc(0, 0, e.radius, 0, Math.PI * 2); 
             ctx.fill(); 
         } else if (e.type === 'dog') {
-            // Собака-мутант (вытянутая форма)
             ctx.fillStyle = color;
             ctx.beginPath();
             ctx.ellipse(0, 0, e.radius * 1.3, e.radius * 0.8, 0, 0, Math.PI * 2);
@@ -1072,7 +1158,6 @@ function gameLoop(timestamp) {
                 ctx.fill(); 
             } 
         } else { 
-            // Зомби / Босс
             ctx.fillStyle = '#333'; 
             ctx.fillRect(-e.radius-4, -e.radius, 8, 4); 
             ctx.fillRect(-e.radius-4, e.radius-4, 8, 4); 

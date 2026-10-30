@@ -249,10 +249,9 @@
                     <button onclick="spinGoldenSlot()" style="width: 100%; background: #fff; color: #ff6600; border: none; padding: 12px; border-radius: 10px; font-weight: bold;">Вращать (50 💎)</button>
                 </div>
                 
-                <!-- КНОПКА АУКЦИОНА / РЫНКА -->
                 <div style="background: linear-gradient(135deg, #1f4068, #162447); border: 2px solid #00ffff; border-radius: 15px; padding: 15px; text-align: center; margin-bottom: 20px;">
                     <h3 style="color: #00ffff; margin: 0 0 5px 0;">🏪 РЫНОК И АУКЦИОН</h3>
-                    <p style="color: #aaa; font-size: 12px; margin-bottom: 10px;">Торгуйте чертежами и экипировкой за ценные алмазы!</p>
+                    <p style="color: #aaa; font-size: 12px; margin-bottom: 10px;">Ежедневные лимиты слитков за алмазы (💎).</p>
                     <button onclick="openAuctionModal()" style="width: 100%; background: #00bcd4; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer;">ОТКРЫТЬ РЫНОК</button>
                 </div>
 
@@ -264,18 +263,14 @@
             </div>
         </div>
         
-        <!-- МОДАЛКО АУКЦИОНА / РЫНКА -->
+        <!-- МОДАЛКА РЫНКА -->
         <div id="auctionModal" class="modal-overlay">
-            <div class="modal-content" style="border-color: #00ffff;">
+            <div class="modal-content" style="border-color: #00ffff; max-width: 550px;">
                 <button onclick="document.getElementById('auctionModal').style.display='none'" style="position:absolute; top:10px; right:10px; background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:5px; font-weight:bold; cursor:pointer;">X</button>
                 <h3 style="color: #00ffff; margin-top:0;">🏪 МЕЖДУНАРОДНЫЙ РЫНОК</h3>
-                <p style="color: #aaa; font-size: 13px; margin-bottom: 15px;">Здесь игроки выставляют на продажу чертежи и редкие предметы за 💎 алмазы.</p>
-                <div style="background: #1e1e2c; border: 1px dashed #555; border-radius: 10px; padding: 20px; text-align: center; margin-bottom: 15px;">
-                    <div style="font-size: 30px; margin-bottom: 5px;">🚧</div>
-                    <div style="color: #ffd700; font-weight: bold;">Раздел аукциона в разработке</div>
-                    <div style="color: #888; font-size: 11px; margin-top: 5px;">Скоро здесь появится полноценный стакан лотов от игроков с покупкой за алмазы.</div>
-                </div>
-                <button onclick="document.getElementById('auctionModal').style.display='none'" style="background: #28a745; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer;">ПОНЯТНО</button>
+                <p style="color: #aaa; font-size: 13px; margin-bottom: 15px;">Ежедневные поставки слитков за алмазы (💎). Лимиты обновляются каждые 24 часа.</p>
+                <div id="marketItemsContainer" style="max-height: 350px; overflow-y: auto; margin-bottom: 15px;"></div>
+                <button onclick="document.getElementById('auctionModal').style.display='none'" style="background: #28a745; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer;">ЗАКРЫТЬ</button>
             </div>
         </div>
         
@@ -314,7 +309,6 @@
             </div>
         </div>
     </div>
-    <!-- Сначала подключаем базы данных, затем игровую логику -->
     <script src="data.js"></script>
     <script src="game.js"></script>
 </body>

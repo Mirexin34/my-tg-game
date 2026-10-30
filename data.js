@@ -2,7 +2,6 @@
 // БАЗЫ ДАННЫХ ИГРЫ (SPEKTER AGENCY: DATA)
 // ==========================================================================
 
-// База данных снаряжения (оружие, броня, кольца, ботинки, дроны)
 const itemDatabase = [
     { id: 'h1', type: 'helmet', rarity: 'normal', icon: '🧢', hp: 100, atk: 0 },
     { id: 'h3', type: 'helmet', rarity: 'epic', icon: '🪖', hp: 800, atk: 50 },
@@ -18,21 +17,18 @@ const itemDatabase = [
     { id: 'd1', type: 'drone', rarity: 'rare', icon: '🛸', hp: 200, atk: 100 }
 ];
 
-// База данных навыков
 const skillDatabase = [
     { id: 'sk_light', rarity: 'rare', icon: '⚡' },
     { id: 'sk_shield', rarity: 'epic', icon: '🛡️' },
     { id: 'sk_fire', rarity: 'normal', icon: '🔥' }
 ];
 
-// Рецепты крафта в Оружейной
 const craftingRecipes = [
     { id: 'w1', name: 'Базовый Пистолет', costGold: 1000, costParts: 50, reqStage: 1, reqBp: null, icon: '🔫' },
     { id: 'w2', name: 'Плазмо-винтовка', costGold: 5000, costParts: 250, reqStage: 2, reqBp: 'bp_w2', icon: '⚡', bpName: 'Плазма' },
     { id: 'w3', name: 'Рельсотрон (Дробовик)', costGold: 15000, costParts: 800, reqStage: 4, reqBp: 'bp_w3', icon: '☄️', bpName: 'Рельсотрон' }
 ];
 
-// Баффы, выпадающие при повышении уровня в бою
 const runSkillsPool = [
     { id: 'atk_up', name: 'Мощь', desc: '+15% к урону', icon: '⚔️' },
     { id: 'spd_up', name: 'Ловкость', desc: '+10% к скорости бега', icon: '👟' },
@@ -42,7 +38,6 @@ const runSkillsPool = [
     { id: 'heal', name: 'Аптечка', desc: 'Мгновенно лечит 50% HP', icon: '💊' }
 ];
 
-// База типов врагов постапокалипсиса
 const enemyTypesConfig = {
     zombie: { name: 'Зомби', icon: '🧟', speedMultiplier: 0.8, hpMultiplier: 1.2, radius: 16, color: '#4e8d7c' },
     dog: { name: 'Собака-мутант', icon: '🐕', speedMultiplier: 1.6, hpMultiplier: 0.7, radius: 12, color: '#e84545' },
@@ -50,5 +45,8 @@ const enemyTypesConfig = {
     kamikaze: { name: 'Камикадзе', icon: '💣', speedMultiplier: 1.4, hpMultiplier: 0.5, radius: 14, color: '#ff8c00' }
 };
 
-// Задел под структуру Аукциона / Рынка
-let auctionMarketList = [];
+const marketSystemConfig = [
+    { id: 'ingot_armor', name: 'Слиток брони', icon: '🛡️', maxDaily: 5, pricePerUnitGem: 20 },
+    { id: 'ingot_weapon', name: 'Слиток оружия', icon: '⚔️', maxDaily: 3, pricePerUnitGem: 40 },
+    { id: 'ingot_ring', name: 'Слиток бижутерии', icon: '💍', maxDaily: 3, pricePerUnitGem: 35 }
+];
