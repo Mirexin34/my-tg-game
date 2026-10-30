@@ -1,5 +1,5 @@
 // ==========================================================================
-// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - DAILY QUESTS)
+// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - ACHIEVEMENTS)
 // ==========================================================================
 
 const tg = window.Telegram?.WebApp;
@@ -58,12 +58,14 @@ const defaultSave = {
     talentsLevels: {}, seasonClaimed: {},
     questProgress: { q_kills: 0, q_arena: 0, q_chest: 0 },
     questClaimed: { q_kills: false, q_arena: false, q_chest: false },
-    lastQuestReset: Date.now()
+    lastQuestReset: Date.now(),
+    totalKillsAllTime: 0, totalArenaWins: 0,
+    achievementsClaimed: {}
 };
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try { 
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal37') || 'null'); 
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal38') || 'null'); 
     if (loaded) Object.assign(savedData, loaded); 
 } catch(e) {}
 
@@ -82,9 +84,10 @@ if (!savedData.unlockedTitles) savedData.unlockedTitles = ['t_rookie'];
 if (!savedData.equippedTitle) savedData.equippedTitle = 't_rookie';
 if (!savedData.questProgress) savedData.questProgress = { q_kills: 0, q_arena: 0, q_chest: 0 };
 if (!savedData.questClaimed) savedData.questClaimed = { q_kills: false, q_arena: false, q_chest: false };
+if (!savedData.achievementsClaimed) savedData.achievementsClaimed = {};
 
 function saveData() { 
-    localStorage.setItem('spekterSaveFinal37', JSON.stringify(savedData)); 
+    localStorage.setItem('spekterSaveFinal38', JSON.stringify(savedData)); 
     updateTopBar(); 
 }
 
@@ -419,6 +422,27 @@ window.switchHubTab = function(tabName, btnEl) {
             `;
         });
         content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #00ffcc; margin-bottom: 4px;">📋 Ежедневные поручения:</div>${questsHtml}`;
+    } else if (tabName === 'achievements') {
+        let achHtml = '';
+        achievementsConfig.forEach(ach => {
+            let currentVal = ach.id === 'ach_slayer' ? savedData.totalKillsAllTime : (ach.id === 'ach_arena' ? savedData.totalArenaWins : savedData.accountLevel);
+            let isClaimed = savedData.achievementsClaimed[ach.id] || false;
+            let isCompleted = currentVal >= ach.target;
+
+            achHtml += `
+                <div style="background: #1e1e2c; border: 1px solid ${isCompleted && !isClaimed ? '#ffd700' : '#444'}; border-radius: 8px; padding: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="color: #fff; font-weight: bold; font-size: 11px;">🏅 ${ach.title}</div>
+                        <div style="color: #aaa; font-size: 9px; margin: 2px 0;">${ach.desc} (${Math.min(currentVal, ach.target)}/${ach.target})</div>
+                        <div style="color: #00ffcc; font-size: 9px;">🎁 +${ach.rewardGems} 💎, +${ach.rewardGold} 💰</div>
+                    </div>
+                    <button onclick="claimAchievement('${ach.id}')" ${!isCompleted || isClaimed ? 'disabled' : ''} style="background: ${isClaimed ? '#555' : (isCompleted ? '#ffd700' : '#444')}; color: ${isCompleted && !isClaimed ? '#000' : '#fff'}; border: none; padding: 5px 10px; border-radius: 6px; font-weight: bold; font-size: 10px; cursor: pointer;">
+                        ${isClaimed ? 'Получено' : (isCompleted ? 'Забрать' : 'В процессе')}
+                    </button>
+                </div>
+            `;
+        });
+        content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #ffd700; margin-bottom: 4px;">🏅 Достижения Сталкера:</div>${achHtml}`;
     }
 };
 
@@ -435,6 +459,20 @@ window.claimDailyQuest = function(qId) {
     saveData();
     switchHubTab('quests', document.querySelectorAll('.hub-tab-btn')[5]);
     showBmPopup("Награда за квест получена!");
+};
+
+window.claimAchievement = function(achId) {
+    let ach = achievementsConfig.find(x => x.id === achId);
+    if (!ach || savedData.achievementsClaimed[achId]) return;
+    let currentVal = achId === 'ach_slayer' ? savedData.totalKillsAllTime : (achId === 'ach_arena' ? savedData.totalArenaWins : savedData.accountLevel);
+    if (currentVal < ach.target) return;
+
+    savedData.achievementsClaimed[achId] = true;
+    savedData.gold += ach.rewardGold;
+    savedData.gems += ach.rewardGems;
+    saveData();
+    switchHubTab('achievements', document.querySelectorAll('.hub-tab-btn')[6]);
+    showBmPopup("Награда за достижение получена! 💎");
 };
 
 window.joinGuild = function(gId) {
@@ -1321,6 +1359,7 @@ function gameLoop(timestamp) {
             if (isPvp) {
                 roomState = 'pvp_ended';
                 savedData.questProgress.q_arena = (savedData.questProgress.q_arena || 0) + 1;
+                savedData.totalArenaWins = (savedData.totalArenaWins || 0) + 1;
                 saveData();
                 showBattleResult(true);
                 return;
@@ -1346,6 +1385,7 @@ function gameLoop(timestamp) {
             totalKillsInRun++; 
             runXp += 15; 
             savedData.questProgress.q_kills = (savedData.questProgress.q_kills || 0) + 1;
+            savedData.totalKillsAllTime = (savedData.totalKillsAllTime || 0) + 1;
             if (runMods.vamp > 0) {
                 player.hp = Math.min(player.maxHp, player.hp + runMods.vamp);
             }
