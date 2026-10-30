@@ -1,5 +1,5 @@
 // ==========================================================================
-// БАЗЫ ДАННЫХ ИГРЫ (SPEKTER AGENCY: DATA - WASTELAND EDITION)
+// БАЗЫ ДАННЫХ ИГРЫ (SPEKTER AGENCY: DATA - LOCATIONS FX)
 // ==========================================================================
 
 const itemDatabase = [
@@ -19,12 +19,11 @@ const itemDatabase = [
 ];
 
 const locationsConfig = [
-    { id: 1, name: 'Ржавые Пустоши', bgStyle: '#221e1e', wallColor: '#4d3e3e', enemyMultiplier: 1.0 },
-    { id: 'h3', type: 'helmet', rarity: 'epic', icon: '🪖', hp: 800, atk: 50 },
-    { id: 2, name: 'Заброшенный Бункер', bgStyle: '#161c24', wallColor: '#283545', enemyMultiplier: 1.4 },
-    { id: 3, name: 'Токсичный Город', bgStyle: '#16241a', wallColor: '#284d32', enemyMultiplier: 1.8 },
-    { id: 4, name: 'Ядро Корпорации', bgStyle: '#241620', wallColor: '#4d283c', enemyMultiplier: 2.3 },
-    { id: 5, name: 'Цитадель Омега', bgStyle: '#1f160a', wallColor: '#4d3916', enemyMultiplier: 3.0 }
+    { id: 1, name: 'Ржавые Пустоши', bgStyle: '#221e1e', wallColor: '#4d3e3e', particleColor: 'rgba(255, 140, 0, 0.25)', enemyMultiplier: 1.0, effect: 'dust' },
+    { id: 2, name: 'Заброшенный Бункер', bgStyle: '#161c24', wallColor: '#283545', particleColor: 'rgba(0, 170, 255, 0.2)', enemyMultiplier: 1.4, effect: 'sparks' },
+    { id: 3, name: 'Токсичный Город', bgStyle: '#16241a', wallColor: '#284d32', particleColor: 'rgba(0, 255, 100, 0.2)', enemyMultiplier: 1.8, effect: 'poison' },
+    { id: 4, name: 'Ядро Корпорации', bgStyle: '#241620', wallColor: '#4d283c', particleColor: 'rgba(255, 0, 150, 0.2)', enemyMultiplier: 2.3, effect: 'cyber' },
+    { id: 5, name: 'Цитадель Омега', bgStyle: '#1f160a', wallColor: '#4d3916', particleColor: 'rgba(255, 215, 0, 0.3)', enemyMultiplier: 3.0, effect: 'storm' }
 ];
 
 const skillDatabase = [

@@ -1,5 +1,5 @@
 // ==========================================================================
-// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - FIXED)
+// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - WITH LOCATION FX)
 // ==========================================================================
 
 const tg = window.Telegram?.WebApp;
@@ -58,7 +58,7 @@ const defaultSave = {
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try { 
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal29') || 'null'); 
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal30') || 'null'); 
     if (loaded) Object.assign(savedData, loaded); 
 } catch(e) {}
 
@@ -76,7 +76,7 @@ if (!savedData.seasonClaimed) savedData.seasonClaimed = {};
 if (savedData.accountXp === undefined) savedData.accountXp = 0;
 
 function saveData() { 
-    localStorage.setItem('spekterSaveFinal29', JSON.stringify(savedData)); 
+    localStorage.setItem('spekterSaveFinal30', JSON.stringify(savedData)); 
     updateTopBar(); 
 }
 
@@ -589,7 +589,7 @@ if(bcs) bcs.addEventListener('click', () => {
 updateTopBar();
 
 // ==========================================================================
-// БОЕВОЙ ДВИЖОК CANVAS (Продвинутый с процедурной генерацией комнат и обходом стен)
+// БОЕВОЙ ДВИЖОК CANVAS (ДИНАМИЧЕСКИЕ ВИЗУАЛЬНЫЕ ЭФФЕКТЫ ЛОКАЦИЙ)
 // ==========================================================================
 
 const canvas = document.getElementById('gameCanvas'); 
@@ -632,6 +632,23 @@ let currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0,
 let runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 };
 let portal = null;
 
+// Массив фоновых частиц для уникальных эффектов локаций
+let backgroundParticles = [];
+function initLocationParticles() {
+    backgroundParticles = [];
+    let count = 30;
+    for(let i=0; i<count; i++) {
+        backgroundParticles.push({
+            x: Math.random() * screenW,
+            y: Math.random() * screenH,
+            vx: (Math.random() - 0.5) * 30,
+            vy: (Math.random() - 0.5) * 30,
+            radius: Math.random() * 3 + 1,
+            alpha: Math.random() * 0.7 + 0.2
+        });
+    }
+}
+
 function prepareBattleUI(titleText) {
     let hm = document.getElementById('hubModal'); if(hm) hm.style.display = 'none';
     document.querySelectorAll('.screen').forEach(s => s.style.display = 'none'); 
@@ -650,7 +667,6 @@ function prepareBattleUI(titleText) {
     player.hp = finalStats.hp; 
     player.atk = finalStats.atk; 
     
-    // Телепортируем игрока на безопасный левый край при старте вылазки
     player.x = 80;
     player.y = screenH / 2;
 
@@ -662,6 +678,7 @@ function prepareBattleUI(titleText) {
     runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
     player.speed = 220;
     enemies = []; projectiles = []; floatingTexts = []; allyUnits = []; obstacles = []; portal = null;
+    initLocationParticles();
 }
 
 window.startBattle = function() { 
@@ -775,7 +792,6 @@ function startRoom() {
     let rcu = document.getElementById('roomCounterUI');
     if(rcu) rcu.innerText = isBossStage ? `БОСС (Сектор ${currentRoom}/5)` : `Сектор ${currentRoom}/5`;
 
-    // ПРОЦЕДУРНАЯ ГЕНЕРАЦИЯ ПРЕГРАД: В каждой новой комнате препятствия меняют свое положение
     const layouts = [
         [
             { x: screenW * 0.3, y: screenH * 0.2, w: 40, h: 90 },
@@ -796,7 +812,6 @@ function startRoom() {
     ];
     obstacles = layouts[(currentRoom - 1) % layouts.length];
 
-    // При входе в новую комнату всегда возвращаем игрока на безопасный левый старт
     player.x = 80;
     player.y = screenH / 2;
 
@@ -807,7 +822,6 @@ function startRoom() {
             let tKey = keys[Math.floor(Math.random() * keys.length)];
             let cfg = enemyTypesConfig[tKey];
             enemies.push({
-                // Мобы спавнятся исключительно в правой половине экрана
                 x: screenW * 0.6 + Math.random() * (screenW * 0.35),
                 y: 80 + Math.random() * (screenH - 160),
                 radius: cfg.radius,
@@ -1107,7 +1121,6 @@ function gameLoop(timestamp) {
         if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1); 
     }
     
-    // ИИ МОБОВ С ОБХОДОМ ПРЕГРАД И АГРО-ЗОНОЙ
     for (let i = enemies.length - 1; i >= 0; i--) {
         let e = enemies[i]; 
         if (e.isDead) { 
@@ -1154,7 +1167,6 @@ function gameLoop(timestamp) {
                 e.x = nx; e.y = ny;
             }
         } else if (e.type === 'shooter' && !e.isBoss) {
-            // Плюющийся мутант держит дистанцию или преследует
             let moveFactor = dist > 200 ? 1 : -0.5;
             let nx = e.x + (dx / dist) * e.speed * moveFactor * dt;
             let ny = e.y + (dy / dist) * e.speed * moveFactor * dt;
@@ -1175,7 +1187,6 @@ function gameLoop(timestamp) {
                 if (player.hp <= 0) { triggerDeath(); return; } 
             }
         } else {
-            // ОБХОД СТЕН ДЛЯ ОБЫЧНЫХ МОБОВ (Зомби / Собаки)
             let moveX = (dx / dist) * e.speed * dt;
             let moveY = (dy / dist) * e.speed * dt;
 
@@ -1183,7 +1194,6 @@ function gameLoop(timestamp) {
             let nextY = e.y + moveY;
 
             if (checkObstacleCollision(nextX, nextY, e.radius)) {
-                // Если уперлись в препятствие, пробуем обойти по вертикали или горизонтали
                 if (!checkObstacleCollision(e.x + moveX, e.y, e.radius)) {
                     e.x += moveX;
                 } else if (!checkObstacleCollision(e.x, e.y + moveY, e.radius)) {
@@ -1269,6 +1279,19 @@ function gameLoop(timestamp) {
     ctx.fillStyle = locCfg.bgStyle; 
     ctx.fillRect(0, 0, screenW, screenH); 
     
+    // ОТРИСОВКА УНИКАЛЬНЫХ ФОНОВЫХ ЭФФЕКТОВ ЛОКАЦИЙ (Пыль, искры, токсин, шторм)
+    for(let pt of backgroundParticles) {
+        pt.x += pt.vx * dt;
+        pt.y += pt.vy * dt;
+        if(pt.x < 0) pt.x = screenW; if(pt.x > screenW) pt.x = 0;
+        if(pt.y < 0) pt.y = screenH; if(pt.y > screenH) pt.y = 0;
+
+        ctx.fillStyle = locCfg.particleColor;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
     ctx.strokeStyle = 'rgba(0, 255, 255, 0.05)'; 
     ctx.lineWidth = 1; 
     ctx.beginPath(); 
