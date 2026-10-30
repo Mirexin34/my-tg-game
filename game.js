@@ -4,7 +4,12 @@
 
 const tg = window.Telegram?.WebApp;
 if (tg) {
-    try { tg.requestFullscreen(); } catch(e) { tg.expand(); }
+    try { 
+        tg.requestFullscreen(); 
+        if (tg.lockOrientation) {
+            tg.lockOrientation('landscape');
+        }
+    } catch(e) { tg.expand(); }
     try { tg.disableVerticalSwipes(); tg.setHeaderColor('#1a1a24'); tg.setBackgroundColor('#1a1a24'); } catch(e) {}
 }
 
@@ -562,7 +567,7 @@ document.getElementById('btnClaimSweep').addEventListener('click', () => {
 
 updateTopBar();
 
-// ----------------- БОЕВОЙ ДВИЖОК CANVAS -----------------
+// ----------------- ГОРИЗОНТАЛЬНЫЙ БОЕВОЙ ДВИЖОК НА ЭКРАНЕ (АРЕНА) -----------------
 const canvas = document.getElementById('gameCanvas'); 
 const ctx = canvas.getContext('2d');
 const joystickZone = document.getElementById('joystickZone'); 
@@ -580,8 +585,8 @@ function resize() {
 window.addEventListener('resize', resize); 
 resize();
 
-const world = { width: 2000, height: 2000 }; 
-const camera = { x: 0, y: 0 };
+// Арена целиком помещается на экран устройства
+let world = { width: 0, height: 0 }; 
 const input = { x: 0, y: 0, isMoving: false, usingKeyboard: false }; 
 let joystickCenter = { x: 0, y: 0 }; 
 const MAX_JOYSTICK_RADIUS = 50; 
@@ -678,7 +683,7 @@ let runLoot = { blueprints: {} };
 
 let currentRoom = 1; 
 const maxRooms = 5; 
-let player = { x: 1000, y: 1000, radius: 15, speed: 200, hp: 100, maxHp: 100, atk: 10, attackRate: 2.5, lastAttackTime: 0, aimingAngle: 0 };
+let player = { x: 100, y: 0, radius: 15, speed: 220, hp: 100, maxHp: 100, atk: 10, attackRate: 2.5, lastAttackTime: 0, aimingAngle: 0 };
 let enemies = []; 
 let projectiles = []; 
 let floatingTexts = []; 
@@ -718,6 +723,11 @@ window.startBattle = function() {
     document.getElementById('battleResultModal').style.display = 'none'; 
     document.getElementById('btnPause').style.display = 'flex'; 
     roomCounterUI.style.display = 'block'; 
+
+    resize();
+    world.width = screenW;
+    world.height = screenH;
+
     let finalStats = getCalculatedStats(); 
     player.maxHp = finalStats.hp; 
     player.hp = finalStats.hp; 
@@ -732,7 +742,7 @@ window.startBattle = function() {
     runXp = 0; 
     runMaxXp = 100; 
     runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
-    player.speed = 200; 
+    player.speed = 220; 
     runLoot = { blueprints: {} }; 
     updateCombatUI(); 
     document.getElementById('combatXpContainer').style.display = 'block'; 
@@ -748,8 +758,9 @@ window.startBattle = function() {
 };
 
 function startRoom() { 
-    player.x = world.width / 2; 
-    player.y = world.height / 2; 
+    // Игрок всегда появляется на левой стороне экрана (на своей базе)
+    player.x = 100; 
+    player.y = screenH / 2; 
     enemies = []; 
     projectiles = []; 
     floatingTexts = []; 
@@ -759,11 +770,19 @@ function startRoom() {
     isBossStage = (currentRoom === maxRooms); 
     bossEntity = null; 
     roomCounterUI.innerText = isBossStage ? 'БОСС КОМНАТА' : `Комната ${currentRoom}/${maxRooms}`; 
+
+    if (isBossStage) {
+        spawnBoss();
+    } else {
+        // Спавним волну врагов сразу на правой стороне экрана, чтобы игрок их видел!
+        let count = 4 + savedData.stage;
+        for (let i = 0; i < count; i++) {
+            spawnSpecificWaveEnemy();
+        }
+    }
 }
 
-function spawnEnemy() { 
-    const angle = Math.random() * Math.PI * 2; 
-    const distance = Math.max(screenW, screenH) / 2 + 100; 
+function spawnSpecificWaveEnemy() {
     let r = Math.random();
     let type = 'zombie'; 
     let cfg = enemyTypesConfig.zombie;
@@ -772,13 +791,17 @@ function spawnEnemy() {
     else if (savedData.stage >= 2 && r >= 0.25 && r < 0.5) { type = 'shooter'; cfg = enemyTypesConfig.shooter; }
     else if (savedData.stage >= 3 && r >= 0.5) { type = 'kamikaze'; cfg = enemyTypesConfig.kamikaze; }
 
-    let mobHp = (40 + (savedData.stage * 25) + (currentRoom * 5)) * cfg.hpMultiplier; 
-    let mobAtk = 8 + (savedData.stage * 4); 
-    let mobSpeed = (90 + (savedData.stage * 3)) * cfg.speedMultiplier; 
+    let mobHp = (50 + (savedData.stage * 30)) * cfg.hpMultiplier; 
+    let mobAtk = 10 + (savedData.stage * 4); 
+    let mobSpeed = (70 + (savedData.stage * 2)) * cfg.speedMultiplier; 
+
+    // Враги появляются справа на экране (в поле зрения игрока)
+    let startX = screenW - 100 + (Math.random() * 60 - 30);
+    let startY = 80 + Math.random() * (screenH - 160);
 
     enemies.push({ 
-        x: player.x + Math.cos(angle)*distance, 
-        y: player.y + Math.sin(angle)*distance, 
+        x: startX, 
+        y: startY, 
         radius: cfg.radius, 
         hp: mobHp, 
         maxHp: mobHp, 
@@ -793,11 +816,22 @@ function spawnEnemy() {
 }
 
 function spawnBoss() { 
-    const angle = Math.random() * Math.PI * 2; 
-    const distance = Math.max(screenW, screenH) / 2 + 100; 
-    let bossHp = (80 + (savedData.stage * 40)) * 12; 
+    // Босс появляется на правом краю экрана, игрок видит его сразу
+    let bossHp = (100 + (savedData.stage * 50)) * 15; 
     let bossAtk = 25 + (savedData.stage * 8); 
-    bossEntity = { x: player.x + Math.cos(angle)*distance, y: player.y + Math.sin(angle)*distance, radius: 40, hp: bossHp, maxHp: bossHp, atk: bossAtk, speed: 85, isBoss: true, type: 'boss', lastAttack: 0, angle: 0 }; 
+    bossEntity = { 
+        x: screenW - 150, 
+        y: screenH / 2, 
+        radius: 40, 
+        hp: bossHp, 
+        maxHp: bossHp, 
+        atk: bossAtk, 
+        speed: 60, 
+        isBoss: true, 
+        type: 'boss', 
+        lastAttack: 0, 
+        angle: 0 
+    }; 
     enemies.push(bossEntity); 
 }
 
@@ -911,7 +945,7 @@ window.selectRunSkill = function(id) {
     if (id === 'atk_up') runMods.atkMult += 0.15; 
     if (id === 'spd_up') { 
         runMods.spdMult += 0.10; 
-        player.speed = 200 * runMods.spdMult; 
+        player.speed = 220 * runMods.spdMult; 
     } 
     if (id === 'vamp') runMods.vamp += 2; 
     if (id === 'regen') runMods.regen += 2; 
@@ -949,18 +983,20 @@ function gameLoop(timestamp) {
         }
         if (isBossStage) { 
             if (!bossEntity && enemies.length === 0) spawnBoss(); 
-        } else { 
-            if (enemies.length < 4 + savedData.stage && Math.random() < 0.8 * dt && killsInRoom < 15) spawnEnemy(); 
+        } else {
+            // Если врагов осталось мало в комнате, подкидываем новых на правый край экрана
+            if (enemies.length < 3 + savedData.stage && killsInRoom + enemies.length < 12 && Math.random() < 1.0 * dt) {
+                spawnSpecificWaveEnemy();
+            }
         }
-        if (enemies.length === 0 && (isBossStage ? bossEntity && bossEntity.isDead : killsInRoom >= 15)) { 
+        if (enemies.length === 0 && (isBossStage ? bossEntity && bossEntity.isDead : killsInRoom >= 12)) { 
             roomState = 'cleared'; 
-            portal = { x: world.width / 2, y: world.height / 2, radius: 40 }; 
+            portal = { x: screenW - 100, y: screenH / 2, radius: 40 }; 
         }
     }
     
     if (roomState === 'cleared' && portal) { 
         if (Math.hypot(player.x - portal.x, player.y - portal.y) < player.radius + portal.radius) { 
-            ctx.restore(); 
             if (currentRoom < maxRooms) { 
                 currentRoom++; 
                 startRoom(); 
@@ -974,8 +1010,9 @@ function gameLoop(timestamp) {
     if (input.isMoving && (input.x !== 0 || input.y !== 0)) { 
         player.x += input.x * player.speed * dt; 
         player.y += input.y * player.speed * dt; 
-        player.x = Math.max(player.radius, Math.min(world.width - player.radius, player.x)); 
-        player.y = Math.max(player.radius, Math.min(world.height - player.radius, player.y)); 
+        // Не даем игроку выходить за границы видимого экрана
+        player.x = Math.max(player.radius, Math.min(screenW - player.radius, player.x)); 
+        player.y = Math.max(player.radius, Math.min(screenH - player.radius, player.y)); 
         if(timestamp - player.lastAttackTime > 500) { 
             player.aimingAngle = Math.atan2(input.y, input.x); 
         } 
@@ -986,7 +1023,7 @@ function gameLoop(timestamp) {
         let target = null, minDist = Infinity; 
         for (let e of enemies) { 
             const dist = Math.hypot(e.x - player.x, e.y - player.y); 
-            if (dist < 400 && dist < minDist) { minDist = dist; target = e; } 
+            if (dist < minDist) { minDist = dist; target = e; } 
         } 
         if (target) { 
             const dx = target.x - player.x, dy = target.y - player.y; 
@@ -1020,7 +1057,7 @@ function gameLoop(timestamp) {
             enemies.splice(i, 1); 
             killsInRoom++; 
             totalKillsInRun++; 
-            runXp += e.isBoss ? 120 : 12; 
+            runXp += e.isBoss ? 120 : 15; 
             if (runMods.vamp > 0) { 
                 player.hp = Math.min(player.maxHp, player.hp + runMods.vamp); 
                 floatingTexts.push({ x: player.x, y: player.y - 20, text: `+${runMods.vamp}`, color: "#00ff00", life: 1.0 }); 
@@ -1033,46 +1070,49 @@ function gameLoop(timestamp) {
         e.angle = Math.atan2(dy, dx);
         
         if (e.type === 'shooter' && !e.isBoss) {
-            if (dist > 250) { e.x += (dx / dist) * e.speed * dt; e.y += (dy / dist) * e.speed * dt; }
-            if (dist < 400 && timestamp - e.lastAttack > 2000) { 
-                projectiles.push({ x: e.x, y: e.y, vx: Math.cos(e.angle)*300, vy: Math.sin(e.angle)*300, radius: 5, damage: e.atk, isEnemy: true, angle: e.angle }); 
+            // Плюющиеся мутанты останавливаются на дистанции, если она позволяет стрелять
+            if (dist > 220) { 
+                e.x += (dx / dist) * e.speed * dt; 
+                e.y += (dy / dist) * e.speed * dt; 
+            }
+            if (dist < 350 && timestamp - e.lastAttack > 2200) { 
+                projectiles.push({ x: e.x, y: e.y, vx: Math.cos(e.angle)*250, vy: Math.sin(e.angle)*250, radius: 5, damage: e.atk, isEnemy: true, angle: e.angle }); 
                 e.lastAttack = timestamp; 
             }
         } else if (e.type === 'kamikaze') {
-            e.x += (dx / dist) * e.speed * 1.5 * dt; 
-            e.y += (dy / dist) * e.speed * 1.5 * dt;
+            e.x += (dx / dist) * e.speed * 1.4 * dt; 
+            e.y += (dy / dist) * e.speed * 1.4 * dt;
             if (dist < player.radius + e.radius + 10) { 
-                player.hp -= e.atk * 3; 
+                player.hp -= e.atk * 2.5; 
                 e.hp = 0; 
                 e.isDead = true; 
                 floatingTexts.push({ x: player.x, y: player.y, text: "ВЗРЫВ!", color: "#ff8c00", life: 1.0 }); 
-                if (player.hp <= 0) { ctx.restore(); triggerDeath(); return; } 
+                if (player.hp <= 0) { triggerDeath(); return; } 
             }
         } else {
+            // Зомби и собаки идут на игрока
             e.x += (dx / dist) * e.speed * dt; 
             e.y += (dy / dist) * e.speed * dt;
             if (e.isBoss && (timestamp - e.lastAttack) > 2000) { 
-                for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) { 
-                    projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a)*300, vy: Math.sin(a)*300, radius: 6, damage: e.atk, isEnemy: true, angle: a }); 
+                for (let a = 0; a < Math.PI * 2; a += Math.PI / 3) { 
+                    projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a)*280, vy: Math.sin(a)*280, radius: 6, damage: e.atk, isEnemy: true, angle: a }); 
                 } 
                 e.lastAttack = timestamp; 
             }
             if (dist < player.radius + e.radius) { 
-                player.hp -= e.atk; 
-                if (player.hp <= 0) { ctx.restore(); triggerDeath(); return; } 
-                e.x -= (dx/dist)*100; 
-                e.y -= (dy/dist)*100; 
+                player.hp -= e.atk * dt * 2; // Урон в секунду при контакте
+                if (player.hp <= 0) { triggerDeath(); return; } 
             }
         }
-        e.x = Math.max(e.radius, Math.min(world.width - e.radius, e.x)); 
-        e.y = Math.max(e.radius, Math.min(world.height - e.radius, e.y));
+        e.x = Math.max(e.radius, Math.min(screenW - e.radius, e.x)); 
+        e.y = Math.max(e.radius, Math.min(screenH - e.radius, e.y));
     }
     
     for (let i = projectiles.length - 1; i >= 0; i--) {
         let p = projectiles[i]; 
         p.x += p.vx * dt; 
         p.y += p.vy * dt; 
-        if (p.x < 0 || p.x > world.width || p.y < 0 || p.y > world.height) { 
+        if (p.x < 0 || p.x > screenW || p.y < 0 || p.y > screenH) { 
             projectiles.splice(i, 1); 
             continue; 
         }
@@ -1081,7 +1121,7 @@ function gameLoop(timestamp) {
                 player.hp -= p.damage; 
                 floatingTexts.push({ x: player.x, y: player.y - 20, text: `-${Math.floor(p.damage)}`, color: "#ff0000", life: 1.0 }); 
                 projectiles.splice(i, 1); 
-                if (player.hp <= 0) { ctx.restore(); triggerDeath(); return; } 
+                if (player.hp <= 0) { triggerDeath(); return; } 
             } 
         } else { 
             for (let j = enemies.length - 1; j >= 0; j--) { 
@@ -1097,23 +1137,22 @@ function gameLoop(timestamp) {
         }
     }
 
+    // Отрисовка арены на весь экран
     ctx.fillStyle = '#0a0a10'; 
     ctx.fillRect(0, 0, screenW, screenH); 
-    ctx.save(); 
     
-    camera.x = Math.max(0, Math.min(world.width - screenW, player.x - screenW / 2)); 
-    camera.y = Math.max(0, Math.min(world.height - screenH, player.y - screenH / 2)); 
-    ctx.translate(-camera.x, -camera.y);
-    
-    ctx.strokeStyle = '#00ffff'; 
-    ctx.lineWidth = 5; 
-    ctx.strokeRect(0, 0, world.width, world.height); 
+    // Сетка арены
     ctx.strokeStyle = 'rgba(0, 255, 255, 0.1)'; 
-    ctx.lineWidth = 2; 
+    ctx.lineWidth = 1; 
     ctx.beginPath(); 
-    for (let i = 0; i <= world.width; i += 50) { ctx.moveTo(i, 0); ctx.lineTo(i, world.height); } 
-    for (let i = 0; i <= world.height; i += 50) { ctx.moveTo(0, i); ctx.lineTo(world.width, i); } 
+    for (let i = 0; i <= screenW; i += 50) { ctx.moveTo(i, 0); ctx.lineTo(i, screenH); } 
+    for (let i = 0; i <= screenH; i += 50) { ctx.moveTo(0, i); ctx.lineTo(screenW, i); } 
     ctx.stroke();
+
+    // Границы арены
+    ctx.strokeStyle = '#00ffff'; 
+    ctx.lineWidth = 3; 
+    ctx.strokeRect(0, 0, screenW, screenH);
     
     if (roomState === 'cleared' && portal) { 
         ctx.fillStyle = '#9932CC'; 
@@ -1123,7 +1162,7 @@ function gameLoop(timestamp) {
         ctx.fillStyle = '#fff'; 
         ctx.font = 'bold 16px sans-serif'; 
         ctx.textAlign = 'center'; 
-        ctx.fillText('ВЫХОД', portal.x, portal.y - 50); 
+        ctx.fillText('ВЫХОД', portal.x, portal.y - 40); 
     }
     
     for (let e of enemies) { 
@@ -1229,5 +1268,4 @@ function gameLoop(timestamp) {
         ctx.fillText(ft.text, ft.x, ft.y); 
         ctx.globalAlpha = 1.0; 
     }
-    ctx.restore();
 }
