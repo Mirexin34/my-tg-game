@@ -195,6 +195,21 @@
                     </div>
                     <button id="btnBuyVip" onclick="buyVip()" style="background: #ffd700; color:#000; border:none; padding:10px 15px; border-radius:8px; font-weight:bold; font-size: 14px;">Купить</button>
                 </div>
+                <h3 style="color: #ffd700; text-align: center; margin-bottom: 10px;">ЕЖЕДНЕВНЫЙ МАГАЗИН</h3>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px;">
+                    <div style="background: #2a2a35; border: 1px solid #444; border-radius: 10px; padding: 10px; text-align: center;">
+                        <div style="font-size: 24px; margin-bottom: 5px;">🪖</div>
+                        <button onclick="buyDailyItem('h3', 1000)" style="width:100%; background: #00bcd4; color:#fff; border:none; padding:5px; border-radius:5px; font-weight:bold; font-size: 11px;">💎 1000</button>
+                    </div>
+                    <div style="background: #2a2a35; border: 1px solid #444; border-radius: 10px; padding: 10px; text-align: center;">
+                        <div style="font-size: 24px; margin-bottom: 5px;">🛡️</div>
+                        <button onclick="buyDailySkill('sk_shield', 800)" style="width:100%; background: #00bcd4; color:#fff; border:none; padding:5px; border-radius:5px; font-weight:bold; font-size: 11px;">💎 800</button>
+                    </div>
+                    <div style="background: #2a2a35; border: 1px solid #444; border-radius: 10px; padding: 10px; text-align: center;">
+                        <div style="font-size: 24px; margin-bottom: 5px;">⚙️</div>
+                        <button onclick="buyResource('parts', 50, 5000)" style="width:100%; background: #ffea00; color:#000; border:none; padding:5px; border-radius:5px; font-weight:bold; font-size: 11px;">💰 5000</button>
+                    </div>
+                </div>
                 <h3 style="color: #ff00ff; text-align: center; margin-bottom: 10px;">СУНДУКИ</h3>
                 <div style="background: linear-gradient(180deg, #d76d77, #3a1c71); border: 2px solid #ff8c00; border-radius: 14px; padding: 15px; margin-bottom: 15px; text-align: center;">
                     <div style="font-weight: bold; font-size: 16px; color: #fff; margin-bottom: 10px;">Сундук S-Gear</div>
@@ -275,10 +290,9 @@
                     <button onclick="spinGoldenSlot()" style="width: 100%; background: #fff; color: #ff6600; border: none; padding: 12px; border-radius: 10px; font-weight: bold;">Вращать (50 💎)</button>
                 </div>
                 
-                <!-- НОВОЕ: ОРУЖЕЙНАЯ / КРАФТ -->
                 <div style="background: #2a2a35; border: 2px solid #00bcd4; border-radius: 15px; padding: 15px; text-align: center; margin-bottom: 20px;">
                     <h3 style="color: #00bcd4; margin: 0 0 10px 0;">🛠️ Оружейная (Крафт)</h3>
-                    <p style="color: #aaa; font-size: 12px; margin-bottom: 10px;">Создавайте новое оружие за Золото и Детали.</p>
+                    <p style="color: #aaa; font-size: 12px; margin-bottom: 10px;">Создавайте оружие. Чертежи падают с Боссов!</p>
                     <div id="craftingList"></div>
                 </div>
             </div>
@@ -309,7 +323,7 @@
             </div>
         </div>
 
-        <div id="navBar" style="position: absolute; bottom: 0; left: 0; width: 100%; height: calc(70px + env(safe-area-inset-bottom)); background: #161622; border-top: 1px solid #333; display: flex; justify-content: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box;">
+        <div id="navBar" style="position: absolute; bottom: 0; left: 0; width: 100%; height: calc(70px + env(safe-area-bottom)); background: #161622; border-top: 1px solid #333; display: flex; justify-content: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box;">
             <div style="display: flex; width: 100%; max-width: 600px;">
                 <button class="navBtn" onclick="switchTab('shopScreen', this)"><span style="font-size:24px; margin-bottom:4px;">🛒</span> Магазин</button>
                 <button class="navBtn" onclick="switchTab('equipmentScreen', this)"><span style="font-size:24px; margin-bottom:4px;">🎒</span> Экипировка</button>
