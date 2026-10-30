@@ -6,13 +6,15 @@
     <title>Spekter Agency</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        /* Строгий мобильный вид для компьютера (центрирование) */
         body { 
-            margin: 0; padding: 0; background: #09090f; font-family: sans-serif; overflow: hidden; user-select: none;
-            position: fixed; width: 100%; height: 100%;
+            margin: 0; padding: 0; background: #050508; font-family: sans-serif; overflow: hidden; user-select: none;
+            display: flex; justify-content: center; align-items: center; width: 100vw; height: 100vh;
         }
-        /* Убрали ограничение ширины для ПК, теперь игра адаптивна на весь экран */
+        /* Контейнер игры: на телефоне 100%, на ПК - как смартфон */
         #appContainer {
-            width: 100%; height: 100%; position: relative; background: #1a1a24; overflow: hidden;
+            width: 100%; max-width: 430px; height: 100%; height: 100dvh; position: relative; 
+            background: #1a1a24; overflow: hidden; box-shadow: 0 0 50px rgba(0, 0, 0, 0.9);
         }
 
         .screen { 
@@ -32,19 +34,23 @@
         
         .stat-badge { position: absolute; bottom: 2px; right: 4px; font-size: 10px; font-weight: bold; color: white; background: rgba(0,0,0,0.7); padding: 1px 4px; border-radius: 4px; }
         .modal-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; }
-        .modal-content { background: #2a2a35; border: 2px solid #ffea00; border-radius: 20px; padding: 20px; width: 90%; max-width: 400px; max-height: 80%; overflow-y: auto; text-align: center; color: white; position: relative; }
+        .modal-content { background: #2a2a35; border: 2px solid #ffea00; border-radius: 20px; padding: 20px; width: 90%; max-height: 80%; overflow-y: auto; text-align: center; color: white; position: relative; }
         .event-btn { background: linear-gradient(135deg, #ff00ff, #8a2be2); color: white; border: none; padding: 12px; border-radius: 12px; font-weight: bold; width: 100%; font-size: 16px; cursor: pointer; box-shadow: 0 4px 10px rgba(138,43,226,0.5); }
         
         #joystickZone { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; touch-action: none; display: none; }
         #joystickBase { position: absolute; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; transform: translate(-50%, -50%); display: none; pointer-events: none; }
         #joystickStick { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; background: rgba(255,255,255,0.8); border-radius: 50%; transform: translate(-50%, -50%); }
         
-        /* Кнопка паузы - опущена ниже крестика */
         #btnPause {
             position: absolute; top: calc(60px + env(safe-area-inset-top)); right: 15px;
             width: 40px; height: 40px; background: rgba(0,0,0,0.5); border: 2px solid #fff; border-radius: 10px;
             color: #fff; font-size: 20px; font-weight: bold; display: none; z-index: 150; cursor: pointer;
             align-items: center; justify-content: center;
+        }
+        #roomCounterUI {
+            position: absolute; top: calc(65px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.7); border: 1px solid #ffd700; color: #ffd700; padding: 5px 15px;
+            border-radius: 15px; font-weight: bold; font-size: 14px; display: none; z-index: 150;
         }
     </style>
 </head>
@@ -53,17 +59,13 @@
         <div id="splashScreen" onclick="this.style.display='none'" style="position:absolute; top:0; left:0; width:100%; height:100%; background: #0f0f16; z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align: center;">
             <h1 style="color:#00ffff; font-size:46px; text-shadow: 0 0 20px #00ffff, 0 0 40px #00bfff; margin-bottom: 10px; font-style: italic;">SPEKTER<br>AGENCY</h1>
             <div style="color:#aaa; margin-bottom: 50px; font-size: 14px;">Инициализация агента...</div>
-            <div style="width: 60%; height: 8px; background: #333; border-radius: 4px; overflow: hidden;">
-                <div id="splashProgress" style="width: 0%; height: 100%; background: #00ffff; box-shadow: 0 0 10px #00ffff; transition: 0.1s;"></div>
-            </div>
+            <div style="width: 60%; height: 8px; background: #333; border-radius: 4px; overflow: hidden;"><div id="splashProgress" style="width: 0%; height: 100%; background: #00ffff; box-shadow: 0 0 10px #00ffff; transition: 0.1s;"></div></div>
         </div>
 
-        <!-- Панель ресурсов - опущена на 60px для защиты от крестика Telegram -->
-        <div id="topBar" style="position: absolute; top: calc(55px + env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; z-index: 1000;">
+        <div id="topBar" style="position: absolute; top: calc(15px + env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; z-index: 1000;">
             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; pointer-events: none;">
                 <div style="background: rgba(0,0,0,0.8); padding: 4px 10px; border-radius: 20px; color: #00ff00; font-weight: bold; border: 1px solid #32cd32; font-size: 12px; pointer-events: auto; cursor: pointer; display: flex; align-items: center; gap: 5px;" onclick="openEnergyShop()">
-                    ⚡ <span id="energyDisplay">30</span>/30
-                    <span id="energyTimer" style="color: #aaa; font-size: 10px;">(00:00)</span>
+                    ⚡ <span id="energyDisplay">30</span>/30 <span id="energyTimer" style="color: #aaa; font-size: 10px;">(00:00)</span>
                 </div>
                 <div style="background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; color: #ffd700; font-weight: bold; border: 1px solid #ffd700; font-size: 12px;">💰 <span id="goldDisplay">0</span></div>
                 <div style="background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; color: #00ffff; font-weight: bold; border: 1px solid #00ffff; font-size: 12px;">💎 <span id="gemDisplay">0</span></div>
@@ -73,9 +75,10 @@
 
         <canvas id="gameCanvas" style="display:none; position:absolute; top:0; left:0;"></canvas>
         <button id="btnPause" onclick="togglePause()">⏸</button>
+        <div id="roomCounterUI">Комната 1/5</div>
         <div id="joystickZone"><div id="joystickBase"><div id="joystickStick"></div></div></div>
 
-        <!-- Окна результатов и паузы -->
+        <!-- Окна результатов, паузы и ВОСКРЕШЕНИЯ -->
         <div id="battleResultModal" class="modal-overlay">
             <div class="modal-content" id="battleResultContent"></div>
         </div>
@@ -85,6 +88,16 @@
                 <h2 style="color: #00ffff;">ПАУЗА</h2>
                 <button onclick="togglePause()" style="background: #28a745; color: #fff; border: none; padding: 15px; border-radius: 10px; font-weight: bold; width: 100%; margin-bottom: 10px; font-size: 16px; cursor: pointer;">ПРОДОЛЖИТЬ</button>
                 <button onclick="fleeBattle()" style="background: #dc3545; color: #fff; border: none; padding: 15px; border-radius: 10px; font-weight: bold; width: 100%; font-size: 16px; cursor: pointer;">ПОКИНУТЬ БОЙ</button>
+            </div>
+        </div>
+
+        <div id="reviveModal" class="modal-overlay">
+            <div class="modal-content" style="border-color: #ff4a4a;">
+                <div style="font-size: 50px; margin-bottom: 10px;">💀</div>
+                <h2 style="color: #ff4a4a; margin-top: 0;">АГЕНТ ПОВЕРЖЕН</h2>
+                <p style="color: #aaa; font-size: 14px; margin-bottom: 20px;">Хотите воскреснуть и продолжить с полным здоровьем?</p>
+                <button onclick="acceptRevive()" style="background: #28a745; color: #fff; border: none; padding: 15px; border-radius: 10px; font-weight: bold; width: 100%; margin-bottom: 10px; font-size: 16px; cursor: pointer;">ВОСКРЕСНУТЬ (<span id="reviveCost">10</span> 💎)</button>
+                <button onclick="declineRevive()" style="background: #555; color: #fff; border: none; padding: 15px; border-radius: 10px; font-weight: bold; width: 100%; font-size: 16px; cursor: pointer;">СДАТЬСЯ</button>
             </div>
         </div>
 
@@ -108,7 +121,7 @@
             <div style="margin: auto; text-align: center; width: 100%;">
                 <div id="stageTitle" style="font-size: 18px; color: #ffea00; font-weight: bold; margin-bottom: 15px;">ЭТАП <span id="stageDisplay">1</span></div>
                 <button onclick="startBattle()" style="background: linear-gradient(135deg, #ffd700, #ff8c00); color: #000; border: none; padding: 15px 50px; border-radius: 30px; font-size: 22px; font-weight: bold; cursor: pointer;">В БОЙ ⚔️</button>
-                <div style="margin-top: 10px; color: #aaa; font-size: 12px; margin-bottom: 30px;">Стоимость: 5 ⚡</div>
+                <div style="margin-top: 10px; color: #aaa; font-size: 12px; margin-bottom: 30px;">Стоимость: 5 ⚡ (5 Комнат)</div>
                 
                 <div id="btnSweep" style="background: rgba(0,0,0,0.7); border: 2px solid #ffd700; border-radius: 15px; padding: 15px; margin: 0 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
                     <div style="text-align: left;">
@@ -132,13 +145,6 @@
                             <button id="btnProg2" onclick="claimProgress(2, 120)" style="background:#28a745; color:#fff; border:none; padding:5px 10px; border-radius:5px; font-weight:bold; font-size:10px;">Забрать</button>
                         </div>
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="color:#fff; font-weight:bold;">Этап 5</span>
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <span style="color:#00ffff; font-size:12px;">💎 x300</span>
-                            <button id="btnProg5" onclick="claimProgress(5, 300)" style="background:#28a745; color:#fff; border:none; padding:5px 10px; border-radius:5px; font-weight:bold; font-size:10px;">Забрать</button>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -154,7 +160,7 @@
             </div>
         </div>
 
-        <!-- 2. ПОЛНОЦЕННЫЙ МАГАЗИН ВОССТАНОВЛЕН -->
+        <!-- 2. МАГАЗИН -->
         <div id="shopScreen" class="screen">
             <h3 style="color: #00ffff; text-align: center; margin-top: 0; margin-bottom: 10px;">КАРТЫ ЛЬГОТ</h3>
             <div style="background: linear-gradient(135deg, #4169e1, #00008b); border: 2px solid #00bfff; border-radius: 14px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
@@ -295,7 +301,6 @@
             </div>
         </div>
 
-        <!-- ТАББАР -->
         <div id="navBar" style="position: absolute; bottom: 0; left: 0; width: 100%; height: calc(70px + env(safe-area-inset-bottom)); background: #161622; border-top: 1px solid #333; display: flex; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box;">
             <button class="navBtn" onclick="switchTab('shopScreen', this)"><span style="font-size:24px; margin-bottom:4px;">🛒</span> Магазин</button>
             <button class="navBtn" onclick="switchTab('equipmentScreen', this)"><span style="font-size:24px; margin-bottom:4px;">🎒</span> Экипировка</button>

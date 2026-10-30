@@ -11,8 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const interval = setInterval(() => {
         progress += 5; bar.style.width = progress + '%';
         if (progress >= 100) { 
-            clearInterval(interval); 
-            document.getElementById('splashScreen').style.opacity = '0'; 
+            clearInterval(interval); document.getElementById('splashScreen').style.opacity = '0'; 
             setTimeout(() => { document.getElementById('splashScreen').style.display = 'none'; }, 500); 
         }
     }, 50);
@@ -36,7 +35,7 @@ const defaultSave = {
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try {
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal11') || localStorage.getItem('spekterSaveFinal10') || 'null');
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal12') || localStorage.getItem('spekterSaveFinal11') || 'null');
     if (loaded) Object.assign(savedData, loaded);
 } catch(e) {}
 
@@ -72,7 +71,7 @@ window.openEnergyShop = function() {
     }
 }
 
-function saveData() { localStorage.setItem('spekterSaveFinal11', JSON.stringify(savedData)); updateTopBar(); }
+function saveData() { localStorage.setItem('spekterSaveFinal12', JSON.stringify(savedData)); updateTopBar(); }
 
 function updateTopBar() {
     checkEnergyRegen();
@@ -81,9 +80,7 @@ function updateTopBar() {
     document.getElementById('partsDisplay').innerText = savedData.parts;
     document.getElementById('energyDisplay').innerText = savedData.energy;
     document.getElementById('accountLevelDisplay').innerText = savedData.accountLevel;
-    let stageTxt = savedData.stage;
-    if (savedData.stage % 5 === 0) { document.getElementById('stageTitle').style.color = '#ff4a4a'; stageTxt += " (БОСС)"; } else { document.getElementById('stageTitle').style.color = '#ffea00'; }
-    document.getElementById('stageDisplay').innerText = stageTxt;
+    document.getElementById('stageDisplay').innerText = savedData.stage;
 }
 
 window.switchTab = function(screenId, btnElement) {
@@ -209,12 +206,14 @@ window.buyVip = function() { savedData.vipActive = true; savedData.gems += 80; s
 setInterval(() => { updateEnergyTimerUI(); }, 1000);
 updateTopBar();
 
+
 // ----------------- БОЕВОЙ ДВИЖОК CANVAS -----------------
 const canvas = document.getElementById('gameCanvas'); 
 const ctx = canvas.getContext('2d');
 const joystickZone = document.getElementById('joystickZone'); 
 const joystickBase = document.getElementById('joystickBase');
 const joystickStick = document.getElementById('joystickStick');
+const roomCounterUI = document.getElementById('roomCounterUI');
 
 let screenW, screenH;
 function resize() { 
@@ -223,15 +222,12 @@ function resize() {
 }
 window.addEventListener('resize', resize); resize();
 
-// Делаем арену жесткого размера 1200х1200
 const world = { width: 1200, height: 1200 }; 
 const camera = { x: 0, y: 0 };
 const input = { x: 0, y: 0, isMoving: false, usingKeyboard: false }; 
-
 let joystickCenter = { x: 0, y: 0 }; 
 const MAX_JOYSTICK_RADIUS = 50; 
 
-// --- УПРАВЛЕНИЕ: МЫШЬ И ТАЧИ ---
 function startInput(clientX, clientY) {
     if (gameState !== 'playing') return;
     input.usingKeyboard = false; input.isMoving = true;
@@ -260,19 +256,29 @@ joystickZone.addEventListener('mousedown', (e) => startInput(e.clientX, e.client
 joystickZone.addEventListener('mousemove', (e) => moveInput(e.clientX, e.clientY));
 window.addEventListener('mouseup', stopInput);
 
-// --- УПРАВЛЕНИЕ: КЛАВИАТУРА (Починено) ---
-const keys = { w: false, a: false, s: false, d: false, arrowup: false, arrowdown: false, arrowleft: false, arrowright: false };
+// --- УПРАВЛЕНИЕ: КЛАВИАТУРА (Исправлено на e.code) ---
+const keys = { up: false, down: false, left: false, right: false };
 window.addEventListener('keydown', (e) => {
-    let key = e.key.toLowerCase(); if (keys.hasOwnProperty(key)) keys[key] = true; updateKeyboardInput();
+    let code = e.code;
+    if(code==='KeyW' || code==='ArrowUp') keys.up = true;
+    if(code==='KeyS' || code==='ArrowDown') keys.down = true;
+    if(code==='KeyA' || code==='ArrowLeft') keys.left = true;
+    if(code==='KeyD' || code==='ArrowRight') keys.right = true;
+    updateKeyboardInput();
 });
 window.addEventListener('keyup', (e) => {
-    let key = e.key.toLowerCase(); if (keys.hasOwnProperty(key)) keys[key] = false; updateKeyboardInput();
+    let code = e.code;
+    if(code==='KeyW' || code==='ArrowUp') keys.up = false;
+    if(code==='KeyS' || code==='ArrowDown') keys.down = false;
+    if(code==='KeyA' || code==='ArrowLeft') keys.left = false;
+    if(code==='KeyD' || code==='ArrowRight') keys.right = false;
+    updateKeyboardInput();
 });
 function updateKeyboardInput() {
     if (gameState !== 'playing') return;
     let dx = 0, dy = 0;
-    if (keys.w || keys.arrowup) dy -= 1; if (keys.s || keys.arrowdown) dy += 1;
-    if (keys.a || keys.arrowleft) dx -= 1; if (keys.d || keys.arrowright) dx += 1;
+    if (keys.up) dy -= 1; if (keys.down) dy += 1;
+    if (keys.left) dx -= 1; if (keys.right) dx += 1;
     
     if (dx !== 0 || dy !== 0) {
         input.usingKeyboard = true; input.isMoving = true;
@@ -283,11 +289,13 @@ function updateKeyboardInput() {
     }
 }
 
+// ПРОГРЕССИЯ ЭТАПА (Archero Run)
+let currentRoom = 1; const maxRooms = 5; 
 let player = { x: 600, y: 600, radius: 15, speed: 200, hp: 100, maxHp: 100, atk: 10, attackRate: 2.5, lastAttackTime: 0 };
-let enemies = []; let projectiles = []; let floatingTexts = []; let killsInBattle = 0;
+let enemies = []; let projectiles = []; let floatingTexts = []; 
+let killsInRoom = 0; let totalKillsInRun = 0; let revivesUsed = 0;
 let isBossStage = false; let bossEntity = null;
-let roomState = 'fighting'; // fighting, cleared
-let portal = null; 
+let roomState = 'fighting'; let portal = null; 
 
 window.togglePause = function() {
     if (gameState === 'playing') { gameState = 'paused'; document.getElementById('pauseModal').style.display = 'flex'; } 
@@ -302,39 +310,66 @@ window.startBattle = function() {
     document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
     document.getElementById('topBar').style.display = 'none'; document.getElementById('navBar').style.display = 'none';
     document.getElementById('battleResultModal').style.display = 'none'; document.getElementById('btnPause').style.display = 'flex';
+    roomCounterUI.style.display = 'block';
     
     let finalStats = getCalculatedStats();
     player.maxHp = finalStats.hp; player.hp = finalStats.hp; player.atk = finalStats.atk;
-    player.x = world.width / 2; player.y = world.height / 2;
-    enemies = []; projectiles = []; floatingTexts = []; killsInBattle = 0;
-    roomState = 'fighting'; portal = null;
-    isBossStage = (savedData.stage % 5 === 0); bossEntity = null;
+    
+    totalKillsInRun = 0; revivesUsed = 0;
+    currentRoom = 1;
+    startRoom();
     
     gameState = 'playing'; canvas.style.display = 'block'; joystickZone.style.display = 'block';
     lastTime = performance.now(); requestAnimationFrame(gameLoop);
 };
 
-// Хардкор: мобы становятся сильнее с каждым этапом
+function startRoom() {
+    player.x = world.width / 2; player.y = world.height / 2;
+    enemies = []; projectiles = []; floatingTexts = []; killsInRoom = 0;
+    roomState = 'fighting'; portal = null;
+    isBossStage = (currentRoom === maxRooms); bossEntity = null;
+    roomCounterUI.innerText = isBossStage ? 'БОСС КОМНАТА' : `Комната ${currentRoom}/${maxRooms}`;
+}
+
 function spawnEnemy() {
     const angle = Math.random() * Math.PI * 2; const distance = Math.max(screenW, screenH) / 2 + 100;
-    let mobHp = 50 + (savedData.stage * 30);
-    let mobAtk = 10 + (savedData.stage * 5);
-    let mobSpeed = 100 + (savedData.stage * 2);
+    let mobHp = 50 + (savedData.stage * 30) + (currentRoom * 5);
+    let mobAtk = 10 + (savedData.stage * 5); let mobSpeed = 100 + (savedData.stage * 2);
     enemies.push({ x: player.x + Math.cos(angle)*distance, y: player.y + Math.sin(angle)*distance, radius: 16, hp: mobHp, maxHp: mobHp, atk: mobAtk, speed: mobSpeed, isBoss: false });
 }
 
 function spawnBoss() {
     const angle = Math.random() * Math.PI * 2; const distance = Math.max(screenW, screenH) / 2 + 100;
-    let bossHp = (50 + (savedData.stage * 30)) * 10;
-    let bossAtk = 20 + (savedData.stage * 10);
+    let bossHp = (50 + (savedData.stage * 30)) * 10; let bossAtk = 20 + (savedData.stage * 10);
     bossEntity = { x: player.x + Math.cos(angle)*distance, y: player.y + Math.sin(angle)*distance, radius: 40, hp: bossHp, maxHp: bossHp, atk: bossAtk, speed: 90, isBoss: true, lastAttack: 0 };
     enemies.push(bossEntity);
 }
 
+// СИСТЕМА ВОСКРЕШЕНИЯ
+function triggerDeath() {
+    gameState = 'paused';
+    if (revivesUsed < 3) {
+        document.getElementById('reviveCost').innerText = (revivesUsed + 1) * 10;
+        document.getElementById('reviveModal').style.display = 'flex';
+    } else {
+        showBattleResult(false);
+    }
+}
+window.acceptRevive = function() {
+    let cost = (revivesUsed + 1) * 10;
+    if (savedData.gems >= cost) {
+        savedData.gems -= cost; saveData(); revivesUsed++;
+        player.hp = player.maxHp;
+        document.getElementById('reviveModal').style.display = 'none';
+        gameState = 'playing'; lastTime = performance.now(); requestAnimationFrame(gameLoop);
+    } else { alert("Недостаточно алмазов!"); }
+};
+window.declineRevive = function() { document.getElementById('reviveModal').style.display = 'none'; showBattleResult(false); };
+
 function showBattleResult(isWin, isFlee = false) {
-    gameState = 'menu'; document.getElementById('btnPause').style.display = 'none';
-    let goldReward = killsInBattle * 15; let partsReward = isWin ? (isBossStage ? 25 : 5) : 0;
-    savedData.dailyKills += killsInBattle; savedData.gold += goldReward; savedData.parts += partsReward;
+    gameState = 'menu'; document.getElementById('btnPause').style.display = 'none'; roomCounterUI.style.display = 'none';
+    let goldReward = totalKillsInRun * 15; let partsReward = isWin ? 25 : 5;
+    savedData.dailyKills += totalKillsInRun; savedData.gold += goldReward; savedData.parts += partsReward;
     if (isWin) savedData.stage++; saveData();
     
     let modalContent = document.getElementById('battleResultContent');
@@ -343,10 +378,10 @@ function showBattleResult(isWin, isFlee = false) {
     modalContent.style.borderColor = titleColor;
     modalContent.innerHTML = `<h2 style="color: ${titleColor}; margin-top: 0; font-size: 28px; font-style: italic;">${titleText}</h2>
         <div style="background: #1e1e2c; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-            <p style="color: #aaa; margin: 5px 0;">Уничтожено врагов: <strong style="color:#fff;">${killsInBattle}</strong></p>
+            <p style="color: #aaa; margin: 5px 0;">Уничтожено врагов: <strong style="color:#fff;">${totalKillsInRun}</strong></p>
             <div style="display: flex; justify-content: center; gap: 20px; margin-top: 15px;">
                 <div><span style="font-size:24px;">💰</span><br><strong style="color:#ffd700;">+${goldReward}</strong></div>
-                ${partsReward > 0 ? `<div><span style="font-size:24px;">⚙️</span><br><strong style="color:#da70d6;">+${partsReward}</strong></div>` : ''}
+                <div><span style="font-size:24px;">⚙️</span><br><strong style="color:#da70d6;">+${partsReward}</strong></div>
             </div>
         </div>
         <button onclick="closeBattleResult()" style="background: ${titleColor}; color: #000; border: none; padding: 15px; border-radius: 10px; font-weight: bold; width: 100%; font-size: 18px; cursor: pointer;">ВЕРНУТЬСЯ В ЛОББИ</button>`;
@@ -367,10 +402,9 @@ function gameLoop(timestamp) {
     
     if (roomState === 'fighting') {
         if (isBossStage) { if (!bossEntity && enemies.length === 0) spawnBoss(); } 
-        else { if (enemies.length < 5 + savedData.stage && Math.random() < 1.2 * dt && killsInBattle < 15) spawnEnemy(); }
+        else { if (enemies.length < 5 + savedData.stage && Math.random() < 1.2 * dt && killsInRoom < 15) spawnEnemy(); }
         
-        // Появление двери/портала, когда все мобы убиты
-        if (enemies.length === 0 && (isBossStage ? bossEntity && bossEntity.isDead : killsInBattle >= 15)) {
+        if (enemies.length === 0 && (isBossStage ? bossEntity && bossEntity.isDead : killsInRoom >= 15)) {
             roomState = 'cleared';
             portal = { x: world.width / 2, y: world.height / 2 - 200, radius: 40 };
         }
@@ -378,11 +412,10 @@ function gameLoop(timestamp) {
 
     if (input.isMoving && (input.x !== 0 || input.y !== 0)) {
         player.x += input.x * player.speed * dt; player.y += input.y * player.speed * dt;
-        // Жесткие границы арены
         player.x = Math.max(player.radius, Math.min(world.width - player.radius, player.x));
         player.y = Math.max(player.radius, Math.min(world.height - player.radius, player.y));
     } 
-    // Автоатака
+
     if (enemies.length > 0 && (timestamp - player.lastAttackTime)/1000 >= 1/player.attackRate) {
         let target = null, minDist = Infinity;
         for (let e of enemies) { const dist = Math.hypot(e.x - player.x, e.y - player.y); if (dist < 400 && dist < minDist) { minDist = dist; target = e; } }
@@ -397,13 +430,11 @@ function gameLoop(timestamp) {
     
     for (let i = enemies.length - 1; i >= 0; i--) {
         let e = enemies[i]; 
-        if (e.isDead) { enemies.splice(i, 1); killsInBattle++; continue; }
+        if (e.isDead) { enemies.splice(i, 1); killsInRoom++; totalKillsInRun++; continue; }
         
         const dx = player.x - e.x, dy = player.y - e.y, dist = Math.hypot(dx, dy) || 0.001;
         if (dist > 0) { e.x += (dx / dist) * e.speed * dt; e.y += (dy / dist) * e.speed * dt; }
-        // Границы для врагов
-        e.x = Math.max(e.radius, Math.min(world.width - e.radius, e.x));
-        e.y = Math.max(e.radius, Math.min(world.height - e.radius, e.y));
+        e.x = Math.max(e.radius, Math.min(world.width - e.radius, e.x)); e.y = Math.max(e.radius, Math.min(world.height - e.radius, e.y));
         
         if (e.isBoss && (timestamp - e.lastAttack) > 2000) {
             for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) { projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a)*300, vy: Math.sin(a)*300, radius: 8, damage: e.atk, isEnemy: true }); }
@@ -411,7 +442,7 @@ function gameLoop(timestamp) {
         }
 
         if (dist < player.radius + e.radius) {
-            player.hp -= e.atk; if (player.hp <= 0) { showBattleResult(false); return; } e.x -= (dx/dist)*100; e.y -= (dy/dist)*100;
+            player.hp -= e.atk; if (player.hp <= 0) { triggerDeath(); return; } e.x -= (dx/dist)*100; e.y -= (dy/dist)*100;
         }
     }
 
@@ -422,7 +453,7 @@ function gameLoop(timestamp) {
         if (p.isEnemy) {
             if (Math.hypot(p.x - player.x, p.y - player.y) < p.radius + player.radius) {
                 player.hp -= p.damage; floatingTexts.push({ x: player.x, y: player.y - 20, text: `-${Math.floor(p.damage)}`, color: "#ff0000", life: 1.0 });
-                projectiles.splice(i, 1); if (player.hp <= 0) { showBattleResult(false); return; }
+                projectiles.splice(i, 1); if (player.hp <= 0) { triggerDeath(); return; }
             }
         } else {
             for (let j = enemies.length - 1; j >= 0; j--) {
@@ -439,21 +470,18 @@ function gameLoop(timestamp) {
     camera.x = Math.max(0, Math.min(world.width - screenW, player.x - screenW / 2)); camera.y = Math.max(0, Math.min(world.height - screenH, player.y - screenH / 2));
     ctx.translate(-camera.x, -camera.y);
 
-    // Рисуем границы комнаты (стены)
     ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 10; ctx.strokeRect(0, 0, world.width, world.height);
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; ctx.lineWidth = 1; ctx.beginPath();
     for (let i = 0; i <= world.width; i += 40) { ctx.moveTo(i, 0); ctx.lineTo(i, world.height); }
     for (let i = 0; i <= world.height; i += 40) { ctx.moveTo(0, i); ctx.lineTo(world.width, i); }
     ctx.stroke();
 
-    // Рисуем Портал
     if (roomState === 'cleared' && portal) {
-        ctx.fillStyle = '#9932CC'; ctx.beginPath(); 
-        ctx.arc(portal.x, portal.y, portal.radius + Math.sin(timestamp/150)*5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#9932CC'; ctx.beginPath(); ctx.arc(portal.x, portal.y, portal.radius + Math.sin(timestamp/150)*5, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#fff'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('ВЫХОД', portal.x, portal.y - 50);
         
         if (Math.hypot(player.x - portal.x, player.y - portal.y) < player.radius + portal.radius) {
-            showBattleResult(true); return;
+            if (currentRoom < maxRooms) { currentRoom++; startRoom(); } else { showBattleResult(true); } return;
         }
     }
 
@@ -473,8 +501,4 @@ function gameLoop(timestamp) {
     ctx.fillStyle = 'rgba(255, 0, 0, 0.5)'; ctx.fillRect(20, Math.max(20, 20), 150, 15);
     ctx.fillStyle = '#00ff00'; ctx.fillRect(20, Math.max(20, 20), 150 * (Math.max(0, player.hp) / player.maxHp), 15);
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.strokeRect(20, Math.max(20, 20), 150, 15);
-    
-    ctx.textAlign = 'right'; 
-    if (isBossStage && bossEntity) { ctx.fillText(`БОСС: ${Math.floor(Math.max(0, bossEntity.hp))} HP`, screenW - 20, 35); } 
-    else { ctx.fillText(`Убито: ${killsInBattle} / 15`, screenW - 20, 35); }
 }
