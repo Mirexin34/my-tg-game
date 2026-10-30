@@ -58,7 +58,7 @@ const defaultSave = {
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try { 
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal21') || 'null'); 
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal22') || 'null'); 
     if (loaded) Object.assign(savedData, loaded); 
 } catch(e) {}
 
@@ -73,7 +73,7 @@ if (savedData.guildBossHp === undefined) savedData.guildBossHp = 15000;
 if (!savedData.baseDefense) savedData.baseDefense = { towers: 2, guards: 3 };
 
 function saveData() { 
-    localStorage.setItem('spekterSaveFinal21', JSON.stringify(savedData)); 
+    localStorage.setItem('spekterSaveFinal22', JSON.stringify(savedData)); 
     updateTopBar(); 
 }
 
@@ -126,6 +126,7 @@ window.openEnergyShop = function() {
     } 
 };
 
+let previousBm = 100;
 function updateTopBar() { 
     checkEnergyRegen(); 
     let el;
@@ -137,8 +138,25 @@ function updateTopBar() {
     el = document.getElementById('stageDisplay'); if(el) el.innerText = savedData.stage; 
 
     let stats = getCalculatedStats();
-    let bm = stats.atk * 2 + stats.hp / 10;
-    let bmd = document.getElementById('bmDisplay'); if(bmd) bmd.innerText = Math.floor(bm);
+    let currentBm = Math.floor(stats.atk * 2 + stats.hp / 10);
+    let bmd = document.getElementById('bmDisplay'); 
+    
+    if(bmd) {
+        if (currentBm > previousBm && previousBm > 0) {
+            let diff = currentBm - previousBm;
+            showBmPopup(`+${diff} БМ ⚔️`);
+        }
+        bmd.innerText = currentBm;
+        previousBm = currentBm;
+    }
+}
+
+function showBmPopup(text) {
+    let popup = document.createElement('div');
+    popup.className = 'bm-popup';
+    popup.innerText = text;
+    appContainer.appendChild(popup);
+    setTimeout(() => popup.remove(), 1200);
 }
 
 window.switchTab = function(screenId, btnElement) { 
@@ -151,7 +169,7 @@ window.switchTab = function(screenId, btnElement) {
     } 
     if(screenId === 'equipmentScreen') renderInventory(); 
     if(screenId === 'skillsScreen') renderSkills(); 
-    if(screenId === 'shopScreen') updateVIPUI(); 
+    if(screenId === 'shopScreen') {} 
     if(screenId === 'cityScreen') renderCrafting(); 
 };
 
@@ -171,7 +189,99 @@ function getCalculatedStats() {
     return { atk: finalAtk, hp: finalHp }; 
 }
 
-// ----------------- ЛОГИКА РЕЙДОВ НА БАЗЫ -----------------
+// ----------------- СОЧНАЯ ГАЧА С АНИМАЦИЕЙ СУНДУКА -----------------
+window.openDropRatesModal = function() {
+    let m = document.getElementById('dropRatesModal'); if(m) m.style.display = 'flex';
+};
+
+window.openChest = function(chestType, amount) { 
+    let cost = 400 * amount; 
+    if (savedData.gems < cost) { showAlert("Недостаточно алмазов!"); return; } 
+    savedData.gems -= cost; 
+
+    let chestBox = document.getElementById('gachaChestBox');
+    if (chestBox) chestBox.className = 'chest-anim';
+
+    let pulled = []; 
+    for (let i = 0; i < amount; i++) { 
+        let r = Math.random(), tr = r < 0.1 ? 'epic' : (r < 0.4 ? 'rare' : 'normal'); 
+        let pool = itemDatabase.filter(x => x.rarity === tr); if(!pool.length) pool = itemDatabase; 
+        let item = pool[Math.floor(Math.random()*pool.length)]; 
+        savedData.inventory.push({uid: getUid(), id: item.id}); 
+        pulled.push(item); 
+    } 
+    saveData(); 
+
+    setTimeout(() => {
+        if (chestBox) chestBox.className = '';
+        const container = document.getElementById('gachaItemsList'); 
+        if(container) {
+            container.innerHTML = ''; 
+            pulled.forEach(item => { 
+                let div = document.createElement('div'); 
+                div.className = `inv-item rarity-bg-${item.rarity}`; 
+                div.style.width = '55px'; div.style.height = '55px'; div.style.fontSize = '26px'; 
+                div.innerHTML = item.icon; 
+                container.appendChild(div); 
+            }); 
+        }
+        let modal = document.getElementById('gachaResult'); if(modal) modal.style.display = 'flex'; 
+    }, 500);
+};
+
+// ----------------- РЫНОК СЛИТКОВ С УДОБНЫМ ВЫБОРОМ КОЛИЧЕСТВА -----------------
+window.openAuctionModal = function() {
+    checkMarketDailyReset();
+    renderMarketUI();
+    let m = document.getElementById('auctionModal'); if(m) m.style.display = 'flex';
+};
+
+window.renderMarketUI = function() {
+    const container = document.getElementById('marketItemsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    marketSystemConfig.forEach(item => {
+        let boughtToday = savedData.marketLimits[item.id] || 0;
+        let leftToday = Math.max(0, item.maxDaily - boughtToday);
+
+        container.innerHTML += `
+            <div style="background: #1e1e2c; border: 1px solid #444; border-radius: 8px; padding: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="text-align: left;">
+                    <div style="font-size: 13px;">${item.icon} <strong style="color:#fff; font-size:11px;">${item.name}</strong></div>
+                    <div style="color: #aaa; font-size: 9px; margin-top: 2px;">Лимит: <span style="color:${leftToday > 0 ? '#00ff00' : '#ff4a4a'}; font-weight:bold;">${leftToday}/${item.maxDaily}</span> | ${item.pricePerUnitGem} 💎</div>
+                </div>
+                <div style="display:flex; gap:4px;">
+                    <button onclick="buyMarketItem('${item.id}', 1)" ${leftToday <= 0 ? 'disabled' : ''} style="background: ${leftToday > 0 ? '#28a745' : '#555'}; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">1 шт</button>
+                    <button onclick="buyMarketItem('${item.id}', ${leftToday})" ${leftToday <= 0 ? 'disabled' : ''} style="background: ${leftToday > 0 ? '#00bcd4' : '#555'}; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Макс</button>
+                </div>
+            </div>
+        `;
+    });
+};
+
+window.buyMarketItem = function(itemId, qty) {
+    checkMarketDailyReset();
+    let cfg = marketSystemConfig.find(x => x.id === itemId);
+    if (!cfg || qty <= 0) return;
+    let boughtToday = savedData.marketLimits[itemId] || 0;
+    let leftToday = Math.max(0, cfg.maxDaily - boughtToday);
+    
+    let buyCount = Math.min(qty, leftToday);
+    if (buyCount <= 0) { showAlert("Лимит исчерпан!"); return; }
+    
+    let totalCost = cfg.pricePerUnitGem * buyCount;
+    if (savedData.gems < totalCost) { showAlert("Недостаточно алмазов!"); return; }
+
+    savedData.gems -= totalCost;
+    savedData.marketLimits[itemId] = boughtToday + buyCount;
+    savedData.parts += 10 * buyCount; 
+    saveData(); 
+    renderMarketUI(); 
+    showAlert(`Успешно куплено (${buyCount} шт)!`);
+};
+
+// ----------------- ОСТАЛЬНЫЕ СИСТЕМЫ И ИГРОВОЙ ЦИКЛ -----------------
 window.openRaidModal = function() {
     renderRaidUI();
     let rm = document.getElementById('raidModal'); if(rm) rm.style.display = 'flex';
@@ -251,7 +361,6 @@ window.startBaseRaid = function(baseId) {
     enemies = []; projectiles = []; floatingTexts = []; allyUnits = [];
     roomState = 'base_raid_fighting'; portal = null; isBossStage = false; bossEntity = null;
 
-    // Спавн охраны базы (турелей и охранников)
     for(let i=0; i<activeRaidBase.towersCount; i++) {
         enemies.push({
             x: screenW - 120, y: 100 + i * (screenH / (activeRaidBase.towersCount + 1)),
@@ -280,7 +389,6 @@ window.callGuildSupport = function() {
     let btn = document.getElementById('btnCallGuild');
     if (btn) btn.style.display = 'none';
 
-    // Призываем 2 ботов-союзников из гильдии
     for(let i=0; i<2; i++) {
         allyUnits.push({
             x: player.x - 30 - i*20, y: player.y + (i === 0 ? 30 : -30),
@@ -290,7 +398,6 @@ window.callGuildSupport = function() {
     showAlert("Подмога согильдийцев прибыла на поле боя!");
 };
 
-// ----------------- ЛОГИКА ГИЛЬДИЙ И ЗАДАНИЙ -----------------
 window.openGuildModal = function() {
     renderGuildUI();
     let gm = document.getElementById('guildModal'); if(gm) gm.style.display = 'flex';
@@ -586,78 +693,6 @@ window.upgradeAgency = function() {
         saveData(); 
         showAlert("Агентство улучшено!"); 
     } else { showAlert("Недостаточно деталей!"); } 
-};
-
-window.openChest = function(chestType, amount) { 
-    let cost = 400 * amount; 
-    if (savedData.gems < cost) { showAlert("Недостаточно алмазов!"); return; } 
-    savedData.gems -= cost; 
-    let pulled = []; 
-    for (let i = 0; i < amount; i++) { 
-        let r = Math.random(), tr = r < 0.1 ? 'epic' : (r < 0.4 ? 'rare' : 'normal'); 
-        let pool = itemDatabase.filter(x => x.rarity === tr); if(!pool.length) pool = itemDatabase; 
-        let item = pool[Math.floor(Math.random()*pool.length)]; 
-        savedData.inventory.push({uid: getUid(), id: item.id}); 
-        pulled.push(item); 
-    } 
-    saveData(); 
-    const container = document.getElementById('gachaItemsList'); 
-    if(container) {
-        container.innerHTML = ''; 
-        pulled.forEach(item => { 
-            let div = document.createElement('div'); 
-            div.className = `inv-item rarity-bg-${item.rarity}`; 
-            div.style.width = '45px'; div.style.height = '45px'; div.style.fontSize = '22px'; 
-            div.innerHTML = item.icon; 
-            container.appendChild(div); 
-        }); 
-    }
-    let modal = document.getElementById('gachaResult'); if(modal) modal.style.display = 'flex'; 
-};
-
-// ----------------- ЛОГИКА РЫНКА СЛИТКОВ -----------------
-window.openAuctionModal = function() {
-    checkMarketDailyReset();
-    renderMarketUI();
-    let m = document.getElementById('auctionModal'); if(m) m.style.display = 'flex';
-};
-
-window.renderMarketUI = function() {
-    const container = document.getElementById('marketItemsContainer');
-    if (!container) return;
-    container.innerHTML = '';
-
-    marketSystemConfig.forEach(item => {
-        let boughtToday = savedData.marketLimits[item.id] || 0;
-        let leftToday = Math.max(0, item.maxDaily - boughtToday);
-
-        container.innerHTML += `
-            <div style="background: #1e1e2c; border: 1px solid #444; border-radius: 8px; padding: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
-                <div style="text-align: left;">
-                    <div style="font-size: 13px;">${item.icon} <strong style="color:#fff; font-size:11px;">${item.name}</strong></div>
-                    <div style="color: #aaa; font-size: 9px; margin-top: 2px;">Лимит: <span style="color:${leftToday > 0 ? '#00ff00' : '#ff4a4a'}; font-weight:bold;">${leftToday}/${item.maxDaily}</span> | ${item.pricePerUnitGem} 💎</div>
-                </div>
-                <button onclick="buyMarketItem('${item.id}', 1)" ${leftToday <= 0 ? 'disabled' : ''} style="background: ${leftToday > 0 ? '#28a745' : '#555'}; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Купить</button>
-            </div>
-        `;
-    });
-};
-
-window.buyMarketItem = function(itemId, qty) {
-    checkMarketDailyReset();
-    let cfg = marketSystemConfig.find(x => x.id === itemId);
-    if (!cfg) return;
-    let boughtToday = savedData.marketLimits[itemId] || 0;
-    let leftToday = Math.max(0, cfg.maxDaily - boughtToday);
-    if (leftToday <= 0) { showAlert("Лимит исчерпан!"); return; }
-    if (savedData.gems < cfg.pricePerUnitGem) { showAlert("Недостаточно алмазов!"); return; }
-
-    savedData.gems -= cfg.pricePerUnitGem;
-    savedData.marketLimits[itemId] = boughtToday + 1;
-    savedData.parts += 10; 
-    saveData(); 
-    renderMarketUI(); 
-    showAlert("Успешно куплено!");
 };
 
 // ----------------- ЛОГИКА АРЕНЫ И БОТОВ (PvP) -----------------
@@ -1201,7 +1236,6 @@ function gameLoop(timestamp) {
         }
     }
 
-    // Логика стрельбы турелей при штурме баз
     if (isBaseRaid) {
         for (let e of enemies) {
             if (e.isTower && timestamp - (e.lastAttack || 0) > 1500) {
@@ -1212,7 +1246,6 @@ function gameLoop(timestamp) {
         }
     }
 
-    // Логика стрельбы союзников (подмоги)
     for (let ally of allyUnits) {
         let target = null, minDist = Infinity;
         for (let e of enemies) {
@@ -1387,7 +1420,6 @@ function gameLoop(timestamp) {
         }
     }
 
-    // Отрисовка союзников
     for (let ally of allyUnits) {
         ctx.save(); ctx.translate(ally.x, ally.y); ctx.rotate(ally.aimingAngle);
         ctx.fillStyle = '#da70d6'; ctx.beginPath(); ctx.arc(0, 0, ally.radius, 0, Math.PI * 2); ctx.fill();
