@@ -1,5 +1,5 @@
 // ==========================================================================
-// БАЗЫ ДАННЫХ ИГРЫ (SPEKTER AGENCY: DATA - LOCATIONS FX)
+// БАЗЫ ДАННЫХ ИГРЫ (SPEKTER AGENCY: DATA - PETS & DRONES)
 // ==========================================================================
 
 const itemDatabase = [
@@ -16,6 +16,11 @@ const itemDatabase = [
     { id: 'w3', type: 'weapon', rarity: 'epic', icon: '☄️', hp: 0, atk: 200, fireRate: 0.8, bullets: 3, projSpeed: 650, spread: 0.25 },
     { id: 'w4', type: 'weapon', rarity: 'legendary', icon: '🚀', hp: 0, atk: 450, fireRate: 0.6, bullets: 1, projSpeed: 450, spread: 0, isRocket: true },
     { id: 'd1', type: 'drone', rarity: 'rare', icon: '🛸', hp: 200, atk: 100 }
+];
+
+const petsConfig = [
+    { id: 'pet_drone', name: 'Боевой Дрон "Коршун"', icon: '🛸', atk: 80, fireRate: 1.2, speed: 250, range: 300 },
+    { id: 'pet_dog', name: 'Мутант-Пёс "Рекс"', icon: '🐕', atk: 120, fireRate: 0.9, speed: 280, range: 120 }
 ];
 
 const locationsConfig = [

@@ -1,5 +1,5 @@
 // ==========================================================================
-// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - WITH LOCATION FX)
+// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - WITH PET / DRONE)
 // ==========================================================================
 
 const tg = window.Telegram?.WebApp;
@@ -45,7 +45,7 @@ const getUid = () => Date.now().toString(36) + '_' + (uidCounter++);
 
 const defaultSave = {
     gems: 2000, gold: 10000, energy: 30, accountLevel: 1, accountXp: 0, stage: 1, parts: 0,
-    inventory: [], equipped: { helmet: null, armor: null, ring: null, boots: null, weapon: null, drone: null },
+    inventory: [], equipped: { helmet: null, armor: null, ring: null, boots: null, weapon: null, drone: 'd1' },
     skillsInventory: [], equippedSkills: [null, null, null, null, null, null], blueprints: {},
     lastEnergyTime: Date.now(), agencyLevel: 0, dailyKills: 0, vipActive: false, vipLastClaim: 0, 
     beginnerClaimed: [false, false, false], serverProgressClaimed: [], seasonLevel: 1, seasonXp: 0, 
@@ -58,12 +58,12 @@ const defaultSave = {
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try { 
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal30') || 'null'); 
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal31') || 'null'); 
     if (loaded) Object.assign(savedData, loaded); 
 } catch(e) {}
 
 if (!savedData.equipped.weapon) savedData.equipped.weapon = null; 
-if (!savedData.equipped.drone) savedData.equipped.drone = null; 
+if (!savedData.equipped.drone) savedData.equipped.drone = 'd1'; 
 if (!savedData.blueprints) savedData.blueprints = {}; 
 if (!savedData.marketLimits) savedData.marketLimits = {};
 if (!savedData.playerLots) savedData.playerLots = [];
@@ -76,7 +76,7 @@ if (!savedData.seasonClaimed) savedData.seasonClaimed = {};
 if (savedData.accountXp === undefined) savedData.accountXp = 0;
 
 function saveData() { 
-    localStorage.setItem('spekterSaveFinal30', JSON.stringify(savedData)); 
+    localStorage.setItem('spekterSaveFinal31', JSON.stringify(savedData)); 
     updateTopBar(); 
 }
 
@@ -589,7 +589,7 @@ if(bcs) bcs.addEventListener('click', () => {
 updateTopBar();
 
 // ==========================================================================
-// БОЕВОЙ ДВИЖОК CANVAS (ДИНАМИЧЕСКИЕ ВИЗУАЛЬНЫЕ ЭФФЕКТЫ ЛОКАЦИЙ)
+// БОЕВОЙ ДВИЖОК CANVAS (С ПОДДЕРЖКОЙ БОЕВОГО ПИТОМЦА / ДРОНА)
 // ==========================================================================
 
 const canvas = document.getElementById('gameCanvas'); 
@@ -631,8 +631,8 @@ let revivesUsed = 0;
 let currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0, isRocket: false };
 let runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 };
 let portal = null;
+let activePet = null;
 
-// Массив фоновых частиц для уникальных эффектов локаций
 let backgroundParticles = [];
 function initLocationParticles() {
     backgroundParticles = [];
@@ -678,6 +678,19 @@ function prepareBattleUI(titleText) {
     runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
     player.speed = 220;
     enemies = []; projectiles = []; floatingTexts = []; allyUnits = []; obstacles = []; portal = null;
+
+    // СПАВН ПИТОМЦА / ДРОНА ПРИ СТАРТЕ БОЯ
+    activePet = {
+        x: player.x - 40,
+        y: player.y,
+        radius: 10,
+        speed: 240,
+        atk: 60,
+        fireRate: 1.0,
+        lastAttack: 0,
+        icon: savedData.equipped.drone ? '🛸' : '🐕'
+    };
+
     initLocationParticles();
 }
 
@@ -1075,6 +1088,34 @@ function gameLoop(timestamp) {
         } 
     }
 
+    // ЛОГИКА БОЕВОГО ПИТОМЦА / ДРОНА
+    if (activePet && enemies.length > 0) {
+        let target = null, minDist = Infinity;
+        for (let e of enemies) {
+            let dist = Math.hypot(e.x - activePet.x, e.y - activePet.y);
+            if (dist < minDist) { minDist = dist; target = e; }
+        }
+        if (target) {
+            let pdx = target.x - activePet.x, pdy = target.y - activePet.y;
+            let pdist = Math.hypot(pdx, pdy) || 0.001;
+            // Дрон следует за игроком, но держится ближе к цели
+            let targetX = player.x + 35;
+            let targetY = player.y - 35;
+            activePet.x += (targetX - activePet.x) * 4 * dt;
+            activePet.y += (targetY - activePet.y) * 4 * dt;
+
+            if (timestamp - activePet.lastAttack > 1200) {
+                let pAngle = Math.atan2(pdy, pdx);
+                projectiles.push({
+                    x: activePet.x, y: activePet.y,
+                    vx: Math.cos(pAngle) * 550, vy: Math.sin(pAngle) * 550,
+                    radius: 4, damage: activePet.atk, isEnemy: false, angle: pAngle
+                });
+                activePet.lastAttack = timestamp;
+            }
+        }
+    }
+
     if (isPvp && enemies.length > 0) {
         let bot = enemies[0];
         if (timestamp - (bot.lastShootTime || 0) > 1000) {
@@ -1279,7 +1320,6 @@ function gameLoop(timestamp) {
     ctx.fillStyle = locCfg.bgStyle; 
     ctx.fillRect(0, 0, screenW, screenH); 
     
-    // ОТРИСОВКА УНИКАЛЬНЫХ ФОНОВЫХ ЭФФЕКТОВ ЛОКАЦИЙ (Пыль, искры, токсин, шторм)
     for(let pt of backgroundParticles) {
         pt.x += pt.vx * dt;
         pt.y += pt.vy * dt;
@@ -1348,12 +1388,21 @@ function gameLoop(timestamp) {
         }
     }
 
-    for (let ally of allyUnits) {
-        ctx.save(); ctx.translate(ally.x, ally.y); ctx.rotate(ally.aimingAngle);
-        ctx.fillStyle = '#da70d6'; ctx.beginPath(); ctx.arc(0, 0, ally.radius, 0, Math.PI * 2); ctx.fill();
+    // ОТРИСОВКА ПИТОМЦА / ДРОНА НА АРЕНЕ
+    if (activePet) {
+        ctx.save();
+        ctx.translate(activePet.x, activePet.y);
+        ctx.fillStyle = '#00ffcc';
+        ctx.beginPath();
+        ctx.arc(0, 0, activePet.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(activePet.icon, 0, 4);
         ctx.restore();
-        ctx.fillStyle = '#ff0000'; ctx.fillRect(ally.x - 20, ally.y - ally.radius - 10, 40, 4);
-        ctx.fillStyle = '#00ff00'; ctx.fillRect(ally.x - 20, ally.y - ally.radius - 10, 40 * (Math.max(0, ally.hp) / ally.maxHp), 4);
     }
     
     for (let p of projectiles) { 
@@ -1530,7 +1579,7 @@ window.showBattleResult = function(isWin, isFlee = false) {
             <h2 style="color:${isWin?'#00ffcc':'#ff4a4a'}; margin-top:0;">${isWin ? 'ЗАЧИСТКА УСПЕШНА!' : (isFlee ? 'ЭВАКУАЦИЯ ИЗ ЗОНЫ' : 'СМЕРТЬ В ПУСТОШИ')}</h2>
             <p style="color:#888; font-size:12px;">Добытые трофеи:</p>
             <div style="display:flex; justify-content:center; gap:15px; margin:10px 0;">
-                <div>💰 +${goldReward}</div>
+                <div>💰 +${goldRender(goldReward)}</div>
                 <div>⚙️ +${partsReward}</div>
             </div>
             <div style="color: #00ffcc; font-size: 11px; margin-bottom: 10px;">🌟 Опыт сталкера: +${accountXpReward}</div>
@@ -1541,3 +1590,8 @@ window.showBattleResult = function(isWin, isFlee = false) {
     let brm = document.getElementById('battleResultModal');
     if(brm) brm.style.display = 'flex';
 };
+
+// Вспомогательная функция для форматирования золота
+function goldRender(val) {
+    return val;
+}
