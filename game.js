@@ -9,7 +9,6 @@ if (tg) {
 }
 
 const appContainer = document.getElementById('appContainer');
-
 window.showAlert = function(msg) { 
     if (tg && tg.showPopup) { 
         try { tg.showPopup({ title: 'Сообщение', message: msg, buttons: [{type: 'ok'}] }); } catch(e) { alert(msg); } 
@@ -130,7 +129,6 @@ window.openEnergyShop = function() {
 };
 
 let previousBm = 100;
-
 function updateTopBar() { 
     checkEnergyRegen(); 
     let el;
@@ -598,6 +596,7 @@ updateTopBar();
 // ==========================================================================
 // БОЕВОЙ ДВИЖОК CANVAS (Единый инициализатор для всех режимов)
 // ==========================================================================
+
 const canvas = document.getElementById('gameCanvas'); 
 const ctx = canvas.getContext('2d');
 const joystickZone = document.getElementById('joystickZone'); 
@@ -619,9 +618,8 @@ const world = { width: 0, height: 0 };
 const input = { x: 0, y: 0, isMoving: false, usingKeyboard: false }; 
 let joystickCenter = { x: 0, y: 0 }; 
 const MAX_JOYSTICK_RADIUS = 50; 
-
-// Игровые сущности
 let player = { x: 100, y: 200, radius: 15, speed: 220, hp: 1000, maxHp: 1000, atk: 150, attackRate: 1.5, aimingAngle: 0, lastAttackTime: 0 };
+
 let enemies = [];
 let projectiles = [];
 let floatingTexts = [];
@@ -669,7 +667,6 @@ function prepareBattleUI(titleText) {
     enemies = []; projectiles = []; floatingTexts = []; allyUnits = []; obstacles = []; portal = null;
 }
 
-// Запуск обычной кампании
 window.startBattle = function() { 
     if (savedData.energy < 5) { showAlert("Недостаточно энергии!"); return; } 
     savedData.energy -= 5; 
@@ -689,7 +686,6 @@ window.startBattle = function() {
     requestAnimationFrame(gameLoop); 
 };
 
-// Запуск дуэли на PvP арене
 let activeArenaBot = null;
 window.startArenaBattle = function(botName) {
     activeArenaBot = simulationBots.find(b => b.name === botName);
@@ -715,7 +711,6 @@ window.startArenaBattle = function(botName) {
     requestAnimationFrame(gameLoop);
 };
 
-// Запуск рейд-босса гильдии
 window.startGuildRaidBattle = function() {
     prepareBattleUI(`РЕЙД: ${guildRaidBoss.name}`);
     let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none'; 
@@ -737,7 +732,6 @@ window.startGuildRaidBattle = function() {
     requestAnimationFrame(gameLoop);
 };
 
-// Запуск штурма базы игрока
 let activeRaidBase = null;
 window.startBaseRaid = function(baseId) {
     activeRaidBase = enemyBasesConfig.find(x => x.id === baseId);
@@ -771,7 +765,6 @@ window.startBaseRaid = function(baseId) {
     requestAnimationFrame(gameLoop);
 };
 
-// Логика комнат кампании
 function startRoom() {
     roomState = 'fighting';
     killsInRoom = 0;
@@ -794,7 +787,7 @@ function startRoom() {
             let tKey = keys[Math.floor(Math.random() * keys.length)];
             let cfg = enemyTypesConfig[tKey];
             enemies.push({
-                x: screenW - 100 - Math.random() * 150,
+                x: screenW - 100 * Math.random() * 150,
                 y: 80 + Math.random() * (screenH - 160),
                 radius: cfg.radius,
                 hp: 100 * cfg.hpMultiplier * savedData.stage,
@@ -815,7 +808,8 @@ function spawnBoss() {
     bossEntity = {
         x: screenW - 150, y: screenH / 2,
         radius: 35,
-        hp: 800 * savedData.stage, maxHp: 800 * savedData.stage,
+        hp: 800 * savedData.stage, 
+        maxHp: 800 * savedData.stage,
         atk: 40 * savedData.stage,
         speed: 70,
         isBoss: true, isBot: false, isTower: false, type: 'boss',
@@ -842,7 +836,6 @@ function spawnSpecificWaveEnemy() {
     });
 }
 
-// Джойстик и ввод
 function startInput(clientX, clientY) { 
     if (gameState !== 'playing') return; 
     input.usingKeyboard = false; 
@@ -894,7 +887,6 @@ window.addEventListener('keydown', (e) => {
     if(code === 'KeyD' || code === 'ArrowRight') keys.right = true; 
     updateKeyboardInput(); 
 }); 
-
 window.addEventListener('keyup', (e) => { 
     let code = e.code; 
     if(code === 'KeyW' || code === 'ArrowUp') keys.up = false; 
@@ -958,7 +950,6 @@ function checkObstacleCollision(x, y, radius) {
 }
 
 let lastTime = performance.now(); 
-
 function gameLoop(timestamp) {
     if (gameState !== 'playing') return; 
     requestAnimationFrame(gameLoop);
@@ -1331,7 +1322,7 @@ function gameLoop(timestamp) {
         ctx.fillStyle = ft.color; 
         ctx.font = 'bold 18px sans-serif'; 
         ctx.textAlign = 'center'; 
-        strokeStyle = '#000'; 
+        ctx.strokeStyle = '#000'; 
         ctx.lineWidth = 3; 
         ctx.strokeText(ft.text, ft.x, ft.y); 
         ctx.fillText(ft.text, ft.x, ft.y); 
@@ -1339,10 +1330,8 @@ function gameLoop(timestamp) {
     }
 }
 
-// Управление завершением боя и уровнями
 let runLevel = 1, runXp = 0, runMaxXp = 100;
 let runLoot = { blueprints: {} };
-let revivesUsed = 0;
 
 function updateCombatUI() {
     let xpBar = document.getElementById('combatXpBar');

@@ -292,11 +292,10 @@
     <script>
         function checkOrientation() {
             const warning = document.getElementById('orientationWarning');
-            if (window.innerWidth >= 768) {
-                warning.style.display = 'none';
-                return;
-            }
-            if (window.innerHeight > window.innerWidth) {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            // Показываем предупреждение ТОЛЬКО на мобильных устройствах, если ориентация вертикальная
+            if (isMobile && window.innerHeight > window.innerWidth) {
                 warning.style.display = 'flex';
             } else {
                 warning.style.display = 'none';
@@ -307,4 +306,5 @@
         document.addEventListener('DOMContentLoaded', checkOrientation);
     </script>
     <script src="data.js"></script>
-    <script src="game.js"></script></body></html>
+    <script src="game.js"></script>
+</body></html>

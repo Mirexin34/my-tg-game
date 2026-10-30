@@ -21,7 +21,7 @@ const itemDatabase = [
 const locationsConfig = [
     { id: 1, name: 'Ржавые Пустоши', bgStyle: '#1a1a24', wallColor: '#333344', enemyMultiplier: 1.0 },
     { id: 2, name: 'Заброшенный Бункер', bgStyle: '#14141c', wallColor: '#2b2b3d', enemyMultiplier: 1.3 },
-    { id: '3', name: 'Токсичный Город', bgStyle: '#121c16', wallColor: '#1e3828', enemyMultiplier: 1.7 },
+    { id: 3, name: 'Токсичный Город', bgStyle: '#121c16', wallColor: '#1e3828', enemyMultiplier: 1.7 },
     { id: 4, name: 'Ядро Корпорации', bgStyle: '#1c1218', wallColor: '#3d1e2b', enemyMultiplier: 2.2 },
     { id: 5, name: 'Цитадель Омега', bgStyle: '#1b1224', wallColor: '#301e3d', enemyMultiplier: 3.0 }
 ];
