@@ -7,7 +7,7 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { margin: 0; padding: 0; background: #1a1a24; font-family: sans-serif; overflow: hidden; user-select: none; }
-        .screen { display: none; width: 100vw; height: 100vh; flex-direction: column; overflow-y: auto; padding-top: 50px; padding-bottom: 80px; box-sizing: border-box; }
+        .screen { display: none; width: 100vw; height: 100dvh; flex-direction: column; overflow-y: auto; padding: 60px 15px calc(90px + env(safe-area-inset-bottom)); box-sizing: border-box; }
         .navBtn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: none; border: none; font-size: 11px; font-weight: bold; cursor: pointer; color: #777; transition: 0.2s; }
         .navBtn.active { color: #ffd700; transform: scale(1.1); }
         .eq-slot { width: 60px; height: 60px; background: #2a2a35; border: 2px solid #555; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; position: relative; cursor: pointer; }
@@ -26,7 +26,6 @@
     </style>
 </head>
 <body>
-    <!-- ЗАГРУЗОЧНЫЙ ЭКРАН (Скрывается по клику, если зависнет) -->
     <div id="splashScreen" onclick="this.style.display='none'" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background: #0f0f16; z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align: center;">
         <h1 style="color:#00ffff; font-size:46px; text-shadow: 0 0 20px #00ffff, 0 0 40px #00bfff; margin-bottom: 10px; font-style: italic;">SPEKTER<br>AGENCY</h1>
         <div style="color:#aaa; margin-bottom: 50px; font-size: 14px;">Инициализация агента...</div>
@@ -36,17 +35,19 @@
     </div>
 
     <div id="app">
-        <!-- ВЕРХНЯЯ ПАНЕЛЬ -->
-        <div id="topBar" style="position: fixed; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; z-index: 1000; pointer-events: none;">
-            <div style="display: flex; align-items: center; gap: 8px;">
+        <div id="topBar" style="position: fixed; top: env(safe-area-inset-top, 12px); left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; z-index: 1000; pointer-events: none;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                 <div style="background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; color: #00ff00; font-weight: bold; border: 1px solid #32cd32; font-size: 12px;">
                     ⚡ <span id="energyDisplay">30</span>/30
                 </div>
                 <div style="background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; color: #ffd700; font-weight: bold; border: 1px solid #ffd700; font-size: 12px;">
-                    🟡 <span id="goldDisplay">0</span>
+                    💰 <span id="goldDisplay">0</span>
                 </div>
                 <div style="background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; color: #00ffff; font-weight: bold; border: 1px solid #00ffff; font-size: 12px;">
                     💎 <span id="gemDisplay">0</span>
+                </div>
+                <div style="background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; color: #da70d6; font-weight: bold; border: 1px solid #da70d6; font-size: 12px;">
+                    ⚙️ <span id="partsDisplay">0</span>
                 </div>
             </div>
         </div>
@@ -80,7 +81,7 @@
                 
                 <div id="btnSweep" style="background: rgba(0,0,0,0.7); border: 2px solid #ffd700; border-radius: 15px; padding: 15px; margin: 0 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
                     <div style="text-align: left;">
-                        <div style="color: #ffea00; font-weight: bold; font-size: 16px;">Sweep-награды</div>
+                        <div style="color: #ffea00; font-weight: bold; font-size: 16px;">Награды за простой</div>
                         <div style="color: #aaa; font-size: 12px;">Накоплено: <span id="sweepTimeDisplay" style="color:#00ff00;">00:00:00</span></div>
                     </div>
                     <div style="font-size: 30px;">🎁</div>
@@ -88,7 +89,6 @@
             </div>
         </div>
 
-        <!-- МОДАЛКА: СОБЫТИЯ И ПАКЕТЫ -->
         <div id="eventsModal" class="modal-overlay">
             <div class="modal-content" style="border-color: #ff00ff;">
                 <button onclick="document.getElementById('eventsModal').style.display='none'" style="position:absolute; top:10px; right:10px; background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:5px; font-weight:bold;">X</button>
@@ -121,7 +121,7 @@
                     </div>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">
                         <span style="color:#ffea00; font-weight:bold;">День 2</span>
-                        <span style="color:#aaa; font-size:12px;">Эпик Кольцо 💍</span>
+                        <span style="color:#aaa; font-size:12px;">Эпическое Кольцо 💍</span>
                         <button id="btnBeginner2" onclick="claimBeginner(2)" style="background:#28a745; color:#fff; border:none; padding:5px 10px; border-radius:5px; font-weight:bold; font-size:10px;">Забрать</button>
                     </div>
                     <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -135,9 +135,9 @@
 
         <div id="sweepModal" class="modal-overlay">
             <div class="modal-content">
-                <h3 style="color:#ffea00; margin-top:0;">БЫСТРАЯ РАЗВЕРТКА</h3>
+                <h3 style="color:#ffea00; margin-top:0;">СБОР НАГРАД</h3>
                 <div style="display:flex; justify-content:center; gap:15px; margin-bottom:20px;">
-                    <div style="background:#1a1a24; padding:10px; border-radius:10px; border:1px solid #555;"><div style="font-size:24px; margin-bottom:5px;">🟡</div><div style="color:#ffd700; font-weight:bold;">+<span id="sweepGoldResult">0</span></div></div>
+                    <div style="background:#1a1a24; padding:10px; border-radius:10px; border:1px solid #555;"><div style="font-size:24px; margin-bottom:5px;">💰</div><div style="color:#ffd700; font-weight:bold;">+<span id="sweepGoldResult">0</span></div></div>
                     <div style="background:#1a1a24; padding:10px; border-radius:10px; border:1px solid #555;"><div style="font-size:24px; margin-bottom:5px;">⚙️</div><div style="color:#da70d6; font-weight:bold;">+<span id="sweepPartsResult">0</span></div></div>
                 </div>
                 <button id="btnClaimSweep" style="background:#28a745; color:#fff; border:none; padding:12px 30px; border-radius:10px; font-weight:bold; width:100%; cursor:pointer;">ЗАБРАТЬ</button>
@@ -145,7 +145,7 @@
         </div>
 
         <!-- 2. МАГАЗИН -->
-        <div id="shopScreen" class="screen" style="display: none; padding: 20px 15px; background: #1a1a24;">
+        <div id="shopScreen" class="screen" style="background: #1a1a24;">
             <h3 style="color: #00ffff; text-align: center; margin-top: 0; margin-bottom: 10px;">КАРТЫ ЛЬГОТ</h3>
             <div style="background: linear-gradient(135deg, #4169e1, #00008b); border: 2px solid #00bfff; border-radius: 14px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
                 <div style="text-align: left;">
@@ -171,7 +171,7 @@
                 <div style="background: #2a2a35; border: 1px solid #444; border-radius: 10px; padding: 10px; text-align: center;">
                     <div style="font-size: 24px; margin-bottom: 5px;">⚙️</div>
                     <div style="font-size: 10px; color: #aaa; margin-bottom: 5px; height: 24px;">50 Деталей</div>
-                    <button onclick="buyResource('parts', 50, 5000)" style="width:100%; background: #ffea00; color:#000; border:none; padding:5px; border-radius:5px; font-weight:bold; font-size: 11px;">🟡 5000</button>
+                    <button onclick="buyResource('parts', 50, 5000)" style="width:100%; background: #ffea00; color:#000; border:none; padding:5px; border-radius:5px; font-weight:bold; font-size: 11px;">💰 5000</button>
                 </div>
             </div>
 
@@ -205,7 +205,7 @@
         </div>
 
         <!-- 3. ЭКИПИРОВКА -->
-        <div id="equipmentScreen" class="screen" style="display: none; padding: 20px 15px; background: #222233;">
+        <div id="equipmentScreen" class="screen" style="background: #222233;">
             <div style="background: linear-gradient(180deg, #4b0082, #1a1a24); border-radius: 20px; padding: 20px; text-align: center; margin-bottom: 15px;">
                 <h3 style="color:#fff; margin:0 0 15px 0;">ОБОРУДОВАТЬ</h3>
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 10px;">
@@ -231,7 +231,7 @@
         </div>
 
         <!-- 4. НАВЫКИ -->
-        <div id="skillsScreen" class="screen" style="display: none; padding: 20px 15px; background: #222233;">
+        <div id="skillsScreen" class="screen" style="background: #222233;">
             <div style="background: linear-gradient(180deg, #8b0000, #1a1a24); border-radius: 20px; padding: 20px; text-align: center; margin-bottom: 15px;">
                 <h3 style="color:#fff; margin:0 0 15px 0;">НАВЫКИ АГЕНТА</h3>
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 10px;">
@@ -254,8 +254,8 @@
             </div>
         </div>
 
-        <!-- 5. ГОРОД (С ЗОЛОТЫМ СЛОТОМ И НОВЫМИ КНОПКАМИ) -->
-        <div id="cityScreen" class="screen" style="display: none; padding: 60px 15px; background: #1a1a24;">
+        <!-- 5. ГОРОД -->
+        <div id="cityScreen" class="screen" style="background: #1a1a24;">
             <h2 style="color: #00ffff; text-align: center; margin-bottom: 20px;">ГОРОД И СОЦИУМ</h2>
             
             <div style="background: linear-gradient(180deg, #ffcc00, #ff6600); border: 3px solid #fff; border-radius: 20px; padding: 15px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 15px rgba(255,102,0,0.5);">
@@ -288,11 +288,11 @@
             </div>
         </div>
 
-        <!-- 6. ДОП: МОЯ БАЗА -->
-        <div id="baseScreen" class="screen" style="display: none; padding: 60px 15px; background: #1a1a24;">
+        <!-- 6. БАЗА -->
+        <div id="baseScreen" class="screen" style="background: #1a1a24;">
             <button onclick="switchTab('cityScreen', document.getElementById('navCity'))" style="background:#dc3545; color:#fff; border:none; padding:8px 15px; border-radius:8px; font-weight:bold; margin-bottom:15px;">⬅ В Город</button>
             <h2 style="color: #00ffff; text-align: center; margin-bottom: 15px;">МОЯ БАЗА</h2>
-            <p style="text-align: center; color: #aaa; font-size: 12px; margin-bottom: 20px;">Прокачивайте здания для увеличения пассивного дохода (Sweep).</p>
+            <p style="text-align: center; color: #aaa; font-size: 12px; margin-bottom: 20px;">Прокачивайте здания для увеличения пассивного дохода.</p>
             
             <div style="background: #2a2a35; border: 1px solid #ffd700; border-radius: 14px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
                 <div>
@@ -310,8 +310,8 @@
             </div>
         </div>
 
-        <!-- 7. ДОП: ГИЛЬДИИ -->
-        <div id="guildScreen" class="screen" style="display: none; padding: 60px 15px; background: #1a1a24;">
+        <!-- 7. ГИЛЬДИИ -->
+        <div id="guildScreen" class="screen" style="background: #1a1a24;">
             <button onclick="switchTab('cityScreen', document.getElementById('navCity'))" style="background:#dc3545; color:#fff; border:none; padding:8px 15px; border-radius:8px; font-weight:bold; margin-bottom:15px;">⬅ В Город</button>
             <h2 style="color: #9932CC; text-align: center; margin-bottom: 15px;">ГИЛЬДИЯ</h2>
             
@@ -330,24 +330,24 @@
                     <div style="font-size: 30px; margin-bottom: 10px;">👹</div>
                     <h3 style="color: #ff4a4a; margin-top: 0;">Босс Гильдии</h3>
                     <p style="color: #aaa; font-size: 12px;">Сражайтесь вместе ради общих наград!</p>
-                    <button onclick="alert('Рейд на босса откроется в следующем обновлении!')" style="background: #dc3545; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; width: 100%;">Атаковать (Скоро)</button>
+                    <button onclick="showAlert('Рейд на босса откроется в следующем обновлении!')" style="background: #dc3545; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; width: 100%;">Атаковать (Скоро)</button>
                 </div>
             </div>
         </div>
 
-        <!-- 8. ДОП: АГЕНТСТВО -->
-        <div id="agencyScreen" class="screen" style="display: none; padding: 60px 15px; background: #1a1a24;">
+        <!-- 8. АГЕНТСТВО -->
+        <div id="agencyScreen" class="screen" style="background: #1a1a24;">
             <button onclick="switchTab('lobbyScreen', document.getElementById('navLobby'))" style="background:#dc3545; color:#fff; border:none; padding:8px 15px; border-radius:8px; font-weight:bold; margin-bottom:15px;">⬅ Назад</button>
             <h2 style="color: #00ffff; text-align: center; margin-bottom: 15px;">АГЕНТСТВО</h2>
             <div style="background: #2a2a35; border: 2px solid #00ffff; border-radius: 14px; padding: 15px; color: #fff;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;"><span>⚔️ АТК вверх</span><strong style="color: #00ff00;">+<span id="agencyAtkBonus">0</span></strong></div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;"><span>❤️ HP вверх</span><strong style="color: #00ff00;">+<span id="agencyHpBonus">0</span></strong></div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;"><span>⚔️ Бонус к атаке</span><strong style="color: #00ff00;">+<span id="agencyAtkBonus">0</span></strong></div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;"><span>❤️ Бонус к здоровью</span><strong style="color: #00ff00;">+<span id="agencyHpBonus">0</span></strong></div>
                 <button onclick="upgradeAgency()" style="background: #00bcd4; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold; width: 100%;">ОБНОВИТЬ (<span id="agencyCostDisplay">5</span> ⚙️)</button>
             </div>
         </div>
 
-        <!-- 9. ДОП: СЕЗОН И ЗАДАНИЯ -->
-        <div id="questsScreen" class="screen" style="display: none; padding: 60px 15px; background: #1a1a24;">
+        <!-- 9. СЕЗОН -->
+        <div id="questsScreen" class="screen" style="background: #1a1a24;">
             <button onclick="switchTab('lobbyScreen', document.getElementById('navLobby'))" style="background:#dc3545; color:#fff; border:none; padding:8px 15px; border-radius:8px; font-weight:bold; margin-bottom:15px;">⬅ Назад</button>
             <h2 style="color: #ffea00; text-align: center; margin-bottom: 15px;">СЕЗОН 9</h2>
             <div style="background: linear-gradient(180deg, #2a2a35, #1e1e24); border: 2px solid #9932CC; border-radius: 15px; padding: 15px; margin-bottom: 20px;">
@@ -358,7 +358,7 @@
                 <div style="width: 100%; background: #111; height: 10px; border-radius: 5px; margin-bottom: 15px;">
                     <div id="seasonProgress" style="width: 0%; background: #00ff00; height: 100%; border-radius: 5px; transition: 0.3s;"></div>
                 </div>
-                <button onclick="claimSeasonReward()" style="width: 100%; background: #28a745; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold;">ЗАЯВИТЬ ВСЕ</button>
+                <button onclick="claimSeasonReward()" style="width: 100%; background: #28a745; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold;">ЗАБРАТЬ ВСЁ</button>
             </div>
             <h3 style="color: #00ffff; text-align: center; margin-bottom: 10px;">МИССИИ</h3>
             <div style="background: #2a2a35; border-radius: 12px; padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;">
@@ -366,15 +366,15 @@
                     <div style="color: #fff; font-weight: bold; font-size: 14px; margin-bottom: 5px;">Убить 15 монстров</div>
                     <div style="color: #aaa; font-size: 12px;">Прогресс: <span id="missionKills">0</span> / 15</div>
                 </div>
-                <button onclick="claimMission('kills')" style="background: #ffea00; color: #000; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold;">+50 XP</button>
+                <button id="btnClaimKillQuest" onclick="claimMission('kills')" style="background: #ffea00; color: #000; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold;">+50 XP</button>
             </div>
         </div>
 
-        <!-- ТАББАР (Зафиксирован поверх всего) -->
-        <div id="navBar" style="position: fixed; bottom: 0; left: 0; right: 0; height: 70px; background: #161622; border-top: 1px solid #333; display: flex; z-index: 1000;">
+        <!-- ТАББАР -->
+        <div id="navBar" style="position: fixed; bottom: 0; left: 0; right: 0; height: 70px; background: #161622; border-top: 1px solid #333; display: flex; z-index: 1000; padding-bottom: env(safe-area-inset-bottom);">
             <button class="navBtn" onclick="switchTab('shopScreen', this)"><span style="font-size:24px; margin-bottom:4px;">🛒</span> Магазин</button>
             <button class="navBtn" onclick="switchTab('equipmentScreen', this)"><span style="font-size:24px; margin-bottom:4px;">🎒</span> Экипировка</button>
-            <button id="navLobby" class="navBtn active" onclick="switchTab('lobbyScreen', this)" style="color:#ffd700;"><span style="font-size:24px; margin-bottom:4px;">⚔️</span> Лобби</button>
+            <button id="navLobby" class="navBtn active" onclick="switchTab('lobbyScreen', this)"><span style="font-size:24px; margin-bottom:4px;">⚔️</span> Лобби</button>
             <button class="navBtn" onclick="switchTab('skillsScreen', this)"><span style="font-size:24px; margin-bottom:4px;">🔥</span> Навыки</button>
             <button id="navCity" class="navBtn" onclick="switchTab('cityScreen', this)"><span style="font-size:24px; margin-bottom:4px;">🏙️</span> Город</button>
         </div>

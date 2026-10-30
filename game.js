@@ -1,7 +1,10 @@
-const tg = window.Telegram.WebApp;
-tg.expand();
-try { tg.disableVerticalSwipes(); tg.setHeaderColor('#1a1a24'); tg.setBackgroundColor('#1a1a24'); } catch(e) {}
-document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+const tg = window.Telegram?.WebApp;
+if (tg) {
+    tg.expand();
+    try { tg.disableVerticalSwipes(); tg.setHeaderColor('#1a1a24'); tg.setBackgroundColor('#1a1a24'); } catch(e) {}
+}
+
+const showAlert = (msg) => { if (tg && tg.showAlert) { tg.showAlert(msg); } else { alert(msg); } };
 
 window.onload = () => {
     let progress = 0; const bar = document.getElementById('splashProgress');
@@ -11,61 +14,71 @@ window.onload = () => {
     }, 50);
 };
 
-window.switchTab = function(screenId, btnElement) {
-    document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
-    document.getElementById(screenId).style.display = 'flex';
-    if(btnElement) {
-        document.querySelectorAll('.navBtn').forEach(b => { b.classList.remove('active'); b.style.color = '#777'; });
-        btnElement.classList.add('active'); btnElement.style.color = '#ffd700';
+let gameState = 'menu';
+document.addEventListener('touchmove', function(e) { 
+    if (gameState === 'playing' || !e.target.closest('.screen, .modal-content')) {
+        e.preventDefault(); 
     }
-    if (screenId === 'equipmentScreen') renderInventory();
-    if (screenId === 'skillsScreen') renderSkills();
-    if (screenId === 'shopScreen') updateVIPUI(); 
-    if (screenId === 'baseScreen') renderBase();
-    if (screenId === 'guildScreen') renderGuild();
-};
+}, { passive: false });
 
-const itemDatabase = [
-    { id: 'h1', type: 'helmet', name: 'Обычный шлем', rarity: 'normal', icon: '🧢', hp: 100, atk: 0 },
-    { id: 'h2', type: 'helmet', name: 'Редкий шлем', rarity: 'rare', icon: '⛑️', hp: 300, atk: 10 },
-    { id: 'h3', type: 'helmet', name: 'ЭПИК Шлем', rarity: 'epic', icon: '🪖', hp: 800, atk: 50 },
-    { id: 'a1', type: 'armor', name: 'Обычная броня', rarity: 'normal', icon: '👕', hp: 200, atk: 0 },
-    { id: 'a2', type: 'armor', name: 'Редкая броня', rarity: 'rare', icon: '🦺', hp: 500, atk: 20 },
-    { id: 'a3', type: 'armor', name: 'ЭПИК Броня', rarity: 'epic', icon: '🧥', hp: 1200, atk: 80 },
-    { id: 'r1', type: 'ring', name: 'Обычное кольцо', rarity: 'normal', icon: '💍', hp: 0, atk: 50 },
-    { id: 'r2', type: 'ring', name: 'Редкое кольцо', rarity: 'rare', icon: '💎', hp: 0, atk: 150 },
-    { id: 'r3', type: 'ring', name: 'ЭПИК Кольцо', rarity: 'epic', icon: '💠', hp: 200, atk: 400 },
-    { id: 'b1', type: 'boots', name: 'Обычная обувь', rarity: 'normal', icon: '👞', hp: 50, atk: 0 },
-    { id: 'b2', type: 'boots', name: 'Редкая обувь', rarity: 'rare', icon: '👟', hp: 150, atk: 15 },
-    { id: 'b3', type: 'boots', name: 'ЭПИК Обувь', rarity: 'epic', icon: '🥾', hp: 400, atk: 60 }
-];
+let uidCounter = 0;
+const getUid = () => Date.now().toString(36) + '_' + (uidCounter++);
 
-const skillDatabase = [
-    { id: 'sk_light', name: 'Удар молнии', rarity: 'rare', icon: '⚡' },
-    { id: 'sk_shield', name: 'Щит', rarity: 'epic', icon: '🛡️' },
-    { id: 'sk_fire', name: 'Огонь', rarity: 'normal', icon: '🔥' }
-];
-
-// === ФИКС СТАРЫХ СОХРАНЕНИЙ ===
-let savedData = JSON.parse(localStorage.getItem('spekterSaveFinal')) || { 
+const defaultSave = {
     gems: 2000, gold: 10000, energy: 30, accountLevel: 1, stage: 1, parts: 0,
     inventory: [], equipped: { helmet: null, armor: null, ring: null, boots: null },
     skillsInventory: [], equippedSkills: [null, null, null, null, null, null],
-    pityCounter: 0, lastAFKTime: Date.now(), agencyLevel: 0,
-    seasonLevel: 1, seasonXp: 0, dailyKills: 0, dailySweep: 0, missionKillsClaimed: false,
+    pityCounter: 0, lastAFKTime: Date.now(), lastEnergyTime: Date.now(), lastDailyReset: Date.now(),
+    agencyLevel: 0, seasonLevel: 1, seasonXp: 0, dailyKills: 0, dailySweep: 0,
+    missionKillsClaimed: false, missionSweepClaimed: false, claimedSeasonRewards: [],
     vipActive: false, vipLastClaim: 0, beginnerClaimed: [false, false, false], serverProgressClaimed: [],
     baseLevels: { gold: 1, parts: 1 }, guild: { joined: false, lastCheckIn: 0 }
 };
 
-// Принудительно раздаем уникальные ID старым вещам в инвентаре, чтобы клики всегда работали!
-if (savedData.inventory) savedData.inventory.forEach(i => { if (!i.uid) i.uid = Date.now() + Math.random(); });
-if (savedData.skillsInventory) savedData.skillsInventory.forEach(i => { if (!i.uid) i.uid = Date.now() + Math.random(); });
-if(!savedData.baseLevels) savedData.baseLevels = { gold: 1, parts: 1 };
-if(!savedData.guild) savedData.guild = { joined: false, lastCheckIn: 0 };
+let savedData = JSON.parse(JSON.stringify(defaultSave));
+try {
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal8'));
+    if (loaded) {
+        Object.assign(savedData, loaded);
+        if(loaded.equipped) Object.assign(savedData.equipped, loaded.equipped);
+        if(loaded.equippedSkills) savedData.equippedSkills = [...loaded.equippedSkills];
+        if(loaded.baseLevels) Object.assign(savedData.baseLevels, loaded.baseLevels);
+        if(loaded.guild) Object.assign(savedData.guild, loaded.guild);
+    }
+} catch(e) {}
 
-function saveData() { localStorage.setItem('spekterSaveFinal', JSON.stringify(savedData)); updateTopBar(); }
+if (savedData.inventory) savedData.inventory.forEach(i => { if (!i.uid) i.uid = getUid(); });
+if (savedData.skillsInventory) savedData.skillsInventory.forEach(i => { if (!i.uid) i.uid = getUid(); });
+
+function checkDailyReset() {
+    let now = Date.now();
+    let dateNow = new Date(now).setHours(0,0,0,0);
+    let dateLast = new Date(savedData.lastDailyReset).setHours(0,0,0,0);
+    if (dateNow > dateLast) {
+        savedData.dailyKills = 0; savedData.dailySweep = 0;
+        savedData.missionKillsClaimed = false; savedData.missionSweepClaimed = false;
+        savedData.lastDailyReset = now;
+        saveData();
+    }
+}
+
+function checkEnergyRegen() {
+    let now = Date.now();
+    let diff = now - savedData.lastEnergyTime;
+    let regenAmount = Math.floor(diff / (5 * 60 * 1000));
+    if (regenAmount > 0 && savedData.energy < 30) {
+        savedData.energy = Math.min(30, savedData.energy + regenAmount);
+        savedData.lastEnergyTime += regenAmount * (5 * 60 * 1000);
+        saveData();
+    } else if (savedData.energy >= 30) {
+        savedData.lastEnergyTime = now;
+    }
+}
+
+function saveData() { localStorage.setItem('spekterSaveFinal8', JSON.stringify(savedData)); updateTopBar(); }
 
 function updateTopBar() {
+    checkEnergyRegen();
     document.getElementById('gemDisplay').innerText = savedData.gems;
     document.getElementById('goldDisplay').innerText = (savedData.gold > 1000) ? (savedData.gold / 1000).toFixed(1) + 'K' : savedData.gold;
     document.getElementById('partsDisplay').innerText = savedData.parts;
@@ -77,16 +90,51 @@ function updateTopBar() {
     document.getElementById('stageDisplay').innerText = stageTxt;
 }
 
-// === БАЗА И ГИЛЬДИЯ ===
+window.switchTab = function(screenId, btnElement) {
+    document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+    document.getElementById(screenId).style.display = 'flex';
+    if(btnElement) {
+        document.querySelectorAll('.navBtn').forEach(b => { b.classList.remove('active'); });
+        btnElement.classList.add('active'); 
+    }
+    if (screenId === 'equipmentScreen') renderInventory();
+    if (screenId === 'skillsScreen') renderSkills();
+    if (screenId === 'shopScreen') updateVIPUI(); 
+    if (screenId === 'baseScreen') renderBase();
+    if (screenId === 'guildScreen') renderGuild();
+    if (screenId === 'questsScreen') { checkDailyReset(); updateMissionsUI(); }
+};
+
+const itemDatabase = [
+    { id: 'h1', type: 'helmet', name: 'Обычный шлем', rarity: 'normal', icon: '🧢', hp: 100, atk: 0 },
+    { id: 'h2', type: 'helmet', name: 'Редкий шлем', rarity: 'rare', icon: '⛑️', hp: 300, atk: 10 },
+    { id: 'h3', type: 'helmet', name: 'ЭПИК Шлем', rarity: 'epic', icon: '🪖', hp: 800, atk: 50 },
+    { id: 'a1', type: 'armor', name: 'Обычная броня', rarity: 'normal', icon: '👕', hp: 200, atk: 0 },
+    { id: 'a2', type: 'armor', name: 'Редкая броня', rarity: 'rare', icon: '🦺', hp: 500, atk: 20 },
+    { id: 'a3', type: 'armor', name: 'ЭПИК Броня', rarity: 'epic', icon: '🧥', hp: 1200, atk: 80 },
+    { id: 'r1', type: 'ring', name: 'Обычное кольцо', rarity: 'normal', icon: '💍', hp: 0, atk: 50 },
+    { id: 'r2', type: 'ring', name: 'Редкое кольцо', rarity: 'rare', icon: '💍', hp: 0, atk: 150 },
+    { id: 'r3', type: 'ring', name: 'ЭПИК Кольцо', rarity: 'epic', icon: '💍', hp: 0, atk: 400 },
+    { id: 'b1', type: 'boots', name: 'Обычная обувь', rarity: 'normal', icon: '👞', hp: 50, atk: 0 },
+    { id: 'b2', type: 'boots', name: 'Редкая обувь', rarity: 'rare', icon: '👟', hp: 150, atk: 15 },
+    { id: 'b3', type: 'boots', name: 'ЭПИК Обувь', rarity: 'epic', icon: '🥾', hp: 400, atk: 60 }
+];
+
+const skillDatabase = [
+    { id: 'sk_light', name: 'Удар молнии', rarity: 'rare', icon: '⚡' },
+    { id: 'sk_shield', name: 'Щит', rarity: 'epic', icon: '🛡️' },
+    { id: 'sk_fire', name: 'Огонь', rarity: 'normal', icon: '🔥' }
+];
+
 window.renderBase = function() {
     document.getElementById('baseGoldLvl').innerText = savedData.baseLevels.gold;
     document.getElementById('basePartsLvl').innerText = savedData.baseLevels.parts;
 };
 window.upgradeBase = function(type) {
     let cost = savedData.baseLevels[type] * 2000;
-    if (savedData.gold < cost) { alert(`❌ Недостаточно Золота! Нужно: ${cost} 💰`); return; }
+    if (savedData.gold < cost) { showAlert(`❌ Недостаточно Золота! Нужно: ${cost} 💰`); return; }
     savedData.gold -= cost; savedData.baseLevels[type]++; saveData(); renderBase();
-    alert(`✅ Здание успешно улучшено до уровня ${savedData.baseLevels[type]}!`);
+    showAlert(`✅ Здание успешно улучшено до уровня ${savedData.baseLevels[type]}!`);
 };
 
 window.renderGuild = function() {
@@ -97,25 +145,24 @@ window.renderGuild = function() {
         else { btn.innerText = "Уже отмечено"; btn.disabled = true; btn.style.background = "#555"; }
     } else { document.getElementById('guildJoinBlock').style.display = 'block'; document.getElementById('guildActiveBlock').style.display = 'none'; }
 };
-window.joinGuild = function() { savedData.guild.joined = true; saveData(); renderGuild(); alert("✅ Вы успешно вступили в гильдию 'Spekter Elites'!"); };
-window.guildCheckIn = function() { savedData.guild.lastCheckIn = Date.now(); savedData.gems += 20; saveData(); renderGuild(); alert("✅ Отметка выполнена! Вы получили +20 💎"); };
+window.joinGuild = function() { savedData.guild.joined = true; saveData(); renderGuild(); showAlert("✅ Вы успешно вступили в гильдию!"); };
+window.guildCheckIn = function() { savedData.guild.lastCheckIn = Date.now(); savedData.gems += 20; saveData(); renderGuild(); showAlert("✅ Отметка выполнена! Вы получили +20 💎"); };
 
-// === ЗОЛОТОЙ СЛОТ И ПРОГРЕСС ===
 window.spinGoldenSlot = function() {
-    if (savedData.gems < 50) { alert("❌ Недостаточно алмазов (Нужно 50 💎)!"); return; }
+    if (savedData.gems < 50) { showAlert("❌ Недостаточно алмазов (Нужно 50 💎)!"); return; }
     savedData.gems -= 50;
     let roll = Math.random(); let rewardText = "";
     if (roll < 0.05) { savedData.gems += 500; rewardText = "ДЖЕКПОТ! +500 💎"; }
     else if (roll < 0.4) { savedData.gold += 8000; rewardText = "Отличный куш! +8000 💰"; }
     else { savedData.parts += 20; rewardText = "Бонус! +20 ⚙️"; }
-    saveData(); alert(`🎰 РУЛЕТКА КРУТИТСЯ...\n\n${rewardText}`);
+    saveData(); showAlert(`🎰 РУЛЕТКА КРУТИТСЯ...\n\n${rewardText}`);
 };
 
 window.claimProgress = function(stageRequired, rewardGems) {
-    if (savedData.stage < stageRequired) { alert(`❌ Пройдите Этап ${stageRequired}, чтобы забрать награду!`); return; }
-    if (savedData.serverProgressClaimed.includes(stageRequired)) { alert("Уже собрано."); return; }
+    if (savedData.stage < stageRequired) { showAlert(`❌ Достигните Этапа ${stageRequired}, чтобы забрать награду!`); return; }
+    if (savedData.serverProgressClaimed.includes(stageRequired)) { showAlert("Уже собрано."); return; }
     savedData.gems += rewardGems; savedData.serverProgressClaimed.push(stageRequired); saveData(); updateEventsUI();
-    alert(`🎉 Вы забрали награду: +${rewardGems} 💎!`);
+    showAlert(`🎉 Вы забрали награду: +${rewardGems} 💎!`);
 };
 
 window.openEventsModal = function() { document.getElementById('eventsModal').style.display = 'flex'; updateEventsUI(); };
@@ -134,9 +181,9 @@ window.updateEventsUI = function() {
 
 window.claimBeginner = function(day) {
     if (savedData.beginnerClaimed[day-1]) return;
-    if (day === 1) { savedData.gold += 1000; savedData.parts += 10; alert("Вы получили 1000 💰 и 10 ⚙️!"); }
-    if (day === 2) { savedData.inventory.push({ uid: Date.now(), id: 'r3' }); alert("Вы получили ЭПИК Кольцо 💍!"); }
-    if (day === 3) { savedData.gems += 300; alert("Вы получили 300 💎!"); }
+    if (day === 1) { savedData.gold += 1000; savedData.parts += 10; showAlert("Вы получили 1000 💰 и 10 ⚙️!"); }
+    if (day === 2) { savedData.inventory.push({ uid: getUid(), id: 'r3' }); showAlert("Вы получили ЭПИК Кольцо 💍!"); }
+    if (day === 3) { savedData.gems += 300; showAlert("Вы получили 300 💎!"); }
     savedData.beginnerClaimed[day-1] = true; saveData(); updateEventsUI();
 };
 
@@ -149,11 +196,11 @@ window.updateVIPUI = function() {
     } else { btnBuy.style.display = 'inline-block'; btnClaim.style.display = 'none'; }
 };
 
-window.buyVip = function() { alert("Покупка VIP... Успешно!"); savedData.vipActive = true; savedData.gems += 80; savedData.vipLastClaim = 0; saveData(); updateVIPUI(); };
-window.claimVipDaily = function() { savedData.gems += 50; savedData.vipLastClaim = Date.now(); saveData(); updateVIPUI(); alert("Вы получили 50 💎 по Серебряной карте!"); };
-window.buyDailyItem = function(itemId, cost) { if (savedData.gems < cost) { alert("❌ Недостаточно алмазов!"); return; } savedData.gems -= cost; savedData.inventory.push({ uid: Date.now(), id: itemId }); saveData(); alert("Предмет успешно куплен!"); };
-window.buyDailySkill = function(skillId, cost) { if (savedData.gems < cost) { alert("❌ Недостаточно алмазов!"); return; } savedData.gems -= cost; savedData.skillsInventory.push({ uid: Date.now(), id: skillId }); saveData(); alert("Навык успешно куплен!"); };
-window.buyResource = function(type, amount, cost) { if (savedData.gold < cost) { alert("❌ Недостаточно золота!"); return; } savedData.gold -= cost; if (type === 'parts') savedData.parts += amount; saveData(); alert(`Вы купили ${amount} Деталей!`); };
+window.buyVip = function() { showAlert("Покупка VIP... Успешно!"); savedData.vipActive = true; savedData.gems += 80; savedData.vipLastClaim = 0; saveData(); updateVIPUI(); };
+window.claimVipDaily = function() { savedData.gems += 50; savedData.vipLastClaim = Date.now(); saveData(); updateVIPUI(); showAlert("Вы получили 50 💎 по Серебряной карте!"); };
+window.buyDailyItem = function(itemId, cost) { if (savedData.gems < cost) { showAlert("❌ Недостаточно алмазов!"); return; } savedData.gems -= cost; savedData.inventory.push({ uid: getUid(), id: itemId }); saveData(); showAlert("Предмет успешно куплен!"); };
+window.buyDailySkill = function(skillId, cost) { if (savedData.gems < cost) { showAlert("❌ Недостаточно алмазов!"); return; } savedData.gems -= cost; savedData.skillsInventory.push({ uid: getUid(), id: skillId }); saveData(); showAlert("Навык успешно куплен!"); };
+window.buyResource = function(type, amount, cost) { if (savedData.gold < cost) { showAlert("❌ Недостаточно золота!"); return; } savedData.gold -= cost; if (type === 'parts') savedData.parts += amount; saveData(); showAlert(`Вы купили ${amount} Деталей!`); };
 
 window.openChest = function(chestType, amount) {
     let cost = 0;
@@ -162,7 +209,7 @@ window.openChest = function(chestType, amount) {
     if (chestType === 'sgear') cost = (amount === 1 ? 400 : 4000);
     if (chestType === 'skills') cost = (amount === 1 ? 200 : 2000);
 
-    if (savedData.gems < cost) { alert("❌ Недостаточно алмазов!"); return; }
+    if (savedData.gems < cost) { showAlert("❌ Недостаточно алмазов!"); return; }
     savedData.gems -= cost;
     let pulledItems = [];
     
@@ -173,19 +220,19 @@ window.openChest = function(chestType, amount) {
             let possibleItems = skillDatabase.filter(item => item.rarity === targetRarity);
             if (possibleItems.length === 0) possibleItems = skillDatabase;
             let randomItem = possibleItems[Math.floor(Math.random() * possibleItems.length)];
-            savedData.skillsInventory.push({ uid: Date.now() + Math.random(), id: randomItem.id });
+            savedData.skillsInventory.push({ uid: getUid(), id: randomItem.id });
             pulledItems.push(randomItem); continue;
         }
         if (chestType === 'silver') targetRarity = rarityRoll < 0.1 ? 'rare' : 'normal';
         else if (chestType === 'gold') targetRarity = rarityRoll < 0.05 ? 'epic' : (rarityRoll < 0.3 ? 'rare' : 'normal');
         else if (chestType === 'sgear') {
-            savedData.pityCounter++;
-            if (savedData.pityCounter >= 10) { targetRarity = 'epic'; savedData.pityCounter = 0; } 
+            if (savedData.pityCounter >= 9) { targetRarity = 'epic'; } 
             else targetRarity = rarityRoll < 0.08 ? 'epic' : (rarityRoll < 0.4 ? 'rare' : 'normal');
+            if (targetRarity === 'epic') savedData.pityCounter = 0; else savedData.pityCounter++;
         }
         let possibleItems = itemDatabase.filter(item => item.rarity === targetRarity);
         let randomItem = possibleItems[Math.floor(Math.random() * possibleItems.length)];
-        savedData.inventory.push({ uid: Date.now() + Math.random(), id: randomItem.id });
+        savedData.inventory.push({ uid: getUid(), id: randomItem.id });
         pulledItems.push(randomItem);
     }
     saveData(); showGachaResult(pulledItems);
@@ -201,7 +248,6 @@ window.showGachaResult = function(items) {
     document.getElementById('gachaResult').style.display = 'flex'; 
 };
 
-// === ЭКИПИРОВКА И НАВЫКИ ===
 function getItemData(itemId) { return itemDatabase.find(i => i.id === itemId); }
 function getCalculatedStats() {
     let baseAtk = 100 + (savedData.accountLevel * 10) + (savedData.agencyLevel * 15);
@@ -220,25 +266,27 @@ window.renderInventory = function() {
         if (savedData.equipped[type]) {
             let data = getItemData(savedData.equipped[type]);
             slot.className = `eq-slot rarity-bg-${data.rarity}`; slot.innerHTML = `${data.icon}<div class="stat-badge">УР.1</div>`;
-        } else slot.innerHTML = `<span style="color:#555;">${{ helmet: '🧢', armor: '👕', ring: '💍', boots: '👞' }[type]}</span>`;
+        } else {
+            slot.className = 'eq-slot'; slot.innerHTML = `<span style="color:#555;">${{ helmet: '🧢', armor: '👕', ring: '💍', boots: '👞' }[type]}</span>`;
+        }
     });
     savedData.inventory.forEach(invItem => {
         let data = getItemData(invItem.id);
         if(!data) return;
         let div = document.createElement('div'); div.className = `inv-item rarity-bg-${data.rarity}`;
-        div.innerHTML = `${data.icon}<div class="stat-badge">ATK+${data.atk}</div>`;
-        div.onclick = () => window.equipItem(invItem.uid, data.type); grid.appendChild(div);
+        div.innerHTML = `${data.icon}<div class="stat-badge">${data.atk > 0 ? 'АТК+'+data.atk : 'ЗДР+'+data.hp}</div>`;
+        div.onclick = () => equipItem(invItem.uid, data.type); grid.appendChild(div);
     });
     calculateStats();
 };
 window.equipItem = function(uid, type) {
     let index = savedData.inventory.findIndex(i => i.uid === uid); if (index === -1) return;
-    if (savedData.equipped[type]) savedData.inventory.push({ uid: Date.now() + Math.random(), id: savedData.equipped[type] });
+    if (savedData.equipped[type]) savedData.inventory.push({ uid: getUid(), id: savedData.equipped[type] });
     savedData.equipped[type] = savedData.inventory[index].id; savedData.inventory.splice(index, 1);
     saveData(); renderInventory();
 };
 window.unequip = function(type) {
-    if (savedData.equipped[type]) { savedData.inventory.push({ uid: Date.now() + Math.random(), id: savedData.equipped[type] }); savedData.equipped[type] = null; saveData(); renderInventory(); }
+    if (savedData.equipped[type]) { savedData.inventory.push({ uid: getUid(), id: savedData.equipped[type] }); savedData.equipped[type] = null; saveData(); renderInventory(); }
 };
 
 window.renderSkills = function() {
@@ -254,16 +302,16 @@ window.renderSkills = function() {
         let data = skillDatabase.find(s => s.id === invItem.id);
         if(!data) return;
         let div = document.createElement('div'); div.className = `inv-item rarity-bg-${data.rarity}`;
-        div.innerHTML = `${data.icon}`; div.onclick = () => window.equipSkill(invItem.uid); grid.appendChild(div);
+        div.innerHTML = `${data.icon}`; div.onclick = () => equipSkill(invItem.uid); grid.appendChild(div);
     });
 };
 window.equipSkill = function(uid) {
     let index = savedData.skillsInventory.findIndex(i => i.uid === uid); if (index === -1) return;
-    let emptySlot = savedData.equippedSkills.findIndex(s => s === null); if (emptySlot === -1) { alert("❌ Все слоты заняты!"); return; }
+    let emptySlot = savedData.equippedSkills.findIndex(s => s === null); if (emptySlot === -1) { showAlert("❌ Все слоты заняты!"); return; }
     savedData.equippedSkills[emptySlot] = savedData.skillsInventory[index].id; savedData.skillsInventory.splice(index, 1); saveData(); renderSkills();
 };
 window.unequipSkill = function(slotIndex) {
-    if (savedData.equippedSkills[slotIndex]) { savedData.skillsInventory.push({ uid: Date.now() + Math.random(), id: savedData.equippedSkills[slotIndex] }); savedData.equippedSkills[slotIndex] = null; saveData(); renderSkills(); }
+    if (savedData.equippedSkills[slotIndex]) { savedData.skillsInventory.push({ uid: getUid(), id: savedData.equippedSkills[slotIndex] }); savedData.equippedSkills[slotIndex] = null; saveData(); renderSkills(); }
 };
 
 window.renderAgency = function() {
@@ -273,22 +321,23 @@ window.renderAgency = function() {
 };
 window.upgradeAgency = function() {
     let cost = (savedData.agencyLevel + 1) * 5;
-    if (savedData.parts >= cost) { savedData.parts -= cost; savedData.agencyLevel++; saveData(); renderAgency(); calculateStats(); alert("✅ Агентство улучшено!"); } 
-    else alert(`❌ Не хватает деталей! Нужно: ${cost} ⚙️`);
+    if (savedData.parts >= cost) { savedData.parts -= cost; savedData.agencyLevel++; saveData(); renderAgency(); calculateStats(); showAlert("✅ Агентство улучшено!"); } 
+    else showAlert(`❌ Не хватает деталей! Нужно: ${cost} ⚙️`);
 };
 
-window.sellPartsOnMarket = function() { if (savedData.parts >= 10) { savedData.parts -= 10; savedData.gold += 1000; saveData(); alert("✅ Вы продали 10 ⚙️ за 1000 💰"); } else { alert("❌ Нужно минимум 10 деталей!"); } };
+window.sellPartsOnMarket = function() { if (savedData.parts >= 10) { savedData.parts -= 10; savedData.gold += 1000; saveData(); showAlert("✅ Вы продали 10 ⚙️ за 1000 💰"); } else { showAlert("❌ Нужно минимум 10 деталей!"); } };
 window.startPvP = function() {
-    if (savedData.energy < 10) { alert("❌ Недостаточно энергии! Нужно 10 ⚡"); return; }
+    if (savedData.energy < 10) { showAlert("❌ Недостаточно энергии! Нужно 10 ⚡"); return; }
     savedData.energy -= 10; saveData();
     let myStats = getCalculatedStats(); let myBM = myStats.atk + myStats.hp;
     let enemyBM = Math.floor(myBM * (0.8 + Math.random() * 0.4));
-    if (myBM >= enemyBM) { savedData.gems += 20; saveData(); alert(`🎉 Победа! Вы выиграли у агента с БМ ${enemyBM}. Награда: 20 💎`); } 
-    else alert(`💀 Поражение. БМ врага: ${enemyBM}`);
+    if (myBM >= enemyBM) { savedData.gems += 20; saveData(); showAlert(`🎉 Победа! Вы выиграли у агента с БМ ${enemyBM}. Награда: 20 💎`); } 
+    else showAlert(`💀 Поражение. БМ врага: ${enemyBM}`);
 };
 
 let pendingGold = 0, pendingParts = 0;
 setInterval(() => {
+    checkEnergyRegen();
     let diff = Math.min(Date.now() - savedData.lastAFKTime, 86400000);
     let totalSeconds = Math.floor(diff / 1000);
     document.getElementById('sweepTimeDisplay').innerText = `${Math.floor(totalSeconds / 3600).toString().padStart(2, '0')}:${Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0')}:${(totalSeconds % 60).toString().padStart(2, '0')}`;
@@ -296,6 +345,7 @@ setInterval(() => {
     let minutesPassed = Math.floor(diff / 60000);
     pendingGold = Math.floor(minutesPassed * goldPerMin); pendingParts = Math.floor(minutesPassed * partsPerMin);
 }, 1000);
+
 document.getElementById('btnSweep').addEventListener('click', () => { document.getElementById('sweepGoldResult').innerText = pendingGold; document.getElementById('sweepPartsResult').innerText = pendingParts; document.getElementById('sweepModal').style.display = 'flex'; });
 document.getElementById('btnClaimSweep').addEventListener('click', () => {
     if (pendingGold > 0 || pendingParts > 0) { savedData.gold += pendingGold; savedData.parts += pendingParts; savedData.lastAFKTime = Date.now(); savedData.dailySweep++; saveData(); updateMissionsUI(); }
@@ -306,25 +356,47 @@ window.updateMissionsUI = function() {
     document.getElementById('seasonLevel').innerText = savedData.seasonLevel; document.getElementById('seasonXp').innerText = savedData.seasonXp;
     document.getElementById('seasonProgress').style.width = `${Math.min(100, savedData.seasonXp)}%`;
     document.getElementById('missionKills').innerText = Math.min(savedData.dailyKills, 15);
+    let btn = document.getElementById('btnClaimKillQuest');
+    if (savedData.missionKillsClaimed) { btn.innerText = "Собрано"; btn.style.background = "#555"; btn.disabled = true; }
 };
 window.claimMission = function(type) {
     if (type === 'kills' && savedData.dailyKills >= 15 && !savedData.missionKillsClaimed) { savedData.missionKillsClaimed = true; savedData.seasonXp += 50; if(savedData.seasonXp >= 100) { savedData.seasonXp -= 100; savedData.seasonLevel++; } saveData(); updateMissionsUI(); }
 };
-window.claimSeasonReward = function() { savedData.gems += 50; saveData(); alert("Вы забрали награды Сезона: +50 Алмазов! 💎"); };
+window.claimSeasonReward = function() { 
+    if(savedData.claimedSeasonRewards.includes(savedData.seasonLevel)) { showAlert("Награда за этот уровень уже получена!"); return; }
+    savedData.gems += 50; savedData.claimedSeasonRewards.push(savedData.seasonLevel); saveData(); showAlert("Вы забрали награды Сезона: +50 Алмазов! 💎"); 
+};
 
-updateTopBar(); calculateStats(); updateVIPUI(); updateEventsUI();
+updateTopBar(); calculateStats(); updateVIPUI(); updateEventsUI(); checkDailyReset();
 
 const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
 const joystickZone = document.getElementById('joystickZone'); const joystickBase = document.getElementById('joystickBase'); const joystickStick = document.getElementById('joystickStick');
-function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+let screenW, screenH;
+function resize() { 
+    screenW = window.innerWidth; screenH = window.innerHeight;
+    canvas.width = screenW; canvas.height = screenH;
+}
 window.addEventListener('resize', resize); resize();
 
-let gameState = 'menu';
 const world = { width: 1600, height: 1600 }; const camera = { x: 0, y: 0 };
 const input = { x: 0, y: 0, isMoving: false }; const joystickCenter = { x: 0, y: 0 }; const MAX_JOYSTICK_RADIUS = 50;
 
-joystickZone.addEventListener('touchstart', (e) => { if (gameState !== 'playing') return; input.isMoving = true; joystickCenter.x = e.changedTouches[0].clientX; joystickCenter.y = e.changedTouches[0].clientY; joystickBase.style.display = 'block'; joystickBase.style.left = `${joystickCenter.x}px`; joystickBase.style.top = `${joystickCenter.y}px`; joystickStick.style.transform = `translate(-50%, -50%)`; });
-joystickZone.addEventListener('touchmove', (e) => { if (!input.isMoving || gameState !== 'playing') return; let dx = e.changedTouches[0].clientX - joystickCenter.x, dy = e.changedTouches[0].clientY - joystickCenter.y, dist = Math.hypot(dx, dy); if (dist > MAX_JOYSTICK_RADIUS) { dx = (dx/dist)*MAX_JOYSTICK_RADIUS; dy = (dy/dist)*MAX_JOYSTICK_RADIUS; } joystickStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`; input.x = dx / MAX_JOYSTICK_RADIUS; input.y = dy / MAX_JOYSTICK_RADIUS; });
+joystickZone.addEventListener('touchstart', (e) => { 
+    if (gameState !== 'playing') return; 
+    input.isMoving = true; 
+    joystickCenter.x = e.changedTouches[0].clientX; joystickCenter.y = e.changedTouches[0].clientY; 
+    let rect = joystickZone.getBoundingClientRect();
+    joystickBase.style.display = 'block'; 
+    joystickBase.style.left = `${joystickCenter.x - rect.left}px`; 
+    joystickBase.style.top = `${joystickCenter.y - rect.top}px`; 
+    joystickStick.style.transform = `translate(-50%, -50%)`; 
+});
+joystickZone.addEventListener('touchmove', (e) => { 
+    if (!input.isMoving || gameState !== 'playing') return; 
+    let dx = e.changedTouches[0].clientX - joystickCenter.x, dy = e.changedTouches[0].clientY - joystickCenter.y, dist = Math.hypot(dx, dy); 
+    if (dist > MAX_JOYSTICK_RADIUS) { dx = (dx/dist)*MAX_JOYSTICK_RADIUS; dy = (dy/dist)*MAX_JOYSTICK_RADIUS; } 
+    joystickStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`; input.x = dx / MAX_JOYSTICK_RADIUS; input.y = dy / MAX_JOYSTICK_RADIUS; 
+});
 const endTouch = () => { input.isMoving = false; input.x = 0; input.y = 0; joystickBase.style.display = 'none'; };
 joystickZone.addEventListener('touchend', endTouch); joystickZone.addEventListener('touchcancel', endTouch);
 
@@ -332,13 +404,11 @@ let player = { x: 800, y: 800, radius: 15, speed: 200, hp: 100, maxHp: 100, atk:
 let enemies = []; let projectiles = []; let floatingTexts = []; let killsInBattle = 0;
 let isBossStage = false; let bossEntity = null;
 
-// === ЗАПУСК БОЯ ===
 window.startBattle = function() {
-    if (savedData.energy < 5) { alert("❌ Недостаточно энергии! (Нужно 5 ⚡)"); return; }
+    if (savedData.energy < 5) { showAlert("❌ Недостаточно энергии! (Нужно 5 ⚡)"); return; }
     savedData.energy -= 5; saveData();
     document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
-    document.getElementById('topBar').style.display = 'none'; 
-    document.getElementById('navBar').style.display = 'none'; // Скрываем таббар
+    document.getElementById('topBar').style.display = 'none'; document.getElementById('navBar').style.display = 'none';
     canvas.style.display = 'block'; joystickZone.style.display = 'block';
     
     let finalStats = getCalculatedStats();
@@ -351,33 +421,35 @@ window.startBattle = function() {
 };
 
 function spawnEnemy() {
-    const angle = Math.random() * Math.PI * 2; const distance = Math.max(canvas.width, canvas.height) / 2 + 100;
+    const angle = Math.random() * Math.PI * 2; const distance = Math.max(screenW, screenH) / 2 + 100;
     let hp = 50 + (savedData.stage * 20);
     enemies.push({ x: player.x + Math.cos(angle)*distance, y: player.y + Math.sin(angle)*distance, radius: 16, hp: hp, maxHp: hp, speed: 100 + Math.random()*40, isBoss: false });
 }
 function spawnBoss() {
-    const angle = Math.random() * Math.PI * 2; const distance = Math.max(canvas.width, canvas.height) / 2 + 100;
+    const angle = Math.random() * Math.PI * 2; const distance = Math.max(screenW, screenH) / 2 + 100;
     let hp = (50 + (savedData.stage * 20)) * 10;
     bossEntity = { x: player.x + Math.cos(angle)*distance, y: player.y + Math.sin(angle)*distance, radius: 40, hp: hp, maxHp: hp, speed: 80, isBoss: true, lastAttack: 0 };
     enemies.push(bossEntity);
 }
 
 function exitBattle(isWin) {
+    if (gameState !== 'playing') return;
     gameState = 'menu'; endTouch(); canvas.style.display = 'none'; joystickZone.style.display = 'none';
     document.getElementById('lobbyScreen').style.display = 'flex'; document.getElementById('topBar').style.display = 'flex'; document.getElementById('navBar').style.display = 'flex';
     savedData.dailyKills += killsInBattle; savedData.gold += killsInBattle * 15;
     if (isWin) { savedData.parts += (isBossStage ? 25 : 5); savedData.stage++; }
     saveData(); updateMissionsUI(); updateEventsUI();
-    alert(isWin ? `🎉 ЭТАП ПРОЙДЕН!\nУбито: ${killsInBattle}. Награда: +${killsInBattle*15} Золота, +${isBossStage ? 25 : 5} Деталей` : `💀 ПОТРАЧЕНО...\nНаграда: +${killsInBattle*15} Золота`);
+    showAlert(isWin ? `🎉 ЭТАП ПРОЙДЕН!\nУбито: ${killsInBattle}. Награда: +${killsInBattle*15} Золота, +${isBossStage ? 25 : 5} Деталей` : `💀 ПОТРАЧЕНО...\nНаграда: +${killsInBattle*15} Золота`);
 }
 
 let lastTime = performance.now();
 function gameLoop(timestamp) {
+    requestAnimationFrame(gameLoop);
     let dt = (timestamp - lastTime) / 1000; lastTime = timestamp; if (dt > 0.1) dt = 0.016; 
     
     if (gameState === 'playing') {
         if (isBossStage) { if (!bossEntity && enemies.length === 0) spawnBoss(); } 
-        else { if (enemies.length < 5 + savedData.stage && Math.random() < 0.02) spawnEnemy(); }
+        else { if (enemies.length < 5 + savedData.stage && Math.random() < 1.2 * dt) spawnEnemy(); }
 
         if (input.isMoving && (input.x !== 0 || input.y !== 0)) {
             player.x += input.x * player.speed * dt; player.y += input.y * player.speed * dt;
@@ -416,7 +488,7 @@ function gameLoop(timestamp) {
             if (e.isDead) { 
                 enemies.splice(i, 1); killsInBattle++; 
                 if (e.isBoss) { exitBattle(true); continue; }
-                if (!isBossStage && killsInBattle >= 15) exitBattle(true); 
+                if (!isBossStage && killsInBattle >= 15) { exitBattle(true); continue; }
                 continue; 
             }
             const dx = player.x - e.x, dy = player.y - e.y, dist = Math.hypot(dx, dy);
@@ -430,7 +502,7 @@ function gameLoop(timestamp) {
             if (dist < player.radius + e.radius) {
                 let hasShield = savedData.equippedSkills.includes('sk_shield');
                 if (hasShield && Math.random() < 0.3) { floatingTexts.push({ x: player.x, y: player.y - 20, text: `🛡️ БЛОК`, color: "#fff", life: 1.0 }); e.x -= (dx/dist)*50; e.y -= (dy/dist)*50; } 
-                else { player.hp -= (20 + savedData.stage * 5); if (player.hp <= 0) { exitBattle(false); return; } e.x -= (dx/dist)*100; e.y -= (dy/dist)*100; }
+                else { player.hp -= (20 + savedData.stage * 5); if (player.hp <= 0) { exitBattle(false); continue; } e.x -= (dx/dist)*100; e.y -= (dy/dist)*100; }
             }
         }
 
@@ -441,7 +513,7 @@ function gameLoop(timestamp) {
             if (p.isEnemy) {
                 if (Math.hypot(p.x - player.x, p.y - player.y) < p.radius + player.radius) {
                     player.hp -= p.damage; floatingTexts.push({ x: player.x, y: player.y - 20, text: `-${Math.floor(p.damage)}`, color: "#ff0000", life: 1.0 });
-                    projectiles.splice(i, 1); if (player.hp <= 0) { exitBattle(false); return; }
+                    projectiles.splice(i, 1); if (player.hp <= 0) { exitBattle(false); continue; }
                 }
             } else {
                 for (let j = enemies.length - 1; j >= 0; j--) {
@@ -454,8 +526,8 @@ function gameLoop(timestamp) {
             }
         }
 
-        ctx.fillStyle = '#1e1e24'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.save(); 
-        camera.x = Math.max(0, Math.min(world.width - canvas.width, player.x - canvas.width / 2)); camera.y = Math.max(0, Math.min(world.height - canvas.height, player.y - canvas.height / 2));
+        ctx.fillStyle = '#1e1e24'; ctx.fillRect(0, 0, screenW, screenH); ctx.save(); 
+        camera.x = Math.max(0, Math.min(world.width - screenW, player.x - screenW / 2)); camera.y = Math.max(0, Math.min(world.height - screenH, player.y - screenH / 2));
         ctx.translate(-camera.x, -camera.y);
 
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; ctx.lineWidth = 1; ctx.beginPath();
@@ -483,12 +555,8 @@ function gameLoop(timestamp) {
         ctx.fillStyle = '#fff'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(`${Math.floor(Math.max(0, player.hp))} / ${player.maxHp}`, 20, 55);
         
         ctx.textAlign = 'right'; 
-        if (isBossStage && bossEntity) {
-            ctx.fillText(`БОСС: ${Math.floor(Math.max(0, bossEntity.hp))} HP`, canvas.width - 20, 35);
-        } else {
-            ctx.fillText(`Убито: ${killsInBattle} / 15`, canvas.width - 20, 35);
-        }
+        if (isBossStage && bossEntity) { ctx.fillText(`БОСС: ${Math.floor(Math.max(0, bossEntity.hp))} HP`, screenW - 20, 35); } 
+        else { ctx.fillText(`Убито: ${killsInBattle} / 15`, screenW - 20, 35); }
     }
-    requestAnimationFrame(gameLoop);
 }
 requestAnimationFrame(gameLoop);
