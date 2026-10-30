@@ -1,5 +1,5 @@
 // ==========================================================================
-// БАЗЫ ДАННЫХ ИГРЫ (SPEKTER AGENCY: DATA - GUILDS & RAIDS)
+// БАЗЫ ДАННЫХ ИГРЫ (SPEKTER AGENCY: DATA - MOUNTS & EXOSKELETONS)
 // ==========================================================================
 
 const itemDatabase = [
@@ -15,7 +15,9 @@ const itemDatabase = [
     { id: 'w2', type: 'weapon', rarity: 'rare', icon: '⚡', hp: 0, atk: 250, fireRate: 2.5, bullets: 1, projSpeed: 800, spread: 0.1 },
     { id: 'w3', type: 'weapon', rarity: 'epic', icon: '☄️', hp: 0, atk: 200, fireRate: 0.8, bullets: 3, projSpeed: 650, spread: 0.25 },
     { id: 'w4', type: 'weapon', rarity: 'legendary', icon: '🚀', hp: 0, atk: 450, fireRate: 0.6, bullets: 1, projSpeed: 450, spread: 0, isRocket: true },
-    { id: 'd1', type: 'drone', rarity: 'rare', icon: '🛸', hp: 200, atk: 100 }
+    { id: 'd1', type: 'drone', rarity: 'rare', icon: '🛸', hp: 200, atk: 100 },
+    { id: 'm1', type: 'mount', rarity: 'rare', icon: '🦾', hp: 500, atk: 100, speedBonus: 1.15 },
+    { id: 'm2', type: 'mount', rarity: 'legendary', icon: '🚜', hp: 1500, atk: 350, speedBonus: 1.30 }
 ];
 
 const titlesConfig = [

@@ -1,5 +1,5 @@
 // ==========================================================================
-// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - FULL BUNDLE)
+// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - MOUNTS & EXOS)
 // ==========================================================================
 
 const tg = window.Telegram?.WebApp;
@@ -47,7 +47,7 @@ const getUid = () => Date.now().toString(36) + '_' + (uidCounter++);
 const defaultSave = {
     gems: 2000, gold: 10000, energy: 30, accountLevel: 1, accountXp: 0, stage: 1, parts: 0,
     equippedTitle: 't_rookie', unlockedTitles: ['t_rookie'],
-    inventory: [], equipped: { helmet: null, armor: null, ring: null, boots: null, weapon: null, drone: 'd1' },
+    inventory: [], equipped: { helmet: null, armor: null, ring: null, boots: null, weapon: null, drone: 'd1', mount: 'm1' },
     skillsInventory: [], equippedSkills: [null, null, null, null, null, null], blueprints: {},
     lastEnergyTime: Date.now(), agencyLevel: 0, dailyKills: 0, vipActive: false, vipLastClaim: 0, 
     beginnerClaimed: [false, false, false], serverProgressClaimed: [], seasonLevel: 1, seasonXp: 0, 
@@ -60,12 +60,13 @@ const defaultSave = {
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try { 
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal34') || 'null'); 
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal35') || 'null'); 
     if (loaded) Object.assign(savedData, loaded); 
 } catch(e) {}
 
 if (!savedData.equipped.weapon) savedData.equipped.weapon = null; 
 if (!savedData.equipped.drone) savedData.equipped.drone = 'd1'; 
+if (!savedData.equipped.mount) savedData.equipped.mount = 'm1';
 if (!savedData.blueprints) savedData.blueprints = {}; 
 if (!savedData.marketLimits) savedData.marketLimits = {};
 if (!savedData.playerLots) savedData.playerLots = [];
@@ -78,7 +79,7 @@ if (!savedData.unlockedTitles) savedData.unlockedTitles = ['t_rookie'];
 if (!savedData.equippedTitle) savedData.equippedTitle = 't_rookie';
 
 function saveData() { 
-    localStorage.setItem('spekterSaveFinal34', JSON.stringify(savedData)); 
+    localStorage.setItem('spekterSaveFinal35', JSON.stringify(savedData)); 
     updateTopBar(); 
 }
 
@@ -564,8 +565,8 @@ window.renderInventory = function() {
     const grid = document.getElementById('inventoryGrid'); 
     if(!grid) return;
     grid.innerHTML = ''; 
-    const slotIcons = { helmet: '🧢', armor: '👕', ring: '💍', boots: '👞', weapon: '🔫', drone: '🛸' }; 
-    ['helmet', 'armor', 'ring', 'weapon', 'boots', 'drone'].forEach(type => { 
+    const slotIcons = { helmet: '🧢', armor: '👕', ring: '💍', boots: '👞', weapon: '🔫', drone: '🛸', mount: '🦾' }; 
+    ['helmet', 'armor', 'ring', 'weapon', 'boots', 'drone', 'mount'].forEach(type => { 
         const slot = document.getElementById(`slot-${type}`); 
         if (slot && savedData.equipped[type]) { 
             let data = getItemData(savedData.equipped[type]); 
@@ -736,13 +737,21 @@ function prepareBattleUI(titleText) {
     player.x = 80;
     player.y = screenH / 2;
 
+    let baseSpeed = 220;
+    if (savedData.equipped.mount) {
+        let mountData = getItemData(savedData.equipped.mount);
+        if (mountData && mountData.speedBonus) {
+            baseSpeed *= mountData.speedBonus;
+        }
+    }
+    player.speed = baseSpeed;
+
     let wp = getItemData(savedData.equipped.weapon); 
     if (wp && wp.fireRate) { 
         currentWeaponStats = { fireRate: wp.fireRate, bullets: wp.bullets, projSpeed: wp.projSpeed, spread: wp.spread, isRocket: wp.isRocket }; 
     } else { currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0, isRocket: false }; } 
     
     runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
-    player.speed = 220;
     enemies = []; projectiles = []; floatingTexts = []; allyUnits = []; obstacles = []; portal = null;
 
     activePet = {
