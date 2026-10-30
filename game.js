@@ -1,5 +1,5 @@
 // ==========================================================================
-// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - MOUNTS & EXOS)
+// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - DAILY QUESTS)
 // ==========================================================================
 
 const tg = window.Telegram?.WebApp;
@@ -55,12 +55,15 @@ const defaultSave = {
     marketLimits: {}, lastMarketReset: Date.now(), playerLots: [],
     guild: null, guildBossHp: 25000,
     baseDefense: { towers: 2, guards: 3 },
-    talentsLevels: {}, seasonClaimed: {}
+    talentsLevels: {}, seasonClaimed: {},
+    questProgress: { q_kills: 0, q_arena: 0, q_chest: 0 },
+    questClaimed: { q_kills: false, q_arena: false, q_chest: false },
+    lastQuestReset: Date.now()
 };
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try { 
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal35') || 'null'); 
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal37') || 'null'); 
     if (loaded) Object.assign(savedData, loaded); 
 } catch(e) {}
 
@@ -77,11 +80,24 @@ if (!savedData.seasonClaimed) savedData.seasonClaimed = {};
 if (savedData.accountXp === undefined) savedData.accountXp = 0;
 if (!savedData.unlockedTitles) savedData.unlockedTitles = ['t_rookie'];
 if (!savedData.equippedTitle) savedData.equippedTitle = 't_rookie';
+if (!savedData.questProgress) savedData.questProgress = { q_kills: 0, q_arena: 0, q_chest: 0 };
+if (!savedData.questClaimed) savedData.questClaimed = { q_kills: false, q_arena: false, q_chest: false };
 
 function saveData() { 
-    localStorage.setItem('spekterSaveFinal35', JSON.stringify(savedData)); 
+    localStorage.setItem('spekterSaveFinal37', JSON.stringify(savedData)); 
     updateTopBar(); 
 }
+
+function checkDailyQuestReset() {
+    let now = Date.now();
+    if (now - (savedData.lastQuestReset || 0) > 86400000) {
+        savedData.questProgress = { q_kills: 0, q_arena: 0, q_chest: 0 };
+        savedData.questClaimed = { q_kills: false, q_arena: false, q_chest: false };
+        savedData.lastQuestReset = now;
+        saveData();
+    }
+}
+checkDailyQuestReset();
 
 function checkMarketDailyReset() {
     let now = Date.now();
@@ -355,7 +371,70 @@ window.switchHubTab = function(tabName, btnEl) {
             `;
         });
         content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #00ffff; margin-bottom: 4px;">🏪 Рынок слитков:</div>${marketHTML}`;
+    } else if (tabName === 'leaderboard') {
+        let stats = getCalculatedStats();
+        let myBm = Math.floor(stats.atk * 2 + stats.hp / 10);
+        let curTitleObj = titlesConfig.find(t => t.id === savedData.equippedTitle) || titlesConfig[0];
+
+        let allRivals = [...leaderboardRivals, { name: 'Вы (Сталкер)', bm: myBm, level: savedData.accountLevel, title: curTitleObj.name, isMe: true }];
+        allRivals.sort((a, b) => b.bm - a.bm);
+
+        let listHtml = '';
+        allRivals.forEach((r, idx) => {
+            let rank = idx + 1;
+            let rankColor = rank === 1 ? '#ffd700' : (rank === 2 ? '#c0c0c0' : (rank === 3 ? '#cd7f32' : '#888'));
+            listHtml += `
+                <div style="background: ${r.isMe ? '#252535' : '#1e1e2c'}; border: 1px solid ${r.isMe ? '#ffaa00' : '#444'}; border-radius: 8px; padding: 7px 10px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="color: ${rankColor}; font-weight: bold; font-size: 13px; width: 18px;">#${rank}</span>
+                        <div>
+                            <div style="color: ${r.isMe ? '#ffaa00' : '#fff'}; font-weight: bold; font-size: 11px;">${r.name}</div>
+                            <div style="color: #aaa; font-size: 9px;">[${r.title}] • Ур. ${r.level}</div>
+                        </div>
+                    </div>
+                    <div style="color: #00ff66; font-weight: bold; font-size: 11px;">⚔️ ${r.bm} БМ</div>
+                </div>
+            `;
+        });
+        content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #ffaa00; margin-bottom: 4px;">🏆 Таблица лидеров Сектора:</div>${listHtml}`;
+    } else if (tabName === 'quests') {
+        let questsHtml = '';
+        dailyQuestsConfig.forEach(q => {
+            let currentProg = savedData.questProgress[q.id] || 0;
+            let isClaimed = savedData.questClaimed[q.id] || false;
+            let isCompleted = currentProg >= q.target;
+            let rewardText = `+${q.rewardGold} 💰` + (q.rewardParts ? ` +${q.rewardParts} ⚙️` : '') + (q.rewardGems ? ` +${q.rewardGems} 💎` : '');
+
+            questsHtml += `
+                <div style="background: #1e1e2c; border: 1px solid ${isCompleted && !isClaimed ? '#00ffcc' : '#444'}; border-radius: 8px; padding: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="color: #fff; font-weight: bold; font-size: 11px;">🎯 ${q.title}</div>
+                        <div style="color: #aaa; font-size: 9px; margin: 2px 0;">${q.desc} (${Math.min(currentProg, q.target)}/${q.target})</div>
+                        <div style="color: #00ff66; font-size: 9px;">🎁 ${rewardText}</div>
+                    </div>
+                    <button onclick="claimDailyQuest('${q.id}')" ${!isCompleted || isClaimed ? 'disabled' : ''} style="background: ${isClaimed ? '#555' : (isCompleted ? '#28a745' : '#444')}; color: white; border: none; padding: 5px 10px; border-radius: 6px; font-weight: bold; font-size: 10px; cursor: pointer;">
+                        ${isClaimed ? 'Получено' : (isCompleted ? 'Забрать' : 'В процессе')}
+                    </button>
+                </div>
+            `;
+        });
+        content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #00ffcc; margin-bottom: 4px;">📋 Ежедневные поручения:</div>${questsHtml}`;
     }
+};
+
+window.claimDailyQuest = function(qId) {
+    let q = dailyQuestsConfig.find(x => x.id === qId);
+    if (!q || savedData.questClaimed[qId]) return;
+    let currentProg = savedData.questProgress[qId] || 0;
+    if (currentProg < q.target) return;
+
+    savedData.questClaimed[qId] = true;
+    savedData.gold += q.rewardGold;
+    if (q.rewardParts) savedData.parts += q.rewardParts;
+    if (q.rewardGems) savedData.gems += q.rewardGems;
+    saveData();
+    switchHubTab('quests', document.querySelectorAll('.hub-tab-btn')[5]);
+    showBmPopup("Награда за квест получена!");
 };
 
 window.joinGuild = function(gId) {
@@ -499,6 +578,8 @@ window.openChest = function(chestType, amount) {
     let cost = 400 * amount; 
     if (savedData.gems < cost) { showAlert("Недостаточно алмазов!"); return; } 
     savedData.gems -= cost; 
+
+    savedData.questProgress.q_chest = (savedData.questProgress.q_chest || 0) + amount;
 
     let chestBox = document.getElementById('gachaChestBox');
     if (chestBox) chestBox.className = 'chest-anim';
@@ -1239,6 +1320,8 @@ function gameLoop(timestamp) {
         if (e.isDead) { 
             if (isPvp) {
                 roomState = 'pvp_ended';
+                savedData.questProgress.q_arena = (savedData.questProgress.q_arena || 0) + 1;
+                saveData();
                 showBattleResult(true);
                 return;
             }
@@ -1262,6 +1345,7 @@ function gameLoop(timestamp) {
             killsInRoom++; 
             totalKillsInRun++; 
             runXp += 15; 
+            savedData.questProgress.q_kills = (savedData.questProgress.q_kills || 0) + 1;
             if (runMods.vamp > 0) {
                 player.hp = Math.min(player.maxHp, player.hp + runMods.vamp);
             }

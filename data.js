@@ -1,5 +1,5 @@
 // ==========================================================================
-// БАЗЫ ДАННЫХ ИГРЫ (SPEKTER AGENCY: DATA - MOUNTS & EXOSKELETONS)
+// БАЗЫ ДАННЫХ ИГРЫ (SPEKTER AGENCY: DATA - DAILY QUESTS)
 // ==========================================================================
 
 const itemDatabase = [
@@ -111,4 +111,18 @@ const seasonPassRewardsConfig = [
     { level: 1, rewardGold: 1000, rewardGems: 50, desc: 'Набор припасов сталкера' },
     { level: 2, rewardGold: 2500, rewardGems: 100, desc: 'Комплект защитной экипировки' },
     { level: 3, rewardGold: 5000, rewardGems: 200, desc: 'Элитный фонд сектора' }
+];
+
+const leaderboardRivals = [
+    { name: 'Apex_Viper', bm: 2450, level: 18, title: 'Легенда Пустоши' },
+    { name: 'AtomKing', bm: 1980, level: 14, title: 'Элита Сектора' },
+    { name: 'ScrapLord', bm: 1420, level: 11, title: 'Элита Сектора' },
+    { name: 'Vortex', bm: 1150, level: 9, title: 'Ветеран Пустоши' },
+    { name: 'ShadowStalker', bm: 890, level: 7, title: 'Ветеран Пустоши' }
+];
+
+const dailyQuestsConfig = [
+    { id: 'q_kills', title: 'Зачистка Пустоши', desc: 'Уничтожьте 10 врагов в вылазках', target: 10, rewardGold: 1500, rewardParts: 30 },
+    { id: 'q_arena', title: 'Проверка на прочность', desc: 'Победите в 2 боях на PvP арене', target: 2, rewardGold: 2500, rewardParts: 50 },
+    { id: 'q_chest', title: 'Черный рынок', desc: 'Откройте 1 контейнер Сталкера', target: 1, rewardGold: 2000, rewardGems: 30 }
 ];
