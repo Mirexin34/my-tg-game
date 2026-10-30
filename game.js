@@ -3,8 +3,8 @@ if (tg) {
     try { tg.requestFullscreen(); } catch(e) { tg.expand(); }
     try { tg.disableVerticalSwipes(); tg.setHeaderColor('#1a1a24'); tg.setBackgroundColor('#1a1a24'); } catch(e) {}
 }
-const appContainer = document.getElementById('appContainer');
 
+const appContainer = document.getElementById('appContainer');
 window.showAlert = function(msg) {
     if (tg && tg.showPopup) {
         try { tg.showPopup({ title: 'Сообщение', message: msg, buttons: [{type: 'ok'}] }); } catch(e) { alert(msg); }
@@ -28,7 +28,6 @@ appContainer.addEventListener('touchmove', function(e) {
 }, { passive: false });
 
 let uidCounter = 0; const getUid = () => Date.now().toString(36) + '_' + (uidCounter++);
-
 const defaultSave = {
     gems: 2000, gold: 10000, energy: 30, accountLevel: 1, stage: 1, parts: 0,
     inventory: [], equipped: { helmet: null, armor: null, ring: null, boots: null, weapon: null, drone: null },
@@ -39,8 +38,6 @@ const defaultSave = {
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try { let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal15') || 'null'); if (loaded) Object.assign(savedData, loaded); } catch(e) {}
-
-// Инициализация новых слотов, если загружено старое сохранение
 if (!savedData.equipped.weapon) savedData.equipped.weapon = null;
 if (!savedData.equipped.drone) savedData.equipped.drone = null;
 
@@ -49,6 +46,7 @@ function checkEnergyRegen() {
     if (regenAmount > 0 && savedData.energy < 30) { savedData.energy = Math.min(30, savedData.energy + regenAmount); savedData.lastEnergyTime += regenAmount * (5 * 60 * 1000); saveData(); } 
     else if (savedData.energy >= 30) { savedData.lastEnergyTime = Date.now(); }
 }
+
 function updateEnergyTimerUI() {
     if (savedData.energy >= 30) { document.getElementById('energyTimer').innerText = '(МАКС)'; } 
     else {
@@ -57,6 +55,7 @@ function updateEnergyTimerUI() {
         else { let m = Math.floor(timeLeft / 60000); let s = Math.floor((timeLeft % 60000) / 1000); document.getElementById('energyTimer').innerText = `(${m}:${s.toString().padStart(2, '0')})`; }
     }
 }
+
 window.openEnergyShop = function() {
     if (savedData.energy >= 30) { showAlert("У вас уже максимум энергии!"); return; }
     if (confirm("Купить 10 Энергии за 50 💎?")) {
@@ -65,10 +64,12 @@ window.openEnergyShop = function() {
 }
 
 function saveData() { localStorage.setItem('spekterSaveFinal15', JSON.stringify(savedData)); updateTopBar(); }
+
 function updateTopBar() {
     checkEnergyRegen(); document.getElementById('gemDisplay').innerText = savedData.gems; document.getElementById('goldDisplay').innerText = (savedData.gold > 1000) ? (savedData.gold / 1000).toFixed(1) + 'K' : savedData.gold;
     document.getElementById('partsDisplay').innerText = savedData.parts; document.getElementById('energyDisplay').innerText = savedData.energy; document.getElementById('accountLevelDisplay').innerText = savedData.accountLevel; document.getElementById('stageDisplay').innerText = savedData.stage;
 }
+
 window.switchTab = function(screenId, btnElement) {
     document.querySelectorAll('.screen').forEach(s => s.style.display = 'none'); document.getElementById(screenId).style.display = 'flex';
     if(btnElement) { document.querySelectorAll('.navBtn').forEach(b => { b.classList.remove('active'); }); btnElement.classList.add('active'); }
@@ -83,41 +84,31 @@ const itemDatabase = [
     { id: 'w1', type: 'weapon', rarity: 'normal', icon: '🔫', hp: 0, atk: 150 }, { id: 'w3', type: 'weapon', rarity: 'epic', icon: '⚔️', hp: 0, atk: 600 },
     { id: 'd1', type: 'drone', rarity: 'rare', icon: '🛸', hp: 200, atk: 100 }
 ];
+
 const skillDatabase = [ { id: 'sk_light', rarity: 'rare', icon: '⚡' }, { id: 'sk_shield', rarity: 'epic', icon: '🛡️' }, { id: 'sk_fire', rarity: 'normal', icon: '🔥' } ];
+
 function getItemData(itemId) { return itemDatabase.find(i => i.id === itemId) || itemDatabase[0]; }
 
-// НОВАЯ ФОРМУЛА СТАТОВ: (База + Плоские бонусы) * (1 + Процентные бонусы)
 function getCalculatedStats() {
     let baseAtk = 100 + (savedData.accountLevel * 10); 
     let baseHp = 500 + (savedData.accountLevel * 50);
     let flatAtk = 0; let flatHp = 0;
-    
-    // Считаем плоские (Flat) бонусы от шмоток
     Object.values(savedData.equipped).forEach(itemId => { 
         if (itemId) { let data = getItemData(itemId); flatAtk += data.atk; flatHp += data.hp; } 
     });
-    
-    // Считаем процентные (Multiplier) бонусы от Агентства (каждый уровень дает +2% к атаке и хп)
-    let percentBonus = (savedData.agencyLevel * 2) / 100; // 0.02, 0.04 и т.д.
-
+    let percentBonus = (savedData.agencyLevel * 2) / 100;
     let finalAtk = Math.floor((baseAtk + flatAtk) * (1 + percentBonus));
     let finalHp = Math.floor((baseHp + flatHp) * (1 + percentBonus));
-    
     return { atk: finalAtk, hp: finalHp };
 }
 
 window.renderInventory = function() {
     const grid = document.getElementById('inventoryGrid'); grid.innerHTML = '';
     const slotIcons = { helmet: '🧢', armor: '👕', ring: '💍', boots: '👞', weapon: '🔫', drone: '🛸' };
-    
     ['helmet', 'armor', 'ring', 'weapon', 'boots', 'drone'].forEach(type => {
         const slot = document.getElementById(`slot-${type}`);
-        if (savedData.equipped[type]) { 
-            let data = getItemData(savedData.equipped[type]); 
-            slot.className = `eq-slot rarity-bg-${data.rarity}`; slot.innerHTML = `${data.icon}`; 
-        } else { 
-            slot.className = 'eq-slot'; slot.innerHTML = `<span style="color:#555;">${slotIcons[type]}</span>`; 
-        }
+        if (savedData.equipped[type]) { let data = getItemData(savedData.equipped[type]); slot.className = `eq-slot rarity-bg-${data.rarity}`; slot.innerHTML = `${data.icon}`; } 
+        else { slot.className = 'eq-slot'; slot.innerHTML = `<span style="color:#555;">${slotIcons[type]}</span>`; }
     });
     savedData.inventory.forEach(invItem => {
         let data = getItemData(invItem.id); if(!data) return; 
@@ -127,6 +118,7 @@ window.renderInventory = function() {
     });
     let stats = getCalculatedStats(); document.getElementById('statAtk').innerText = stats.atk; document.getElementById('statHp').innerText = stats.hp; 
 };
+
 window.equipItem = function(uid, type) { let index = savedData.inventory.findIndex(i => i.uid === uid); if (index === -1) return; if (savedData.equipped[type]) savedData.inventory.push({ uid: getUid(), id: savedData.equipped[type] }); savedData.equipped[type] = savedData.inventory[index].id; savedData.inventory.splice(index, 1); saveData(); renderInventory(); };
 window.unequip = function(type) { if (savedData.equipped[type]) { savedData.inventory.push({ uid: getUid(), id: savedData.equipped[type] }); savedData.equipped[type] = null; saveData(); renderInventory(); } };
 
@@ -135,18 +127,11 @@ window.renderSkills = function() {
     for (let i = 0; i < 6; i++) { const slot = document.getElementById(`skill-slot-${i}`); if (savedData.equippedSkills[i]) { let data = skillDatabase.find(s => s.id === savedData.equippedSkills[i]); slot.className = `eq-slot rarity-bg-${data.rarity}`; slot.innerHTML = `${data.icon}`; } else { slot.className = 'eq-slot'; slot.innerHTML = `<span style="color:#555;">➕</span>`; } }
     savedData.skillsInventory.forEach(invItem => { let data = skillDatabase.find(s => s.id === invItem.id); if(!data) return; let div = document.createElement('div'); div.className = `inv-item rarity-bg-${data.rarity}`; div.innerHTML = `${data.icon}`; div.onclick = () => { window.equipSkill(invItem.uid); }; grid.appendChild(div); });
 };
+
 window.equipSkill = function(uid) { let index = savedData.skillsInventory.findIndex(i => i.uid === uid); if (index === -1) return; let emptySlot = savedData.equippedSkills.findIndex(s => s === null); if (emptySlot === -1) { showAlert("Все слоты заняты!"); return; } savedData.equippedSkills[emptySlot] = savedData.skillsInventory[index].id; savedData.skillsInventory.splice(index, 1); saveData(); renderSkills(); };
 window.unequipSkill = function(slotIndex) { if (savedData.equippedSkills[slotIndex]) { savedData.skillsInventory.push({ uid: getUid(), id: savedData.equippedSkills[slotIndex] }); savedData.equippedSkills[slotIndex] = null; saveData(); renderSkills(); } };
 
-window.upgradeAgency = function() { 
-    let cost = (savedData.agencyLevel + 1) * 5; 
-    if (savedData.parts >= cost) { 
-        savedData.parts -= cost; savedData.agencyLevel++; saveData(); 
-        document.getElementById('agencyAtkBonus').innerText = savedData.agencyLevel * 2; // +2% за уровень
-        document.getElementById('agencyCostDisplay').innerText = (savedData.agencyLevel + 1) * 5; 
-        showAlert("Агентство успешно улучшено!"); 
-    } else { showAlert("Недостаточно деталей!"); } 
-};
+window.upgradeAgency = function() { let cost = (savedData.agencyLevel + 1) * 5; if (savedData.parts >= cost) { savedData.parts -= cost; savedData.agencyLevel++; saveData(); document.getElementById('agencyAtkBonus').innerText = savedData.agencyLevel * 2; document.getElementById('agencyCostDisplay').innerText = (savedData.agencyLevel + 1) * 5; showAlert("Агентство успешно улучшено!"); } else { showAlert("Недостаточно деталей!"); } };
 window.buyDailyItem = function(itemId, cost) { if (savedData.gems >= cost) { savedData.gems -= cost; savedData.inventory.push({ uid: getUid(), id: itemId }); saveData(); showAlert("Предмет куплен!"); } else { showAlert("Недостаточно алмазов!"); } };
 window.buyDailySkill = function(skillId, cost) { if (savedData.gems >= cost) { savedData.gems -= cost; savedData.skillsInventory.push({ uid: getUid(), id: skillId }); saveData(); showAlert("Навык куплен!"); } else { showAlert("Недостаточно алмазов!"); } };
 window.buyResource = function(type, amount, cost) { if (savedData.gold >= cost) { savedData.gold -= cost; savedData.parts += amount; saveData(); showAlert(`Куплено ${amount} деталей!`); } else { showAlert("Недостаточно золота!"); } };
@@ -179,10 +164,12 @@ window.spinGoldenSlot = function() {
 };
 window.sellPartsOnMarket = function() { if(savedData.parts >= 10) { savedData.parts -= 10; savedData.gold += 1000; saveData(); showAlert("Продано: +1000 💰"); } else { showAlert("Недостаточно деталей (нужно 10)!"); } };
 window.openEventsModal = function() { document.getElementById('eventsModal').style.display = 'flex'; };
+
 window.claimProgress = function(stageRequired, rewardGems) {
     if (savedData.stage > stageRequired) { if (!savedData.serverProgressClaimed.includes(stageRequired)) { savedData.gems += rewardGems; savedData.serverProgressClaimed.push(stageRequired); saveData(); showAlert(`🎉 Вы забрали: +${rewardGems} 💎!`); } else { showAlert("Уже собрано."); } } 
     else { showAlert(`❌ Достигните Этапа ${stageRequired}!`); }
 };
+
 window.claimMission = function(type) {
     if(type==='kills' && savedData.dailyKills >= 15 && !savedData.missionKillsClaimed) { savedData.missionKillsClaimed = true; savedData.seasonXp += 50; if(savedData.seasonXp >= 100) { savedData.seasonXp -= 100; savedData.seasonLevel++; } saveData(); showAlert("Миссия выполнена! +50 XP"); document.getElementById('missionKills').innerText = "15"; } else { showAlert("Миссия еще не выполнена или уже собрана!"); }
 };
@@ -212,6 +199,7 @@ const input = { x: 0, y: 0, isMoving: false, usingKeyboard: false }; let joystic
 function startInput(clientX, clientY) { if (gameState !== 'playing') return; input.usingKeyboard = false; input.isMoving = true; let rect = joystickZone.getBoundingClientRect(); joystickCenter.x = clientX - rect.left; joystickCenter.y = clientY - rect.top; joystickBase.style.display = 'block'; joystickBase.style.left = `${joystickCenter.x}px`; joystickBase.style.top = `${joystickCenter.y}px`; joystickStick.style.transform = `translate(-50%, -50%)`; }
 function moveInput(clientX, clientY) { if (!input.isMoving || input.usingKeyboard || gameState !== 'playing') return; let rect = joystickZone.getBoundingClientRect(); let dx = (clientX - rect.left) - joystickCenter.x, dy = (clientY - rect.top) - joystickCenter.y; let dist = Math.hypot(dx, dy) || 0.001; if (dist > MAX_JOYSTICK_RADIUS) { dx = (dx/dist)*MAX_JOYSTICK_RADIUS; dy = (dy/dist)*MAX_JOYSTICK_RADIUS; } joystickStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`; input.x = dx / MAX_JOYSTICK_RADIUS; input.y = dy / MAX_JOYSTICK_RADIUS; }
 function stopInput() { if (input.usingKeyboard) return; input.isMoving = false; input.x = 0; input.y = 0; joystickBase.style.display = 'none'; }
+
 joystickZone.addEventListener('touchstart', (e) => startInput(e.changedTouches[0].clientX, e.changedTouches[0].clientY)); joystickZone.addEventListener('touchmove', (e) => moveInput(e.changedTouches[0].clientX, e.changedTouches[0].clientY)); joystickZone.addEventListener('touchend', stopInput); joystickZone.addEventListener('mousedown', (e) => startInput(e.clientX, e.clientY)); joystickZone.addEventListener('mousemove', (e) => moveInput(e.clientX, e.clientY)); window.addEventListener('mouseup', stopInput);
 
 const keys = { up: false, down: false, left: false, right: false };
@@ -219,12 +207,30 @@ window.addEventListener('keydown', (e) => { let code = e.code; if(code==='KeyW' 
 window.addEventListener('keyup', (e) => { let code = e.code; if(code==='KeyW' || code==='ArrowUp') keys.up = false; if(code==='KeyS' || code==='ArrowDown') keys.down = false; if(code==='KeyA' || code==='ArrowLeft') keys.left = false; if(code==='KeyD' || code==='ArrowRight') keys.right = false; updateKeyboardInput(); });
 function updateKeyboardInput() { if (gameState !== 'playing') return; let dx = 0, dy = 0; if (keys.up) dy -= 1; if (keys.down) dy += 1; if (keys.left) dx -= 1; if (keys.right) dx += 1; if (dx !== 0 || dy !== 0) { input.usingKeyboard = true; input.isMoving = true; let dist = Math.hypot(dx, dy); input.x = dx / dist; input.y = dy / dist; joystickBase.style.display = 'none'; } else if (input.usingKeyboard) { input.usingKeyboard = false; input.isMoving = false; input.x = 0; input.y = 0; } }
 
+// --- ПЕРЕМЕННЫЕ РОГАЛИКА (Сброс каждый забег) ---
+let runLevel = 1;
+let runXp = 0;
+let runMaxXp = 50;
+let runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 };
+let pendingLevelUps = 0;
+
+const runSkillsPool = [
+    { id: 'atk_up', name: 'Мощь', desc: '+15% к урону', icon: '⚔️' },
+    { id: 'spd_up', name: 'Ловкость', desc: '+10% к скорости бега', icon: '👟' },
+    { id: 'vamp', name: 'Вампиризм', desc: 'Восст. 2 HP за убийство', icon: '🦇' },
+    { id: 'regen', name: 'Регенерация', desc: 'Восст. 2 HP каждую секунду', icon: '❤️' },
+    { id: 'max_hp', name: 'Здоровяк', desc: '+20% к Макс. HP и лечение', icon: '🛡️' },
+    { id: 'heal', name: 'Аптечка', desc: 'Мгновенно лечит 50% HP', icon: '💊' }
+];
+
 let currentRoom = 1; const maxRooms = 5; 
-// Добавляем фундамент под будущие пассивки (вампиризм, шанс крита и тд)
-let player = { x: 1000, y: 1000, radius: 15, speed: 200, hp: 100, maxHp: 100, atk: 10, attackRate: 2.5, lastAttackTime: 0, vampirism: 0.0 };
+let player = { x: 1000, y: 1000, radius: 15, speed: 200, hp: 100, maxHp: 100, atk: 10, attackRate: 2.5, lastAttackTime: 0 };
 let enemies = []; let projectiles = []; let floatingTexts = []; let killsInRoom = 0; let totalKillsInRun = 0; let revivesUsed = 0; let isBossStage = false; let bossEntity = null; let roomState = 'fighting'; let portal = null; 
 
-window.togglePause = function() { if (gameState === 'playing') { gameState = 'paused'; document.getElementById('pauseModal').style.display = 'flex'; } else if (gameState === 'paused') { gameState = 'playing'; document.getElementById('pauseModal').style.display = 'none'; lastTime = performance.now(); requestAnimationFrame(gameLoop); } };
+window.togglePause = function() { 
+    if (gameState === 'playing') { gameState = 'paused'; document.getElementById('pauseModal').style.display = 'flex'; } 
+    else if (gameState === 'paused') { gameState = 'playing'; document.getElementById('pauseModal').style.display = 'none'; lastTime = performance.now(); requestAnimationFrame(gameLoop); } 
+};
 window.fleeBattle = function() { document.getElementById('pauseModal').style.display = 'none'; showBattleResult(false, true); };
 
 window.startBattle = function() {
@@ -232,7 +238,14 @@ window.startBattle = function() {
     savedData.energy -= 5; saveData();
     document.querySelectorAll('.screen').forEach(s => s.style.display = 'none'); document.getElementById('topBar').style.display = 'none'; document.getElementById('navBar').style.display = 'none'; document.getElementById('battleResultModal').style.display = 'none'; document.getElementById('btnPause').style.display = 'flex'; roomCounterUI.style.display = 'block';
     
-    let finalStats = getCalculatedStats(); player.maxHp = finalStats.hp; player.hp = finalStats.hp; player.atk = finalStats.atk;
+    // Сброс статов для нового забега
+    let finalStats = getCalculatedStats(); 
+    player.maxHp = finalStats.hp; player.hp = finalStats.hp; player.atk = finalStats.atk;
+    runLevel = 1; runXp = 0; runMaxXp = 50; runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 };
+    player.speed = 200; // базовая скорость
+    updateCombatUI();
+    document.getElementById('combatXpContainer').style.display = 'block';
+
     totalKillsInRun = 0; revivesUsed = 0; currentRoom = 1; startRoom();
     gameState = 'playing'; canvas.style.display = 'block'; joystickZone.style.display = 'block';
     lastTime = performance.now(); requestAnimationFrame(gameLoop);
@@ -251,7 +264,7 @@ window.acceptRevive = function() { let cost = (revivesUsed + 1) * 10; if (savedD
 window.declineRevive = function() { document.getElementById('reviveModal').style.display = 'none'; showBattleResult(false); };
 
 function showBattleResult(isWin, isFlee = false) {
-    gameState = 'menu'; document.getElementById('btnPause').style.display = 'none'; roomCounterUI.style.display = 'none';
+    gameState = 'menu'; document.getElementById('btnPause').style.display = 'none'; roomCounterUI.style.display = 'none'; document.getElementById('combatXpContainer').style.display = 'none';
     let goldReward = totalKillsInRun * 15; let partsReward = isWin ? 25 : 5; savedData.dailyKills += totalKillsInRun; savedData.gold += goldReward; savedData.parts += partsReward; if (isWin) savedData.stage++; saveData();
     let modalContent = document.getElementById('battleResultContent'); let titleColor = isWin ? '#00ff00' : '#ff4a4a'; let titleText = isWin ? 'ЭТАП ПРОЙДЕН!' : (isFlee ? 'ОТСТУПЛЕНИЕ' : 'АГЕНТ ПАЛ');
     modalContent.style.borderColor = titleColor; modalContent.innerHTML = `<h2 style="color: ${titleColor}; margin-top: 0; font-size: 28px; font-style: italic;">${titleText}</h2><div style="background: #1e1e2c; padding: 15px; border-radius: 10px; margin-bottom: 20px;"><p style="color: #aaa; margin: 5px 0;">Уничтожено врагов: <strong style="color:#fff;">${totalKillsInRun}</strong></p><div style="display: flex; justify-content: center; gap: 20px; margin-top: 15px;"><div><span style="font-size:24px;">💰</span><br><strong style="color:#ffd700;">+${goldReward}</strong></div><div><span style="font-size:24px;">⚙️</span><br><strong style="color:#da70d6;">+${partsReward}</strong></div></div></div><button onclick="closeBattleResult()" style="background: ${titleColor}; color: #000; border: none; padding: 15px; border-radius: 10px; font-weight: bold; width: 100%; font-size: 18px; cursor: pointer;">ВЕРНУТЬСЯ В ЛОББИ</button>`;
@@ -259,12 +272,76 @@ function showBattleResult(isWin, isFlee = false) {
 }
 window.closeBattleResult = function() { document.getElementById('battleResultModal').style.display = 'none'; canvas.style.display = 'none'; joystickZone.style.display = 'none'; document.getElementById('lobbyScreen').style.display = 'flex'; document.getElementById('topBar').style.display = 'flex'; document.getElementById('navBar').style.display = 'flex'; };
 
+// --- ЛОГИКА ОПЫТА И ПРОКАЧКИ ---
+function updateCombatUI() {
+    let pct = Math.min(100, (runXp / runMaxXp) * 100);
+    document.getElementById('combatXpBar').style.width = pct + '%';
+    document.getElementById('combatLevelText').innerText = 'УР. ' + runLevel;
+}
+
+function checkLevelUp() {
+    while (runXp >= runMaxXp) {
+        runXp -= runMaxXp;
+        runLevel++;
+        runMaxXp = Math.floor(runMaxXp * 1.5);
+        pendingLevelUps++;
+    }
+    updateCombatUI();
+    if (pendingLevelUps > 0 && gameState === 'playing') {
+        gameState = 'paused';
+        renderLevelUpMenu();
+    }
+}
+
+function renderLevelUpMenu() {
+    document.getElementById('levelUpModal').style.display = 'flex';
+    let shuffled = [...runSkillsPool].sort(() => 0.5 - Math.random());
+    let choices = shuffled.slice(0, 3);
+    let container = document.getElementById('skillCardsContainer');
+    container.innerHTML = '';
+    choices.forEach(skill => {
+        let btn = document.createElement('button');
+        btn.className = "skill-card-btn";
+        btn.innerHTML = `<div style="font-size: 32px;">${skill.icon}</div>
+                         <div>
+                            <div style="font-weight: bold; font-size: 16px; color: #ffd700;">${skill.name}</div>
+                            <div style="font-size: 12px; color: #aaa; margin-top: 2px;">${skill.desc}</div>
+                         </div>`;
+        btn.onclick = () => selectRunSkill(skill.id);
+        container.appendChild(btn);
+    });
+}
+
+window.selectRunSkill = function(id) {
+    if (id === 'atk_up') runMods.atkMult += 0.15;
+    if (id === 'spd_up') { runMods.spdMult += 0.10; player.speed = 200 * runMods.spdMult; }
+    if (id === 'vamp') runMods.vamp += 2;
+    if (id === 'regen') runMods.regen += 2;
+    if (id === 'max_hp') { let bonus = Math.floor(player.maxHp * 0.2); player.maxHp += bonus; player.hp += bonus; }
+    if (id === 'heal') { player.hp = Math.min(player.maxHp, player.hp + (player.maxHp * 0.5)); }
+    
+    pendingLevelUps--;
+    if (pendingLevelUps > 0) {
+        renderLevelUpMenu(); 
+    } else {
+        document.getElementById('levelUpModal').style.display = 'none';
+        gameState = 'playing';
+        lastTime = performance.now();
+        requestAnimationFrame(gameLoop);
+    }
+}
+
 let lastTime = performance.now();
 function gameLoop(timestamp) {
     if (gameState !== 'playing') return; requestAnimationFrame(gameLoop);
     let dt = (timestamp - lastTime) / 1000; lastTime = timestamp; if (dt > 0.1) dt = 0.016; 
     
     if (roomState === 'fighting') {
+        // Пассивная регенерация
+        if (runMods.regen > 0 && player.hp < player.maxHp) {
+            player.hp = Math.min(player.maxHp, player.hp + (runMods.regen * dt));
+        }
+
         if (isBossStage) { if (!bossEntity && enemies.length === 0) spawnBoss(); } 
         else { if (enemies.length < 5 + savedData.stage && Math.random() < 1.2 * dt && killsInRoom < 15) spawnEnemy(); }
         if (enemies.length === 0 && (isBossStage ? bossEntity && bossEntity.isDead : killsInRoom >= 15)) { roomState = 'cleared'; portal = { x: world.width / 2, y: world.height / 2 - 200, radius: 40 }; }
@@ -278,15 +355,40 @@ function gameLoop(timestamp) {
     }
 
     if (input.isMoving && (input.x !== 0 || input.y !== 0)) { player.x += input.x * player.speed * dt; player.y += input.y * player.speed * dt; player.x = Math.max(player.radius, Math.min(world.width - player.radius, player.x)); player.y = Math.max(player.radius, Math.min(world.height - player.radius, player.y)); } 
-    if (enemies.length > 0 && (timestamp - player.lastAttackTime)/1000 >= 1/player.attackRate) { let target = null, minDist = Infinity; for (let e of enemies) { const dist = Math.hypot(e.x - player.x, e.y - player.y); if (dist < 400 && dist < minDist) { minDist = dist; target = e; } } if (target) { const dx = target.x - player.x, dy = target.y - player.y, dist = Math.hypot(dx, dy) || 0.001; projectiles.push({ x: player.x, y: player.y, vx: (dx/dist)*500, vy: (dy/dist)*500, radius: 5, damage: player.atk, isEnemy: false }); player.lastAttackTime = timestamp; } }
+    
+    if (enemies.length > 0 && (timestamp - player.lastAttackTime)/1000 >= 1/player.attackRate) { 
+        let target = null, minDist = Infinity; 
+        for (let e of enemies) { const dist = Math.hypot(e.x - player.x, e.y - player.y); if (dist < 400 && dist < minDist) { minDist = dist; target = e; } } 
+        if (target) { 
+            const dx = target.x - player.x, dy = target.y - player.y, dist = Math.hypot(dx, dy) || 0.001; 
+            // Применяем модификатор урона от навыков рогалика
+            let finalDamage = player.atk * runMods.atkMult;
+            projectiles.push({ x: player.x, y: player.y, vx: (dx/dist)*500, vy: (dy/dist)*500, radius: 5, damage: finalDamage, isEnemy: false }); 
+            player.lastAttackTime = timestamp; 
+        } 
+    }
+    
     for (let i = floatingTexts.length - 1; i >= 0; i--) { floatingTexts[i].life -= dt; floatingTexts[i].y -= 30 * dt; if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1); }
+    
     for (let i = enemies.length - 1; i >= 0; i--) {
-        let e = enemies[i]; if (e.isDead) { enemies.splice(i, 1); killsInRoom++; totalKillsInRun++; continue; }
+        let e = enemies[i]; 
+        if (e.isDead) { 
+            enemies.splice(i, 1); killsInRoom++; totalKillsInRun++; 
+            // ОПЫТ И ВАМПИРИЗМ
+            runXp += e.isBoss ? 150 : 20;
+            if (runMods.vamp > 0) {
+                player.hp = Math.min(player.maxHp, player.hp + runMods.vamp);
+                floatingTexts.push({ x: player.x, y: player.y - 20, text: `+${runMods.vamp}`, color: "#00ff00", life: 1.0 });
+            }
+            checkLevelUp();
+            continue; 
+        }
         const dx = player.x - e.x, dy = player.y - e.y, dist = Math.hypot(dx, dy) || 0.001; if (dist > 0) { e.x += (dx / dist) * e.speed * dt; e.y += (dy / dist) * e.speed * dt; }
         e.x = Math.max(e.radius, Math.min(world.width - e.radius, e.x)); e.y = Math.max(e.radius, Math.min(world.height - e.radius, e.y));
         if (e.isBoss && (timestamp - e.lastAttack) > 2000) { for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) { projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a)*300, vy: Math.sin(a)*300, radius: 8, damage: e.atk, isEnemy: true }); } e.lastAttack = timestamp; }
         if (dist < player.radius + e.radius) { player.hp -= e.atk; if (player.hp <= 0) { ctx.restore(); triggerDeath(); return; } e.x -= (dx/dist)*100; e.y -= (dy/dist)*100; }
     }
+    
     for (let i = projectiles.length - 1; i >= 0; i--) {
         let p = projectiles[i]; p.x += p.vx * dt; p.y += p.vy * dt; if (p.x < 0 || p.x > world.width || p.y < 0 || p.y > world.height) { projectiles.splice(i, 1); continue; }
         if (p.isEnemy) { if (Math.hypot(p.x - player.x, p.y - player.y) < p.radius + player.radius) { player.hp -= p.damage; floatingTexts.push({ x: player.x, y: player.y - 20, text: `-${Math.floor(p.damage)}`, color: "#ff0000", life: 1.0 }); projectiles.splice(i, 1); if (player.hp <= 0) { ctx.restore(); triggerDeath(); return; } } } 

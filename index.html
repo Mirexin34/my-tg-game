@@ -22,7 +22,6 @@
         .navBtn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: none; border: none; font-size: 11px; font-weight: bold; cursor: pointer; color: #777; transition: 0.2s; }
         .navBtn.active { color: #ffd700; transform: scale(1.1); }
         
-        /* Измененные слоты под новый дизайн профиля */
         .eq-slot { width: 65px; height: 65px; background: #2a2a35; border: 2px solid #555; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 28px; position: relative; cursor: pointer; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
         .inv-item { width: 100%; aspect-ratio: 1; background: #333; border: 2px solid #555; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; position: relative; }
         
@@ -47,22 +46,39 @@
             align-items: center; justify-content: center;
         }
         #roomCounterUI {
-            position: absolute; top: calc(65px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+            position: absolute; top: calc(85px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
             background: rgba(0,0,0,0.7); border: 1px solid #ffd700; color: #ffd700; padding: 5px 15px;
             border-radius: 15px; font-weight: bold; font-size: 14px; display: none; z-index: 150;
         }
+
+        /* Шкала опыта в бою */
+        #combatXpContainer {
+            display: none; position: absolute; top: calc(55px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); 
+            width: 80%; max-width: 400px; background: rgba(0,0,0,0.6); border: 2px solid #555; border-radius: 10px; height: 18px; z-index: 150;
+        }
+        #combatXpBar {
+            width: 0%; height: 100%; background: linear-gradient(90deg, #00bfff, #00ffff); border-radius: 8px; transition: width 0.3s ease-out;
+        }
+        #combatLevelText {
+            position: absolute; top: -1px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 13px; font-weight: bold; text-shadow: 1px 1px 2px #000;
+        }
+
+        .skill-card-btn {
+            background: #2a2a35; border: 2px solid #555; border-radius: 10px; padding: 15px; 
+            display: flex; align-items: center; gap: 15px; cursor: pointer; text-align: left; 
+            transition: 0.2s; color: white; width: 100%;
+        }
+        .skill-card-btn:active { transform: scale(0.95); border-color: #ffd700; }
     </style>
 </head>
 <body>
     <div id="appContainer">
-        <!-- Сплэш экран -->
         <div id="splashScreen" onclick="this.style.display='none'" style="position:absolute; top:0; left:0; width:100%; height:100%; background: #0f0f16; z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align: center;">
             <h1 style="color:#00ffff; font-size:46px; text-shadow: 0 0 20px #00ffff, 0 0 40px #00bfff; margin-bottom: 10px; font-style: italic;">SPEKTER<br>AGENCY</h1>
             <div style="color:#aaa; margin-bottom: 50px; font-size: 14px;">Инициализация агента...</div>
             <div style="width: 60%; height: 8px; background: #333; border-radius: 4px; overflow: hidden;"><div id="splashProgress" style="width: 0%; height: 100%; background: #00ffff; box-shadow: 0 0 10px #00ffff; transition: 0.1s;"></div></div>
         </div>
 
-        <!-- Верхняя панель -->
         <div id="topBar" style="position: absolute; top: calc(15px + env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; z-index: 1000;">
             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; pointer-events: none;">
                 <div style="background: rgba(0,0,0,0.8); padding: 4px 10px; border-radius: 20px; color: #00ff00; font-weight: bold; border: 1px solid #32cd32; font-size: 12px; pointer-events: auto; cursor: pointer; display: flex; align-items: center; gap: 5px;" onclick="openEnergyShop()">
@@ -74,14 +90,21 @@
             </div>
         </div>
 
-        <!-- Игровой холст -->
         <canvas id="gameCanvas" style="display:none; position:absolute; top:0; left:0;"></canvas>
         <button id="btnPause" onclick="togglePause()">⏸</button>
         <div id="roomCounterUI">Комната 1/5</div>
+        
+        <!-- Контейнер для шкалы опыта -->
+        <div id="combatXpContainer">
+            <div id="combatXpBar"></div>
+            <div id="combatLevelText">УР. 1</div>
+        </div>
+
         <div id="joystickZone"><div id="joystickBase"><div id="joystickStick"></div></div></div>
 
         <!-- Модалки боя -->
         <div id="battleResultModal" class="modal-overlay"><div class="modal-content" id="battleResultContent"></div></div>
+        
         <div id="pauseModal" class="modal-overlay">
             <div class="modal-content" style="border-color: #00ffff;">
                 <h2 style="color: #00ffff;">ПАУЗА</h2>
@@ -89,6 +112,7 @@
                 <button onclick="fleeBattle()" style="background: #dc3545; color: #fff; border: none; padding: 15px; border-radius: 10px; font-weight: bold; width: 100%; font-size: 16px; cursor: pointer;">ПОКИНУТЬ БОЙ</button>
             </div>
         </div>
+
         <div id="reviveModal" class="modal-overlay">
             <div class="modal-content" style="border-color: #ff4a4a;">
                 <div style="font-size: 50px; margin-bottom: 10px;">💀</div>
@@ -98,7 +122,18 @@
             </div>
         </div>
 
-        <!-- 1. ЛОББИ -->
+        <!-- Модалка Level Up -->
+        <div id="levelUpModal" class="modal-overlay">
+            <div class="modal-content" style="border-color: #ffd700;">
+                <h2 style="color: #ffd700; margin-top: 0; font-size: 26px; text-shadow: 0 0 10px #ffd700;">НОВЫЙ УРОВЕНЬ!</h2>
+                <p style="color: #aaa; font-size: 14px; margin-bottom: 20px;">Выберите улучшение на этот забег:</p>
+                <div id="skillCardsContainer" style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Карточки навыков будут сгенерированы через JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Экраны лобби -->
         <div id="lobbyScreen" class="screen" style="display: flex; background: url('https://img.freepik.com/free-vector/dark-hexagonal-background-with-gradient-color_79603-1409.jpg') center/cover;">
             <div style="display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.7); padding: 8px 12px; border-radius: 12px; border: 1px solid #444; width: fit-content; margin: 0 auto; margin-top: 10px;">
                 <div style="width: 40px; height: 40px; background: #555; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px;">🐱</div>
@@ -128,7 +163,6 @@
             </div>
         </div>
 
-        <!-- Модалки Лобби -->
         <div id="eventsModal" class="modal-overlay">
             <div class="modal-content" style="border-color: #ff00ff;">
                 <button onclick="document.getElementById('eventsModal').style.display='none'" style="position:absolute; top:10px; right:10px; background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:5px; font-weight:bold;">X</button>
@@ -156,7 +190,6 @@
             </div>
         </div>
 
-        <!-- 2. МАГАЗИН -->
         <div id="shopScreen" class="screen">
             <div style="max-width: 600px; margin: 0 auto; width: 100%;">
                 <h3 style="color: #00ffff; text-align: center; margin-top: 0; margin-bottom: 10px;">КАРТЫ ЛЬГОТ</h3>
@@ -202,41 +235,28 @@
             </div>
         </div>
 
-        <!-- 3. ЭКИПИРОВКА (Новый дизайн профиля) -->
         <div id="equipmentScreen" class="screen">
             <div style="max-width: 600px; margin: 0 auto; width: 100%;">
-                
-                <!-- Окно персонажа в стиле референса -->
                 <div style="background: linear-gradient(180deg, #3a1c71, #1a1a24); border-radius: 20px; padding: 20px; text-align: center; margin-bottom: 15px; position: relative; border: 1px solid #555;">
                     <h3 style="color:#fff; margin:0 0 20px 0;">ПРОФИЛЬ АГЕНТА</h3>
-                    
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 10px; position: relative;">
-                        <!-- Левые слоты -->
                         <div style="display: flex; flex-direction: column; gap: 15px;">
                             <div id="slot-helmet" class="eq-slot" onclick="unequip('helmet')"></div>
                             <div id="slot-armor" class="eq-slot" onclick="unequip('armor')"></div>
                             <div id="slot-ring" class="eq-slot" onclick="unequip('ring')"></div>
                         </div>
-                        
-                        <!-- Центральный персонаж (Пока заглушка, потом вставишь свою картинку) -->
                         <div style="width: 130px; height: 180px; background: url('https://cdn3d.iconscout.com/3d/premium/thumb/ninja-5353597-4468694.png') center/contain no-repeat; filter: drop-shadow(0 0 10px rgba(0,255,255,0.5));"></div>
-                        
-                        <!-- Правые слоты -->
                         <div style="display: flex; flex-direction: column; gap: 15px;">
                             <div id="slot-weapon" class="eq-slot" onclick="unequip('weapon')"></div>
                             <div id="slot-boots" class="eq-slot" onclick="unequip('boots')"></div>
                             <div id="slot-drone" class="eq-slot" onclick="unequip('drone')"></div>
                         </div>
                     </div>
-                    
-                    <!-- Плашка статов под персонажем -->
                     <div style="display: flex; justify-content: space-around; margin-top: 25px; background: rgba(0,0,0,0.6); padding: 12px; border-radius: 15px; border: 1px solid #444;">
                         <div style="color: #fff; font-size: 16px;">⚔️ Атака: <br><span id="statAtk" style="font-weight:bold; color:#00ff00; font-size: 20px;">100</span></div>
                         <div style="color: #fff; font-size: 16px;">❤️ Здоровье: <br><span id="statHp" style="font-weight:bold; color:#ff4a4a; font-size: 20px;">500</span></div>
                     </div>
                 </div>
-
-                <!-- Инвентарь ниже -->
                 <div style="background: #1e1e2c; padding: 15px; border-radius: 20px; flex-grow: 1;">
                     <div style="color: #aaa; font-size: 12px; margin-bottom: 10px; text-align: center; text-transform: uppercase;">Склад экипировки</div>
                     <div id="inventoryGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;"></div>
@@ -244,7 +264,6 @@
             </div>
         </div>
 
-        <!-- 4. НАВЫКИ -->
         <div id="skillsScreen" class="screen">
             <div style="max-width: 600px; margin: 0 auto; width: 100%;">
                 <div style="background: linear-gradient(180deg, #8b0000, #1a1a24); border-radius: 20px; padding: 20px; text-align: center; margin-bottom: 15px;">
@@ -269,7 +288,6 @@
             </div>
         </div>
 
-        <!-- 5. ГОРОД и АГЕНТСТВО -->
         <div id="cityScreen" class="screen">
             <div style="max-width: 600px; margin: 0 auto; width: 100%;">
                 <h2 style="color: #00ffff; text-align: center;">ГОРОД</h2>
@@ -309,7 +327,6 @@
             </div>
         </div>
 
-        <!-- Нижняя навигация -->
         <div id="navBar" style="position: absolute; bottom: 0; left: 0; width: 100%; height: calc(70px + env(safe-area-inset-bottom)); background: #161622; border-top: 1px solid #333; display: flex; justify-content: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box;">
             <div style="display: flex; width: 100%; max-width: 600px;">
                 <button class="navBtn" onclick="switchTab('shopScreen', this)"><span style="font-size:24px; margin-bottom:4px;">🛒</span> Магазин</button>
