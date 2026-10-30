@@ -6,73 +6,32 @@
     <title>Spekter Agency</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { 
-            margin: 0; padding: 0; background: #050508; font-family: sans-serif; overflow: hidden; user-select: none;
-            width: 100vw; height: 100vh;
-        }
-        #appContainer {
-            width: 100%; height: 100%; position: relative; background: #1a1a24; overflow: hidden;
-        }
-
-        .screen { 
-            display: none; width: 100%; height: 100%; flex-direction: column; overflow-y: auto; 
-            padding: calc(75px + env(safe-area-inset-top)) 15px calc(90px + env(safe-area-inset-bottom)); 
-            box-sizing: border-box; position: absolute; top: 0; left: 0; background: #1a1a24;
-        }
+        body { margin: 0; padding: 0; background: #050508; font-family: sans-serif; overflow: hidden; user-select: none; width: 100vw; height: 100vh; }
+        #appContainer { width: 100%; height: 100%; position: relative; background: #1a1a24; overflow: hidden; }
+        .screen { display: none; width: 100%; height: 100%; flex-direction: column; overflow-y: auto; padding: calc(75px + env(safe-area-inset-top)) 15px calc(90px + env(safe-area-inset-bottom)); box-sizing: border-box; position: absolute; top: 0; left: 0; background: #1a1a24; }
         .navBtn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: none; border: none; font-size: 11px; font-weight: bold; cursor: pointer; color: #777; transition: 0.2s; }
         .navBtn.active { color: #ffd700; transform: scale(1.1); }
-        
         .eq-slot { width: 65px; height: 65px; background: #2a2a35; border: 2px solid #555; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 28px; position: relative; cursor: pointer; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
         .inv-item { width: 100%; aspect-ratio: 1; background: #333; border: 2px solid #555; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; position: relative; }
-        
         .rarity-bg-normal { background: linear-gradient(135deg, #444, #222); border-color: #aaa; }
         .rarity-bg-rare { background: linear-gradient(135deg, #4169e1, #00008b); border-color: #00bfff; }
         .rarity-bg-epic { background: linear-gradient(135deg, #9370db, #4b0082); border-color: #da70d6; }
         .rarity-bg-legendary { background: linear-gradient(135deg, #ffd700, #ff8c00); border-color: #ffff00; }
-        
         .stat-badge { position: absolute; bottom: 2px; right: 4px; font-size: 10px; font-weight: bold; color: white; background: rgba(0,0,0,0.7); padding: 2px 5px; border-radius: 4px; }
         .modal-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; }
         .modal-content { background: #2a2a35; border: 2px solid #ffea00; border-radius: 20px; padding: 20px; width: 90%; max-width: 500px; max-height: 80%; overflow-y: auto; text-align: center; color: white; position: relative; }
         .event-btn { background: linear-gradient(135deg, #ff00ff, #8a2be2); color: white; border: none; padding: 12px; border-radius: 12px; font-weight: bold; width: 100%; font-size: 16px; cursor: pointer; box-shadow: 0 4px 10px rgba(138,43,226,0.5); }
-        
         #joystickZone { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; touch-action: none; display: none; }
         #joystickBase { position: absolute; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; transform: translate(-50%, -50%); display: none; pointer-events: none; }
         #joystickStick { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; background: rgba(255,255,255,0.8); border-radius: 50%; transform: translate(-50%, -50%); }
-        
-        #btnPause {
-            position: absolute; top: calc(60px + env(safe-area-inset-top)); right: 15px;
-            width: 40px; height: 40px; background: rgba(0,0,0,0.5); border: 2px solid #fff; border-radius: 10px;
-            color: #fff; font-size: 20px; font-weight: bold; display: none; z-index: 150; cursor: pointer;
-            align-items: center; justify-content: center;
-        }
-        #roomCounterUI {
-            position: absolute; top: calc(85px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.7); border: 1px solid #ffd700; color: #ffd700; padding: 5px 15px;
-            border-radius: 15px; font-weight: bold; font-size: 14px; display: none; z-index: 150;
-        }
-
-        #combatXpContainer {
-            display: none; position: absolute; top: calc(55px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); 
-            width: 80%; max-width: 400px; background: rgba(0,0,0,0.6); border: 2px solid #555; border-radius: 10px; height: 18px; z-index: 150;
-        }
-        #combatXpBar {
-            width: 0%; height: 100%; background: linear-gradient(90deg, #00bfff, #00ffff); border-radius: 8px; transition: width 0.3s ease-out;
-        }
-        #combatLevelText {
-            position: absolute; top: -1px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 13px; font-weight: bold; text-shadow: 1px 1px 2px #000;
-        }
-
-        .skill-card-btn {
-            background: #2a2a35; border: 2px solid #555; border-radius: 10px; padding: 15px; 
-            display: flex; align-items: center; gap: 15px; cursor: pointer; text-align: left; 
-            transition: 0.2s; color: white; width: 100%;
-        }
+        #btnPause { position: absolute; top: calc(60px + env(safe-area-inset-top)); right: 15px; width: 40px; height: 40px; background: rgba(0,0,0,0.5); border: 2px solid #fff; border-radius: 10px; color: #fff; font-size: 20px; font-weight: bold; display: none; z-index: 150; cursor: pointer; align-items: center; justify-content: center; }
+        #roomCounterUI { position: absolute; top: calc(85px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); border: 1px solid #ffd700; color: #ffd700; padding: 5px 15px; border-radius: 15px; font-weight: bold; font-size: 14px; display: none; z-index: 150; }
+        #combatXpContainer { display: none; position: absolute; top: calc(55px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: 80%; max-width: 400px; background: rgba(0,0,0,0.6); border: 2px solid #555; border-radius: 10px; height: 18px; z-index: 150; }
+        #combatXpBar { width: 0%; height: 100%; background: linear-gradient(90deg, #00bfff, #00ffff); border-radius: 8px; transition: width 0.3s ease-out; }
+        #combatLevelText { position: absolute; top: -1px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 13px; font-weight: bold; text-shadow: 1px 1px 2px #000; }
+        .skill-card-btn { background: #2a2a35; border: 2px solid #555; border-radius: 10px; padding: 15px; display: flex; align-items: center; gap: 15px; cursor: pointer; text-align: left; transition: 0.2s; color: white; width: 100%; }
         .skill-card-btn:active { transform: scale(0.95); border-color: #ffd700; }
-        
-        .craft-card {
-            background: #1e1e2c; border: 1px solid #555; border-radius: 10px; padding: 10px; margin-bottom: 10px;
-            display: flex; justify-content: space-between; align-items: center; text-align: left;
-        }
+        .craft-card { background: #1e1e2c; border: 1px solid #555; border-radius: 10px; padding: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; text-align: left; }
     </style>
 </head>
 <body>
@@ -290,11 +249,33 @@
                     <button onclick="spinGoldenSlot()" style="width: 100%; background: #fff; color: #ff6600; border: none; padding: 12px; border-radius: 10px; font-weight: bold;">Вращать (50 💎)</button>
                 </div>
                 
+                <!-- КНОПКА АУКЦИОНА / РЫНКА -->
+                <div style="background: linear-gradient(135deg, #1f4068, #162447); border: 2px solid #00ffff; border-radius: 15px; padding: 15px; text-align: center; margin-bottom: 20px;">
+                    <h3 style="color: #00ffff; margin: 0 0 5px 0;">🏪 РЫНОК И АУКЦИОН</h3>
+                    <p style="color: #aaa; font-size: 12px; margin-bottom: 10px;">Торгуйте чертежами и экипировкой за ценные алмазы!</p>
+                    <button onclick="openAuctionModal()" style="width: 100%; background: #00bcd4; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer;">ОТКРЫТЬ РЫНОК</button>
+                </div>
+
                 <div style="background: #2a2a35; border: 2px solid #00bcd4; border-radius: 15px; padding: 15px; text-align: center; margin-bottom: 20px;">
                     <h3 style="color: #00bcd4; margin: 0 0 10px 0;">🛠️ Оружейная (Крафт)</h3>
                     <p style="color: #aaa; font-size: 12px; margin-bottom: 10px;">Создавайте оружие. Чертежи падают с Боссов!</p>
                     <div id="craftingList"></div>
                 </div>
+            </div>
+        </div>
+        
+        <!-- МОДАЛКО АУКЦИОНА / РЫНКА -->
+        <div id="auctionModal" class="modal-overlay">
+            <div class="modal-content" style="border-color: #00ffff;">
+                <button onclick="document.getElementById('auctionModal').style.display='none'" style="position:absolute; top:10px; right:10px; background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:5px; font-weight:bold; cursor:pointer;">X</button>
+                <h3 style="color: #00ffff; margin-top:0;">🏪 МЕЖДУНАРОДНЫЙ РЫНОК</h3>
+                <p style="color: #aaa; font-size: 13px; margin-bottom: 15px;">Здесь игроки выставляют на продажу чертежи и редкие предметы за 💎 алмазы.</p>
+                <div style="background: #1e1e2c; border: 1px dashed #555; border-radius: 10px; padding: 20px; text-align: center; margin-bottom: 15px;">
+                    <div style="font-size: 30px; margin-bottom: 5px;">🚧</div>
+                    <div style="color: #ffd700; font-weight: bold;">Раздел аукциона в разработке</div>
+                    <div style="color: #888; font-size: 11px; margin-top: 5px;">Скоро здесь появится полноценный стакан лотов от игроков с покупкой за алмазы.</div>
+                </div>
+                <button onclick="document.getElementById('auctionModal').style.display='none'" style="background: #28a745; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer;">ПОНЯТНО</button>
             </div>
         </div>
         
@@ -323,7 +304,7 @@
             </div>
         </div>
 
-        <div id="navBar" style="position: absolute; bottom: 0; left: 0; width: 100%; height: calc(70px + env(safe-area-bottom)); background: #161622; border-top: 1px solid #333; display: flex; justify-content: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box;">
+        <div id="navBar" style="position: absolute; bottom: 0; left: 0; width: 100%; height: calc(70px + env(safe-area-inset-bottom)); background: #161622; border-top: 1px solid #333; display: flex; justify-content: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box;">
             <div style="display: flex; width: 100%; max-width: 600px;">
                 <button class="navBtn" onclick="switchTab('shopScreen', this)"><span style="font-size:24px; margin-bottom:4px;">🛒</span> Магазин</button>
                 <button class="navBtn" onclick="switchTab('equipmentScreen', this)"><span style="font-size:24px; margin-bottom:4px;">🎒</span> Экипировка</button>
@@ -333,6 +314,8 @@
             </div>
         </div>
     </div>
+    <!-- Сначала подключаем базы данных, затем игровую логику -->
+    <script src="data.js"></script>
     <script src="game.js"></script>
 </body>
 </html>

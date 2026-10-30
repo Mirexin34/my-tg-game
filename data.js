@@ -1,0 +1,48 @@
+// ==========================================================================
+// БАЗЫ ДАННЫХ ИГРЫ (SPEKTER AGENCY: DATA)
+// ==========================================================================
+
+// База данных снаряжения (оружие, броня, кольца, ботинки, дроны)
+const itemDatabase = [
+    { id: 'h1', type: 'helmet', rarity: 'normal', icon: '🧢', hp: 100, atk: 0 },
+    { id: 'h3', type: 'helmet', rarity: 'epic', icon: '🪖', hp: 800, atk: 50 },
+    { id: 'a1', type: 'armor', rarity: 'normal', icon: '👕', hp: 200, atk: 0 },
+    { id: 'a3', type: 'armor', rarity: 'epic', icon: '🧥', hp: 1200, atk: 80 },
+    { id: 'r1', type: 'ring', rarity: 'normal', icon: '💍', hp: 0, atk: 50 },
+    { id: 'r3', type: 'ring', rarity: 'epic', icon: '💍', hp: 0, atk: 400 },
+    { id: 'b1', type: 'boots', rarity: 'normal', icon: '👞', hp: 50, atk: 0 },
+    { id: 'b3', type: 'boots', rarity: 'epic', icon: '🥾', hp: 400, atk: 60 },
+    { id: 'w1', type: 'weapon', rarity: 'normal', icon: '🔫', hp: 0, atk: 150, fireRate: 1.0, bullets: 1, projSpeed: 600, spread: 0 },
+    { id: 'w2', type: 'weapon', rarity: 'rare', icon: '⚡', hp: 0, atk: 250, fireRate: 2.5, bullets: 1, projSpeed: 800, spread: 0.1 },
+    { id: 'w3', type: 'weapon', rarity: 'epic', icon: '☄️', hp: 0, atk: 200, fireRate: 0.8, bullets: 3, projSpeed: 650, spread: 0.25 },
+    { id: 'd1', type: 'drone', rarity: 'rare', icon: '🛸', hp: 200, atk: 100 }
+];
+
+// База данных навыков
+const skillDatabase = [
+    { id: 'sk_light', rarity: 'rare', icon: '⚡' },
+    { id: 'sk_shield', rarity: 'epic', icon: '🛡️' },
+    { id: 'sk_fire', rarity: 'normal', icon: '🔥' }
+];
+
+// Рецепты крафта в Оружейной
+const craftingRecipes = [
+    { id: 'w1', name: 'Базовый Пистолет', costGold: 1000, costParts: 50, reqStage: 1, reqBp: null, icon: '🔫' },
+    { id: 'w2', name: 'Плазмо-винтовка', costGold: 5000, costParts: 250, reqStage: 2, reqBp: 'bp_w2', icon: '⚡', bpName: 'Плазма' },
+    { id: 'w3', name: 'Рельсотрон (Дробовик)', costGold: 15000, costParts: 800, reqStage: 4, reqBp: 'bp_w3', icon: '☄️', bpName: 'Рельсотрон' }
+];
+
+// Баффы, выпадающие при повышении уровня в бою
+const runSkillsPool = [
+    { id: 'atk_up', name: 'Мощь', desc: '+15% к урону', icon: '⚔️' },
+    { id: 'spd_up', name: 'Ловкость', desc: '+10% к скорости бега', icon: '👟' },
+    { id: 'vamp', name: 'Вампиризм', desc: 'Восст. 2 HP за убийство', icon: '🦇' },
+    { id: 'regen', name: 'Регенерация', desc: 'Восст. 2 HP каждую секунду', icon: '❤️' },
+    { id: 'max_hp', name: 'Здоровяк', desc: '+20% к Макс. HP и лечение', icon: '🛡️' },
+    { id: 'heal', name: 'Аптечка', desc: 'Мгновенно лечит 50% HP', icon: '💊' }
+];
+
+// Задел под структуру Аукциона / Рынка (активные лоты игроков)
+let auctionMarketList = [
+    // Примеры будущих лотов: { id: 'lot_1', seller: 'Агент#77', itemType: 'blueprint', itemId: 'bp_w2', priceGems: 150 }
+];
