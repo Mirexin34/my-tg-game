@@ -1,20 +1,32 @@
 const tg = window.Telegram?.WebApp;
 if (tg) {
-    tg.expand();
+    // Включаем полноэкранный режим на iPhone, чтобы убрать крестик и панель
+    try { tg.requestFullscreen(); } catch(e) { tg.expand(); }
     try { tg.disableVerticalSwipes(); tg.setHeaderColor('#1a1a24'); tg.setBackgroundColor('#1a1a24'); } catch(e) {}
 }
 
-const showAlert = (msg) => { if (tg && tg.showAlert) { tg.showAlert(msg); } else { alert(msg); } };
+const showAlert = (msg) => { 
+    // Если сообщение требует подтверждения - используем нативный popup Telegram
+    if (tg && tg.showPopup) {
+        tg.showPopup({ title: 'Информация', message: msg, buttons: [{type: 'ok'}] });
+    } else { alert(msg); } 
+};
 
 document.addEventListener('DOMContentLoaded', () => {
     let progress = 0; const bar = document.getElementById('splashProgress');
     const interval = setInterval(() => {
         progress += 5; bar.style.width = progress + '%';
-        if (progress >= 100) { clearInterval(interval); document.getElementById('splashScreen').style.opacity = '0'; setTimeout(() => { document.getElementById('splashScreen').style.display = 'none'; }, 500); }
+        if (progress >= 100) { 
+            clearInterval(interval); 
+            document.getElementById('splashScreen').style.opacity = '0'; 
+            setTimeout(() => { document.getElementById('splashScreen').style.display = 'none'; }, 500); 
+        }
     }, 50);
 });
 
 let gameState = 'menu';
+
+// Блокируем скролл на Canvas, чтобы экран не "резинил"
 document.addEventListener('touchmove', function(e) { 
     if (gameState === 'playing' || !e.target.closest('.screen, .modal-content')) {
         e.preventDefault(); 
@@ -37,7 +49,7 @@ const defaultSave = {
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try {
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal9') || localStorage.getItem('spekterSaveFinal8') || localStorage.getItem('spekterSaveFinal') || 'null');
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal9') || 'null');
     if (loaded) {
         Object.assign(savedData, loaded);
         if(loaded.equipped) Object.assign(savedData.equipped, loaded.equipped);
@@ -62,16 +74,51 @@ function checkDailyReset() {
     }
 }
 
+// Восстановление энергии: 1 единица каждые 5 минут
 function checkEnergyRegen() {
     let now = Date.now();
     let diff = now - savedData.lastEnergyTime;
     let regenAmount = Math.floor(diff / (5 * 60 * 1000));
+    
     if (regenAmount > 0 && savedData.energy < 30) {
         savedData.energy = Math.min(30, savedData.energy + regenAmount);
         savedData.lastEnergyTime += regenAmount * (5 * 60 * 1000);
         saveData();
     } else if (savedData.energy >= 30) {
         savedData.lastEnergyTime = now;
+    }
+}
+
+// Таймер для визуала
+function updateEnergyTimerUI() {
+    if (savedData.energy >= 30) {
+        document.getElementById('energyTimer').innerText = '(МАКС)';
+    } else {
+        let diff = Date.now() - savedData.lastEnergyTime;
+        let timeLeft = (5 * 60 * 1000) - diff;
+        if (timeLeft <= 0) {
+            checkEnergyRegen(); 
+        } else {
+            let m = Math.floor(timeLeft / 60000);
+            let s = Math.floor((timeLeft % 60000) / 1000);
+            document.getElementById('energyTimer').innerText = `(${m}:${s.toString().padStart(2, '0')})`;
+        }
+    }
+}
+
+// Покупка энергии
+window.openEnergyShop = function() {
+    if (savedData.energy >= 30) {
+        showAlert("У вас уже максимум энергии!"); return;
+    }
+    if (confirm("Купить 10 Энергии за 50 💎?")) {
+        if (savedData.gems < 50) {
+            showAlert("Недостаточно алмазов!"); return;
+        }
+        savedData.gems -= 50;
+        savedData.energy = Math.min(30, savedData.energy + 10);
+        saveData();
+        showAlert("✅ Успешно куплено 10 Энергии!");
     }
 }
 
@@ -84,9 +131,14 @@ function updateTopBar() {
     document.getElementById('partsDisplay').innerText = savedData.parts;
     document.getElementById('energyDisplay').innerText = savedData.energy;
     document.getElementById('accountLevelDisplay').innerText = savedData.accountLevel;
+    
     let stageTxt = savedData.stage;
-    if (savedData.stage % 5 === 0) { document.getElementById('stageTitle').style.color = '#ff4a4a'; stageTxt += " (БОСС)"; } 
-    else document.getElementById('stageTitle').style.color = '#ffea00';
+    if (savedData.stage % 5 === 0) { 
+        document.getElementById('stageTitle').style.color = '#ff4a4a'; 
+        stageTxt += " (БОСС)"; 
+    } else {
+        document.getElementById('stageTitle').style.color = '#ffea00';
+    }
     document.getElementById('stageDisplay').innerText = stageTxt;
 }
 
@@ -179,7 +231,6 @@ window.updateEventsUI = function() {
         else btn.disabled = true;
     });
 };
-
 window.claimBeginner = function(day) {
     if (savedData.beginnerClaimed[day-1]) return;
     if (day === 1) { savedData.gold += 1000; savedData.parts += 10; showAlert("Вы получили 1000 💰 и 10 ⚙️!"); }
@@ -196,9 +247,9 @@ window.updateVIPUI = function() {
         else { btnClaim.innerText = "Собрано"; btnClaim.disabled = true; btnClaim.style.background = "#555"; }
     } else { btnBuy.style.display = 'inline-block'; btnClaim.style.display = 'none'; }
 };
-
 window.buyVip = function() { showAlert("Покупка VIP... Успешно!"); savedData.vipActive = true; savedData.gems += 80; savedData.vipLastClaim = 0; saveData(); updateVIPUI(); };
 window.claimVipDaily = function() { savedData.gems += 50; savedData.vipLastClaim = Date.now(); saveData(); updateVIPUI(); showAlert("Вы получили 50 💎 по Серебряной карте!"); };
+
 window.buyDailyItem = function(itemId, cost) { if (savedData.gems < cost) { showAlert("❌ Недостаточно алмазов!"); return; } savedData.gems -= cost; savedData.inventory.push({ uid: getUid(), id: itemId }); saveData(); showAlert("Предмет успешно куплен!"); };
 window.buyDailySkill = function(skillId, cost) { if (savedData.gems < cost) { showAlert("❌ Недостаточно алмазов!"); return; } savedData.gems -= cost; savedData.skillsInventory.push({ uid: getUid(), id: skillId }); saveData(); showAlert("Навык успешно куплен!"); };
 window.buyResource = function(type, amount, cost) { if (savedData.gold < cost) { showAlert("❌ Недостаточно золота!"); return; } savedData.gold -= cost; if (type === 'parts') savedData.parts += amount; saveData(); showAlert(`Вы купили ${amount} Деталей!`); };
@@ -250,16 +301,19 @@ window.showGachaResult = function(items) {
 };
 
 function getItemData(itemId) { return itemDatabase.find(i => i.id === itemId); }
+
 function getCalculatedStats() {
     let baseAtk = 100 + (savedData.accountLevel * 10) + (savedData.agencyLevel * 15);
     let baseHp = 500 + (savedData.accountLevel * 50) + (savedData.agencyLevel * 60);
     Object.values(savedData.equipped).forEach(itemId => { if (itemId) { let data = getItemData(itemId); baseAtk += data.atk; baseHp += data.hp; } });
     return { atk: baseAtk, hp: baseHp };
 }
+
 function calculateStats() {
     let stats = getCalculatedStats();
     document.getElementById('statAtk').innerText = stats.atk; document.getElementById('statHp').innerText = stats.hp; document.getElementById('bmDisplay').innerText = stats.atk + stats.hp;
 }
+
 window.renderInventory = function() {
     const grid = document.getElementById('inventoryGrid'); grid.innerHTML = '';
     ['helmet', 'armor', 'ring', 'boots'].forEach(type => {
@@ -325,7 +379,6 @@ window.upgradeAgency = function() {
     if (savedData.parts >= cost) { savedData.parts -= cost; savedData.agencyLevel++; saveData(); renderAgency(); calculateStats(); showAlert("✅ Агентство улучшено!"); } 
     else showAlert(`❌ Не хватает деталей! Нужно: ${cost} ⚙️`);
 };
-
 window.sellPartsOnMarket = function() { if (savedData.parts >= 10) { savedData.parts -= 10; savedData.gold += 1000; saveData(); showAlert("✅ Вы продали 10 ⚙️ за 1000 💰"); } else { showAlert("❌ Нужно минимум 10 деталей!"); } };
 window.startPvP = function() {
     if (savedData.energy < 10) { showAlert("❌ Недостаточно энергии! Нужно 10 ⚡"); return; }
@@ -338,7 +391,8 @@ window.startPvP = function() {
 
 let pendingGold = 0, pendingParts = 0;
 setInterval(() => {
-    checkEnergyRegen();
+    updateEnergyTimerUI();
+    
     let diff = Math.min(Date.now() - savedData.lastAFKTime, 86400000);
     let totalSeconds = Math.floor(diff / 1000);
     document.getElementById('sweepTimeDisplay').innerText = `${Math.floor(totalSeconds / 3600).toString().padStart(2, '0')}:${Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0')}:${(totalSeconds % 60).toString().padStart(2, '0')}`;
@@ -374,8 +428,12 @@ window.claimSeasonReward = function() {
 
 updateTopBar(); calculateStats(); updateVIPUI(); updateEventsUI(); renderAgency(); checkDailyReset(); updateMissionsUI();
 
-const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
-const joystickZone = document.getElementById('joystickZone'); const joystickBase = document.getElementById('joystickBase'); const joystickStick = document.getElementById('joystickStick');
+// ----------------- БОЕВОЙ ДВИЖОК CANVAS -----------------
+const canvas = document.getElementById('gameCanvas'); 
+const ctx = canvas.getContext('2d');
+const joystickZone = document.getElementById('joystickZone'); 
+const joystickStick = document.getElementById('joystickStick');
+
 let screenW, screenH;
 function resize() { 
     screenW = window.innerWidth; screenH = window.innerHeight;
@@ -383,26 +441,36 @@ function resize() {
 }
 window.addEventListener('resize', resize); resize();
 
-const world = { width: 1600, height: 1600 }; const camera = { x: 0, y: 0 };
-const input = { x: 0, y: 0, isMoving: false }; const joystickCenter = { x: 0, y: 0 }; const MAX_JOYSTICK_RADIUS = 50;
+const world = { width: 1600, height: 1600 }; 
+const camera = { x: 0, y: 0 };
+const input = { x: 0, y: 0, isMoving: false }; 
+
+let joystickCenter = { x: 0, y: 0 }; 
+const MAX_JOYSTICK_RADIUS = 50; // Максимальный радиус стика
 
 joystickZone.addEventListener('touchstart', (e) => { 
     if (gameState !== 'playing') return; 
     input.isMoving = true; 
-    joystickCenter.x = e.changedTouches[0].clientX; joystickCenter.y = e.changedTouches[0].clientY; 
+    // Определяем центр статичного джойстика
     let rect = joystickZone.getBoundingClientRect();
-    joystickBase.style.display = 'block'; 
-    joystickBase.style.left = `${joystickCenter.x - rect.left}px`; 
-    joystickBase.style.top = `${joystickCenter.y - rect.top}px`; 
-    joystickStick.style.transform = `translate(-50%, -50%)`; 
+    joystickCenter.x = rect.left + rect.width / 2;
+    joystickCenter.y = rect.top + rect.height / 2;
+    joystickStick.style.transition = 'none'; // Убираем плавность при касании
 });
 joystickZone.addEventListener('touchmove', (e) => { 
     if (!input.isMoving || gameState !== 'playing') return; 
-    let dx = e.changedTouches[0].clientX - joystickCenter.x, dy = e.changedTouches[0].clientY - joystickCenter.y, dist = Math.hypot(dx, dy) || 0.001; 
+    let dx = e.changedTouches[0].clientX - joystickCenter.x, dy = e.changedTouches[0].clientY - joystickCenter.y;
+    let dist = Math.hypot(dx, dy) || 0.001; 
     if (dist > MAX_JOYSTICK_RADIUS) { dx = (dx/dist)*MAX_JOYSTICK_RADIUS; dy = (dy/dist)*MAX_JOYSTICK_RADIUS; } 
-    joystickStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`; input.x = dx / MAX_JOYSTICK_RADIUS; input.y = dy / MAX_JOYSTICK_RADIUS; 
+    joystickStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`; 
+    input.x = dx / MAX_JOYSTICK_RADIUS; 
+    input.y = dy / MAX_JOYSTICK_RADIUS; 
 });
-const endTouch = () => { input.isMoving = false; input.x = 0; input.y = 0; joystickBase.style.display = 'none'; };
+const endTouch = () => { 
+    input.isMoving = false; input.x = 0; input.y = 0; 
+    joystickStick.style.transition = 'transform 0.2s'; // Плавный возврат в центр
+    joystickStick.style.transform = `translate(-50%, -50%)`; 
+};
 joystickZone.addEventListener('touchend', endTouch); joystickZone.addEventListener('touchcancel', endTouch);
 
 let player = { x: 800, y: 800, radius: 15, speed: 200, hp: 100, maxHp: 100, atk: 10, attackRate: 2.5, lastAttackTime: 0, skillTimers: { lightning: 0, fire: 0 } };
@@ -414,8 +482,8 @@ window.startBattle = function() {
     savedData.energy -= 5; saveData();
     document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
     document.getElementById('topBar').style.display = 'none'; document.getElementById('navBar').style.display = 'none';
-    canvas.style.display = 'block'; joystickZone.style.display = 'block';
     
+    // Рассчитываем статы перед боем
     let finalStats = getCalculatedStats();
     player.maxHp = finalStats.hp; player.hp = finalStats.hp; player.atk = finalStats.atk;
     player.x = world.width / 2; player.y = world.height / 2;
@@ -423,6 +491,9 @@ window.startBattle = function() {
     
     isBossStage = (savedData.stage % 5 === 0); bossEntity = null;
     gameState = 'playing';
+    
+    canvas.style.display = 'block'; 
+    joystickZone.style.display = 'block';
 };
 
 function spawnEnemy() {
@@ -430,8 +501,10 @@ function spawnEnemy() {
     let hp = 50 + (savedData.stage * 20);
     enemies.push({ x: player.x + Math.cos(angle)*distance, y: player.y + Math.sin(angle)*distance, radius: 16, hp: hp, maxHp: hp, speed: 100 + Math.random()*40, isBoss: false });
 }
+
 function spawnBoss() {
     const angle = Math.random() * Math.PI * 2; const distance = Math.max(screenW, screenH) / 2 + 100;
+    // Исправлен критический баг со здоровьем босса (добавлен знак умножения)
     let hp = (50 + (savedData.stage * 20)) * 10;
     bossEntity = { x: player.x + Math.cos(angle)*distance, y: player.y + Math.sin(angle)*distance, radius: 40, hp: hp, maxHp: hp, speed: 80, isBoss: true, lastAttack: 0 };
     enemies.push(bossEntity);
@@ -453,8 +526,11 @@ function gameLoop(timestamp) {
     let dt = (timestamp - lastTime) / 1000; lastTime = timestamp; if (dt > 0.1) dt = 0.016; 
     
     if (gameState === 'playing') {
-        if (isBossStage) { if (!bossEntity && enemies.length === 0) spawnBoss(); } 
-        else { if (enemies.length < 5 + savedData.stage && Math.random() < 1.2 * dt) spawnEnemy(); }
+        if (isBossStage) { 
+            if (!bossEntity && enemies.length === 0) spawnBoss(); 
+        } else { 
+            if (enemies.length < 5 + savedData.stage && Math.random() < 1.2 * dt) spawnEnemy(); 
+        }
 
         if (input.isMoving && (input.x !== 0 || input.y !== 0)) {
             player.x += input.x * player.speed * dt; player.y += input.y * player.speed * dt;
@@ -486,7 +562,11 @@ function gameLoop(timestamp) {
             }
         });
 
-        for (let i = floatingTexts.length - 1; i >= 0; i--) { floatingTexts[i].life -= dt; floatingTexts[i].y -= 30 * dt; if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1); }
+        for (let i = floatingTexts.length - 1; i >= 0; i--) { 
+            floatingTexts[i].life -= dt; 
+            floatingTexts[i].y -= 30 * dt; 
+            if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1); 
+        }
         
         for (let i = enemies.length - 1; i >= 0; i--) {
             let e = enemies[i]; 
@@ -554,14 +634,15 @@ function gameLoop(timestamp) {
         for (let ft of floatingTexts) { ctx.globalAlpha = ft.life; ctx.fillStyle = ft.color; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(ft.text, ft.x, ft.y); ctx.globalAlpha = 1.0; }
         ctx.restore();
 
-        ctx.fillStyle = 'rgba(255, 0, 0, 0.5)'; ctx.fillRect(20, 20, 150, 15);
-        ctx.fillStyle = '#00ff00'; ctx.fillRect(20, 20, 150 * (Math.max(0, player.hp) / player.maxHp), 15);
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.strokeRect(20, 20, 150, 15);
-        ctx.fillStyle = '#fff'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(`${Math.floor(Math.max(0, player.hp))} / ${player.maxHp}`, 20, 55);
+        // Отрисовка HP игрока
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.5)'; ctx.fillRect(20, max(20, env(safe-area-inset-top)), 150, 15);
+        ctx.fillStyle = '#00ff00'; ctx.fillRect(20, max(20, env(safe-area-inset-top)), 150 * (Math.max(0, player.hp) / player.maxHp), 15);
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.strokeRect(20, max(20, env(safe-area-inset-top)), 150, 15);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(`${Math.floor(Math.max(0, player.hp))} / ${player.maxHp}`, 20, max(20, env(safe-area-inset-top)) + 35);
         
         ctx.textAlign = 'right'; 
-        if (isBossStage && bossEntity) { ctx.fillText(`БОСС: ${Math.floor(Math.max(0, bossEntity.hp))} HP`, screenW - 20, 35); } 
-        else { ctx.fillText(`Убито: ${killsInBattle} / 15`, screenW - 20, 35); }
+        if (isBossStage && bossEntity) { ctx.fillText(`БОСС: ${Math.floor(Math.max(0, bossEntity.hp))} HP`, screenW - 20, max(35, env(safe-area-inset-top) + 15)); } 
+        else { ctx.fillText(`Убито: ${killsInBattle} / 15`, screenW - 20, max(35, env(safe-area-inset-top) + 15)); }
     }
 }
 requestAnimationFrame(gameLoop);
