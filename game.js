@@ -579,7 +579,7 @@ function updateKeyboardInput() {
 
 let runLevel = 1; 
 let runXp = 0; 
-let runMaxXp = 50; 
+let runMaxXp = 100; // Увеличен порог опыта для замедления прокачки
 let runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
 let pendingLevelUps = 0; 
 let runLoot = { blueprints: {} };
@@ -638,7 +638,7 @@ window.startBattle = function() {
     } 
     runLevel = 1; 
     runXp = 0; 
-    runMaxXp = 50; 
+    runMaxXp = 100; 
     runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
     player.speed = 200; 
     runLoot = { blueprints: {} }; 
@@ -672,22 +672,42 @@ function startRoom() {
 function spawnEnemy() { 
     const angle = Math.random() * Math.PI * 2; 
     const distance = Math.max(screenW, screenH) / 2 + 100; 
-    let mobHp = 50 + (savedData.stage * 30) + (currentRoom * 5); 
-    let mobAtk = 10 + (savedData.stage * 5); 
-    let mobSpeed = 100 + (savedData.stage * 2); 
-    let type = 'melee'; 
-    let r = Math.random(); 
-    if (savedData.stage >= 2 && r < 0.3) type = 'shooter'; 
-    else if (savedData.stage >= 3 && r > 0.8) type = 'kamikaze'; 
-    enemies.push({ x: player.x + Math.cos(angle)*distance, y: player.y + Math.sin(angle)*distance, radius: 16, hp: mobHp, maxHp: mobHp, atk: mobAtk, speed: mobSpeed, isBoss: false, type: type, angle: 0, lastAttack: 0 }); 
+    
+    // Выбор типа врага на основе конфигурации
+    let r = Math.random();
+    let type = 'zombie'; // По умолчанию медленный зомби
+    let cfg = enemyTypesConfig.zombie;
+
+    if (savedData.stage >= 2 && r < 0.25) { type = 'dog'; cfg = enemyTypesConfig.dog; }
+    else if (savedData.stage >= 2 && r >= 0.25 && r < 0.5) { type = 'shooter'; cfg = enemyTypesConfig.shooter; }
+    else if (savedData.stage >= 3 && r >= 0.5) { type = 'kamikaze'; cfg = enemyTypesConfig.kamikaze; }
+
+    let mobHp = (40 + (savedData.stage * 25) + (currentRoom * 5)) * cfg.hpMultiplier; 
+    let mobAtk = 8 + (savedData.stage * 4); 
+    let mobSpeed = (90 + (savedData.stage * 3)) * cfg.speedMultiplier; 
+
+    enemies.push({ 
+        x: player.x + Math.cos(angle)*distance, 
+        y: player.y + Math.sin(angle)*distance, 
+        radius: cfg.radius, 
+        hp: mobHp, 
+        maxHp: mobHp, 
+        atk: mobAtk, 
+        speed: mobSpeed, 
+        isBoss: false, 
+        type: type, 
+        icon: cfg.icon,
+        angle: 0, 
+        lastAttack: 0 
+    }); 
 }
 
 function spawnBoss() { 
     const angle = Math.random() * Math.PI * 2; 
     const distance = Math.max(screenW, screenH) / 2 + 100; 
-    let bossHp = (50 + (savedData.stage * 30)) * 10; 
-    let bossAtk = 20 + (savedData.stage * 10); 
-    bossEntity = { x: player.x + Math.cos(angle)*distance, y: player.y + Math.sin(angle)*distance, radius: 40, hp: bossHp, maxHp: bossHp, atk: bossAtk, speed: 90, isBoss: true, type: 'boss', lastAttack: 0, angle: 0 }; 
+    let bossHp = (80 + (savedData.stage * 40)) * 12; 
+    let bossAtk = 25 + (savedData.stage * 8); 
+    bossEntity = { x: player.x + Math.cos(angle)*distance, y: player.y + Math.sin(angle)*distance, radius: 40, hp: bossHp, maxHp: bossHp, atk: bossAtk, speed: 85, isBoss: true, type: 'boss', lastAttack: 0, angle: 0 }; 
     enemies.push(bossEntity); 
 }
 
@@ -727,18 +747,25 @@ function showBattleResult(isWin, isFlee = false) {
     document.getElementById('btnPause').style.display = 'none'; 
     roomCounterUI.style.display = 'none'; 
     document.getElementById('combatXpContainer').style.display = 'none'; 
-    let goldReward = totalKillsInRun * 15; 
-    let partsReward = isWin ? 25 : 5; 
+    
+    // Награды (при победе полные, при поражении/отступлении — утешительные крохи)
+    let goldReward = isWin ? (totalKillsInRun * 20 + 500) : (totalKillsInRun * 5); 
+    let partsReward = isWin ? 30 : 5; 
+    
     savedData.dailyKills += totalKillsInRun; 
     savedData.gold += goldReward; 
     savedData.parts += partsReward; 
     if (isWin) savedData.stage++; 
+    
     let bpText = ''; 
-    for(let bp in runLoot.blueprints) { 
-        let name = bp === 'bp_w2' ? 'Плазмо-винтовка' : 'Рельсотрон'; 
-        savedData.blueprints[bp] = (savedData.blueprints[bp] || 0) + runLoot.blueprints[bp]; 
-        bpText += `<div style="color:#00ffff; font-size:14px; margin-top:5px; text-transform: uppercase;">📜 ЧЕРТЕЖ: ${name} (x${runLoot.blueprints[bp]})</div>`; 
-    } 
+    if (isWin) {
+        for(let bp in runLoot.blueprints) { 
+            let name = bp === 'bp_w2' ? 'Плазмо-винтовка' : 'Рельсотрон'; 
+            savedData.blueprints[bp] = (savedData.blueprints[bp] || 0) + runLoot.blueprints[bp]; 
+            bpText += `<div style="color:#00ffff; font-size:14px; margin-top:5px; text-transform: uppercase;">📜 ЧЕРТЕЖ: ${name} (x${runLoot.blueprints[bp]})</div>`; 
+        } 
+    }
+    
     saveData(); 
     let modalContent = document.getElementById('battleResultContent'); 
     let titleColor = isWin ? '#00ff00' : '#ff4a4a'; 
@@ -767,7 +794,7 @@ function checkLevelUp() {
     while (runXp >= runMaxXp) { 
         runXp -= runMaxXp; 
         runLevel++; 
-        runMaxXp = Math.floor(runMaxXp * 1.5); 
+        runMaxXp = Math.floor(runMaxXp * 1.6); 
         pendingLevelUps++; 
     } 
     updateCombatUI(); 
@@ -834,7 +861,8 @@ function gameLoop(timestamp) {
         if (isBossStage) { 
             if (!bossEntity && enemies.length === 0) spawnBoss(); 
         } else { 
-            if (enemies.length < 5 + savedData.stage && Math.random() < 1.2 * dt && killsInRoom < 15) spawnEnemy(); 
+            // Спавн врагов чуть реже, чтобы локация не зачищалась за 10 секунд
+            if (enemies.length < 4 + savedData.stage && Math.random() < 0.8 * dt && killsInRoom < 15) spawnEnemy(); 
         }
         if (enemies.length === 0 && (isBossStage ? bossEntity && bossEntity.isDead : killsInRoom >= 15)) { 
             roomState = 'cleared'; 
@@ -904,7 +932,7 @@ function gameLoop(timestamp) {
             enemies.splice(i, 1); 
             killsInRoom++; 
             totalKillsInRun++; 
-            runXp += e.isBoss ? 150 : 20;
+            runXp += e.isBoss ? 120 : 12; // Снижено получение опыта для плавности
             if (runMods.vamp > 0) { 
                 player.hp = Math.min(player.maxHp, player.hp + runMods.vamp); 
                 floatingTexts.push({ x: player.x, y: player.y - 20, text: `+${runMods.vamp}`, color: "#00ff00", life: 1.0 }); 
@@ -933,6 +961,7 @@ function gameLoop(timestamp) {
                 if (player.hp <= 0) { ctx.restore(); triggerDeath(); return; } 
             }
         } else {
+            // Зомби и быстрые собаки
             e.x += (dx / dist) * e.speed * dt; 
             e.y += (dy / dist) * e.speed * dt;
             if (e.isBoss && (timestamp - e.lastAttack) > 2000) { 
@@ -1014,13 +1043,23 @@ function gameLoop(timestamp) {
         ctx.save(); 
         ctx.translate(e.x, e.y); 
         ctx.rotate(e.angle);
+        
+        let cfg = enemyTypesConfig[e.type] || enemyTypesConfig.zombie;
+        let color = e.isBoss ? '#9932CC' : cfg.color;
+
         if (e.type === 'shooter') { 
             ctx.fillStyle = '#555'; 
             ctx.fillRect(0, -4, e.radius + 15, 8); 
-            ctx.fillStyle = '#4169e1'; 
+            ctx.fillStyle = color; 
             ctx.beginPath(); 
             ctx.arc(0, 0, e.radius, 0, Math.PI * 2); 
             ctx.fill(); 
+        } else if (e.type === 'dog') {
+            // Собака-мутант (вытянутая форма)
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, e.radius * 1.3, e.radius * 0.8, 0, 0, Math.PI * 2);
+            ctx.fill();
         } else if (e.type === 'kamikaze') { 
             ctx.fillStyle = '#ff4500'; 
             ctx.beginPath(); 
@@ -1033,19 +1072,13 @@ function gameLoop(timestamp) {
                 ctx.fill(); 
             } 
         } else { 
-            let color = e.isBoss ? '#9932CC' : '#ff4a4a'; 
-            ctx.fillStyle = '#444'; 
-            ctx.fillRect(-e.radius-5, -e.radius, 10, 5); 
-            ctx.fillRect(-e.radius-5, e.radius-5, 10, 5); 
-            ctx.fillRect(e.radius-5, -e.radius, 10, 5); 
-            ctx.fillRect(e.radius-5, e.radius-5, 10, 5); 
+            // Зомби / Босс
+            ctx.fillStyle = '#333'; 
+            ctx.fillRect(-e.radius-4, -e.radius, 8, 4); 
+            ctx.fillRect(-e.radius-4, e.radius-4, 8, 4); 
             ctx.fillStyle = color; 
             ctx.beginPath(); 
             ctx.arc(0, 0, e.radius, 0, Math.PI * 2); 
-            ctx.fill(); 
-            ctx.fillStyle = '#222'; 
-            ctx.beginPath(); 
-            ctx.arc(0, 0, e.radius * 0.6, 0, Math.PI * 2); 
             ctx.fill(); 
             if(e.isBoss) { 
                 ctx.strokeStyle = '#fff'; 
@@ -1054,10 +1087,6 @@ function gameLoop(timestamp) {
                 ctx.arc(0, 0, e.radius, 0, Math.PI * 2); 
                 ctx.stroke(); 
             } 
-            ctx.fillStyle = '#ffea00'; 
-            ctx.beginPath(); 
-            ctx.arc(e.radius*0.5, 0, e.radius * 0.3, 0, Math.PI * 2); 
-            ctx.fill(); 
         }
         ctx.restore();
         

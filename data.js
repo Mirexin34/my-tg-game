@@ -42,7 +42,13 @@ const runSkillsPool = [
     { id: 'heal', name: 'Аптечка', desc: 'Мгновенно лечит 50% HP', icon: '💊' }
 ];
 
-// Задел под структуру Аукциона / Рынка (активные лоты игроков)
-let auctionMarketList = [
-    // Примеры будущих лотов: { id: 'lot_1', seller: 'Агент#77', itemType: 'blueprint', itemId: 'bp_w2', priceGems: 150 }
-];
+// База типов врагов постапокалипсиса
+const enemyTypesConfig = {
+    zombie: { name: 'Зомби', icon: '🧟', speedMultiplier: 0.8, hpMultiplier: 1.2, radius: 16, color: '#4e8d7c' },
+    dog: { name: 'Собака-мутант', icon: '🐕', speedMultiplier: 1.6, hpMultiplier: 0.7, radius: 12, color: '#e84545' },
+    shooter: { name: 'Плюющийся мутант', icon: '🧪', speedMultiplier: 0.9, hpMultiplier: 1.0, radius: 15, color: '#33abc5' },
+    kamikaze: { name: 'Камикадзе', icon: '💣', speedMultiplier: 1.4, hpMultiplier: 0.5, radius: 14, color: '#ff8c00' }
+};
+
+// Задел под структуру Аукциона / Рынка
+let auctionMarketList = [];
