@@ -6,13 +6,13 @@ if (tg) {
 
 const showAlert = (msg) => { if (tg && tg.showAlert) { tg.showAlert(msg); } else { alert(msg); } };
 
-window.onload = () => {
+document.addEventListener('DOMContentLoaded', () => {
     let progress = 0; const bar = document.getElementById('splashProgress');
     const interval = setInterval(() => {
         progress += 5; bar.style.width = progress + '%';
         if (progress >= 100) { clearInterval(interval); document.getElementById('splashScreen').style.opacity = '0'; setTimeout(() => { document.getElementById('splashScreen').style.display = 'none'; }, 500); }
     }, 50);
-};
+});
 
 let gameState = 'menu';
 document.addEventListener('touchmove', function(e) { 
@@ -37,7 +37,7 @@ const defaultSave = {
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try {
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal8'));
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal9') || localStorage.getItem('spekterSaveFinal8') || localStorage.getItem('spekterSaveFinal') || 'null');
     if (loaded) {
         Object.assign(savedData, loaded);
         if(loaded.equipped) Object.assign(savedData.equipped, loaded.equipped);
@@ -75,7 +75,7 @@ function checkEnergyRegen() {
     }
 }
 
-function saveData() { localStorage.setItem('spekterSaveFinal8', JSON.stringify(savedData)); updateTopBar(); }
+function saveData() { localStorage.setItem('spekterSaveFinal9', JSON.stringify(savedData)); updateTopBar(); }
 
 function updateTopBar() {
     checkEnergyRegen();
@@ -102,22 +102,23 @@ window.switchTab = function(screenId, btnElement) {
     if (screenId === 'shopScreen') updateVIPUI(); 
     if (screenId === 'baseScreen') renderBase();
     if (screenId === 'guildScreen') renderGuild();
+    if (screenId === 'agencyScreen') renderAgency();
     if (screenId === 'questsScreen') { checkDailyReset(); updateMissionsUI(); }
 };
 
 const itemDatabase = [
     { id: 'h1', type: 'helmet', name: 'Обычный шлем', rarity: 'normal', icon: '🧢', hp: 100, atk: 0 },
     { id: 'h2', type: 'helmet', name: 'Редкий шлем', rarity: 'rare', icon: '⛑️', hp: 300, atk: 10 },
-    { id: 'h3', type: 'helmet', name: 'ЭПИК Шлем', rarity: 'epic', icon: '🪖', hp: 800, atk: 50 },
+    { id: 'h3', type: 'helmet', name: 'Эпический шлем', rarity: 'epic', icon: '🪖', hp: 800, atk: 50 },
     { id: 'a1', type: 'armor', name: 'Обычная броня', rarity: 'normal', icon: '👕', hp: 200, atk: 0 },
     { id: 'a2', type: 'armor', name: 'Редкая броня', rarity: 'rare', icon: '🦺', hp: 500, atk: 20 },
-    { id: 'a3', type: 'armor', name: 'ЭПИК Броня', rarity: 'epic', icon: '🧥', hp: 1200, atk: 80 },
+    { id: 'a3', type: 'armor', name: 'Эпическая броня', rarity: 'epic', icon: '🧥', hp: 1200, atk: 80 },
     { id: 'r1', type: 'ring', name: 'Обычное кольцо', rarity: 'normal', icon: '💍', hp: 0, atk: 50 },
     { id: 'r2', type: 'ring', name: 'Редкое кольцо', rarity: 'rare', icon: '💍', hp: 0, atk: 150 },
-    { id: 'r3', type: 'ring', name: 'ЭПИК Кольцо', rarity: 'epic', icon: '💍', hp: 0, atk: 400 },
+    { id: 'r3', type: 'ring', name: 'Эпическое кольцо', rarity: 'epic', icon: '💍', hp: 0, atk: 400 },
     { id: 'b1', type: 'boots', name: 'Обычная обувь', rarity: 'normal', icon: '👞', hp: 50, atk: 0 },
     { id: 'b2', type: 'boots', name: 'Редкая обувь', rarity: 'rare', icon: '👟', hp: 150, atk: 15 },
-    { id: 'b3', type: 'boots', name: 'ЭПИК Обувь', rarity: 'epic', icon: '🥾', hp: 400, atk: 60 }
+    { id: 'b3', type: 'boots', name: 'Эпическая обувь', rarity: 'epic', icon: '🥾', hp: 400, atk: 60 }
 ];
 
 const skillDatabase = [
@@ -159,7 +160,7 @@ window.spinGoldenSlot = function() {
 };
 
 window.claimProgress = function(stageRequired, rewardGems) {
-    if (savedData.stage < stageRequired) { showAlert(`❌ Достигните Этапа ${stageRequired}, чтобы забрать награду!`); return; }
+    if (savedData.stage <= stageRequired) { showAlert(`❌ Достигните Этапа ${stageRequired}, чтобы забрать награду!`); return; }
     if (savedData.serverProgressClaimed.includes(stageRequired)) { showAlert("Уже собрано."); return; }
     savedData.gems += rewardGems; savedData.serverProgressClaimed.push(stageRequired); saveData(); updateEventsUI();
     showAlert(`🎉 Вы забрали награду: +${rewardGems} 💎!`);
@@ -174,7 +175,7 @@ window.updateEventsUI = function() {
     [2, 5].forEach(stage => {
         let btn = document.getElementById('btnProg' + stage);
         if (savedData.serverProgressClaimed.includes(stage)) { btn.innerText = "Собрано"; btn.style.background = "#555"; btn.disabled = true; } 
-        else if (savedData.stage >= stage) { btn.style.background = "#28a745"; btn.disabled = false; } 
+        else if (savedData.stage > stage) { btn.style.background = "#28a745"; btn.disabled = false; } 
         else btn.disabled = true;
     });
 };
@@ -182,7 +183,7 @@ window.updateEventsUI = function() {
 window.claimBeginner = function(day) {
     if (savedData.beginnerClaimed[day-1]) return;
     if (day === 1) { savedData.gold += 1000; savedData.parts += 10; showAlert("Вы получили 1000 💰 и 10 ⚙️!"); }
-    if (day === 2) { savedData.inventory.push({ uid: getUid(), id: 'r3' }); showAlert("Вы получили ЭПИК Кольцо 💍!"); }
+    if (day === 2) { savedData.inventory.push({ uid: getUid(), id: 'r3' }); showAlert("Вы получили Эпическое Кольцо 💍!"); }
     if (day === 3) { savedData.gems += 300; showAlert("Вы получили 300 💎!"); }
     savedData.beginnerClaimed[day-1] = true; saveData(); updateEventsUI();
 };
@@ -275,7 +276,7 @@ window.renderInventory = function() {
         if(!data) return;
         let div = document.createElement('div'); div.className = `inv-item rarity-bg-${data.rarity}`;
         div.innerHTML = `${data.icon}<div class="stat-badge">${data.atk > 0 ? 'АТК+'+data.atk : 'ЗДР+'+data.hp}</div>`;
-        div.onclick = () => equipItem(invItem.uid, data.type); grid.appendChild(div);
+        div.onclick = () => window.equipItem(invItem.uid, data.type); grid.appendChild(div);
     });
     calculateStats();
 };
@@ -302,7 +303,7 @@ window.renderSkills = function() {
         let data = skillDatabase.find(s => s.id === invItem.id);
         if(!data) return;
         let div = document.createElement('div'); div.className = `inv-item rarity-bg-${data.rarity}`;
-        div.innerHTML = `${data.icon}`; div.onclick = () => equipSkill(invItem.uid); grid.appendChild(div);
+        div.innerHTML = `${data.icon}`; div.onclick = () => window.equipSkill(invItem.uid); grid.appendChild(div);
     });
 };
 window.equipSkill = function(uid) {
@@ -357,7 +358,11 @@ window.updateMissionsUI = function() {
     document.getElementById('seasonProgress').style.width = `${Math.min(100, savedData.seasonXp)}%`;
     document.getElementById('missionKills').innerText = Math.min(savedData.dailyKills, 15);
     let btn = document.getElementById('btnClaimKillQuest');
-    if (savedData.missionKillsClaimed) { btn.innerText = "Собрано"; btn.style.background = "#555"; btn.disabled = true; }
+    if (savedData.missionKillsClaimed) { 
+        btn.innerText = "Собрано"; btn.style.background = "#555"; btn.disabled = true; 
+    } else {
+        btn.innerText = "+50 XP"; btn.style.background = "#ffea00"; btn.disabled = false;
+    }
 };
 window.claimMission = function(type) {
     if (type === 'kills' && savedData.dailyKills >= 15 && !savedData.missionKillsClaimed) { savedData.missionKillsClaimed = true; savedData.seasonXp += 50; if(savedData.seasonXp >= 100) { savedData.seasonXp -= 100; savedData.seasonLevel++; } saveData(); updateMissionsUI(); }
@@ -367,7 +372,7 @@ window.claimSeasonReward = function() {
     savedData.gems += 50; savedData.claimedSeasonRewards.push(savedData.seasonLevel); saveData(); showAlert("Вы забрали награды Сезона: +50 Алмазов! 💎"); 
 };
 
-updateTopBar(); calculateStats(); updateVIPUI(); updateEventsUI(); checkDailyReset();
+updateTopBar(); calculateStats(); updateVIPUI(); updateEventsUI(); renderAgency(); checkDailyReset(); updateMissionsUI();
 
 const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
 const joystickZone = document.getElementById('joystickZone'); const joystickBase = document.getElementById('joystickBase'); const joystickStick = document.getElementById('joystickStick');
@@ -393,7 +398,7 @@ joystickZone.addEventListener('touchstart', (e) => {
 });
 joystickZone.addEventListener('touchmove', (e) => { 
     if (!input.isMoving || gameState !== 'playing') return; 
-    let dx = e.changedTouches[0].clientX - joystickCenter.x, dy = e.changedTouches[0].clientY - joystickCenter.y, dist = Math.hypot(dx, dy); 
+    let dx = e.changedTouches[0].clientX - joystickCenter.x, dy = e.changedTouches[0].clientY - joystickCenter.y, dist = Math.hypot(dx, dy) || 0.001; 
     if (dist > MAX_JOYSTICK_RADIUS) { dx = (dx/dist)*MAX_JOYSTICK_RADIUS; dy = (dy/dist)*MAX_JOYSTICK_RADIUS; } 
     joystickStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`; input.x = dx / MAX_JOYSTICK_RADIUS; input.y = dy / MAX_JOYSTICK_RADIUS; 
 });
@@ -456,9 +461,9 @@ function gameLoop(timestamp) {
             player.x = Math.max(player.radius, Math.min(world.width - player.radius, player.x)); player.y = Math.max(player.radius, Math.min(world.height - player.radius, player.y));
         } else if (enemies.length > 0 && (timestamp - player.lastAttackTime)/1000 >= 1/player.attackRate) {
             let target = null, minDist = Infinity;
-            for (let e of enemies) { const dist = Math.hypot(e.x - player.x, e.y - player.y); if (dist < 400 && dist < minDist) { minDist = dist; target = e; } }
+            for (let e of enemies) { const dist = Math.hypot(e.x - player.x, e.y - player.y) || 0.001; if (dist < 400 && dist < minDist) { minDist = dist; target = e; } }
             if (target) {
-                const dx = target.x - player.x, dy = target.y - player.y, dist = Math.hypot(dx, dy);
+                const dx = target.x - player.x, dy = target.y - player.y, dist = Math.hypot(dx, dy) || 0.001;
                 projectiles.push({ x: player.x, y: player.y, vx: (dx/dist)*500, vy: (dy/dist)*500, radius: 5, damage: player.atk, isEnemy: false });
                 player.lastAttackTime = timestamp;
             }
@@ -491,7 +496,7 @@ function gameLoop(timestamp) {
                 if (!isBossStage && killsInBattle >= 15) { exitBattle(true); continue; }
                 continue; 
             }
-            const dx = player.x - e.x, dy = player.y - e.y, dist = Math.hypot(dx, dy);
+            const dx = player.x - e.x, dy = player.y - e.y, dist = Math.hypot(dx, dy) || 0.001;
             if (dist > 0) { e.x += (dx / dist) * e.speed * dt; e.y += (dy / dist) * e.speed * dt; }
             
             if (e.isBoss && (timestamp - e.lastAttack) > 2000) {
