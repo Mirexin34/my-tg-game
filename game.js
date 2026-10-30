@@ -59,7 +59,7 @@ const defaultSave = {
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try { 
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal25') || 'null'); 
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal26') || 'null'); 
     if (loaded) Object.assign(savedData, loaded); 
 } catch(e) {}
 
@@ -76,7 +76,7 @@ if (!savedData.talentsLevels) savedData.talentsLevels = {};
 if (!savedData.seasonClaimed) savedData.seasonClaimed = {};
 
 function saveData() { 
-    localStorage.setItem('spekterSaveFinal25', JSON.stringify(savedData)); 
+    localStorage.setItem('spekterSaveFinal26', JSON.stringify(savedData)); 
     updateTopBar(); 
 }
 
@@ -130,6 +130,7 @@ window.openEnergyShop = function() {
 };
 
 let previousBm = 100;
+
 function updateTopBar() { 
     checkEnergyRegen(); 
     let el;
@@ -139,6 +140,10 @@ function updateTopBar() {
     el = document.getElementById('energyDisplay'); if(el) el.innerText = savedData.energy; 
     el = document.getElementById('accountLevelDisplay'); if(el) el.innerText = savedData.accountLevel; 
     el = document.getElementById('stageDisplay'); if(el) el.innerText = savedData.stage; 
+
+    let loc = locationsConfig.find(l => l.id === savedData.stage) || locationsConfig[0];
+    let locDisp = document.getElementById('locationNameDisplay');
+    if(locDisp) locDisp.innerText = loc.name;
 
     let stats = getCalculatedStats();
     let currentBm = Math.floor(stats.atk * 2 + stats.hp / 10);
@@ -153,6 +158,11 @@ function updateTopBar() {
         previousBm = currentBm;
     }
 }
+
+window.changeStage = function(dir) {
+    savedData.stage = Math.max(1, Math.min(locationsConfig.length, savedData.stage + dir));
+    saveData();
+};
 
 function showBmPopup(text) {
     let popup = document.createElement('div');
@@ -203,7 +213,6 @@ function getCalculatedStats() {
 window.openHubModal = function() {
     let m = document.getElementById('hubModal');
     if(m) m.style.display = 'flex';
-    // Открываем вкладку рейдов по умолчанию
     let firstBtn = document.querySelector('.hub-tab-btn');
     if(firstBtn) switchHubTab('raid', firstBtn);
 };
@@ -218,7 +227,7 @@ window.switchHubTab = function(tabName, btnEl) {
     if (tabName === 'raid') {
         let basesHTML = '';
         enemyBasesConfig.forEach(b => {
-            let bpLabel = b.lootBp === 'bp_w2' ? 'Плазма' : 'Рельсотрон';
+            let bpLabel = b.lootBp === 'bp_w2' ? 'Плазма' : (b.lootBp === 'bp_w3' ? 'Рельсотрон' : 'Ракетница');
             basesHTML += `
                 <div style="background: #1e1e2c; border: 1px solid #e43f5a; border-radius: 8px; padding: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
                     <div>
@@ -241,15 +250,17 @@ window.switchHubTab = function(tabName, btnEl) {
     } else if (tabName === 'guild') {
         if (!savedData.guild) {
             content.innerHTML = `
-                <p style="color: #ccc; font-size: 11px; margin-top: 0;">Вы не в гильдии.</p>
+                <p style="color: #ccc; font-size: 11px; margin-top: 0;">Вы не состоите в гильдии.</p>
                 <button onclick="joinGuild('g1')" style="background: #da70d6; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 10px; cursor: pointer;">Вступить в "Стальные Тени"</button>
             `;
         } else {
             content.innerHTML = `
                 <div style="background: #1e1e2c; border: 1px solid #da70d6; border-radius: 8px; padding: 8px; text-align: center; margin-bottom: 8px;">
                     <div style="color: #da70d6; font-weight: bold; font-size: 12px;">🛡️ ${savedData.guild.name} (ур. ${savedData.guild.level})</div>
-                    <div style="color: #00ff00; font-size: 10px;">🪙 Жетоны: ${savedData.guild.tokens || 0}</div>
-                    <button onclick="startGuildRaidBattle()" style="background: #ff4a4a; color: white; border: none; padding: 5px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 10px; cursor: pointer; margin-top: 4px;">Атаковать рейд-босса (${savedData.guildBossHp}/${guildRaidBoss.hp} HP)</button>
+                    <div style="color: #00ff00; font-size: 10px; margin-top: 2px;">🪙 Жетоны гильдии: ${savedData.guild.tokens || 0}</div>
+                    <div style="color: #ffd700; font-size: 10px; margin-top: 2px;">📦 Казна: ${savedData.guild.treasuryGold || 0} золота</div>
+                    <button onclick="donateToGuildTreasury()" style="background: #ffd700; color: #000; border: none; padding: 4px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 9px; cursor: pointer; margin-top: 6px;">Внести 500 💰 в казну</button>
+                    <button onclick="startGuildRaidBattle()" style="background: #ff4a4a; color: white; border: none; padding: 5px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 10px; cursor: pointer; margin-top: 6px;">Атаковать рейд-босса (${savedData.guildBossHp}/${guildRaidBoss.hp} HP)</button>
                 </div>
                 <button onclick="leaveGuild()" style="background: #dc3545; color: white; border: none; padding: 5px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 9px; cursor: pointer;">Покинуть гильдию</button>
             `;
@@ -285,6 +296,19 @@ window.switchHubTab = function(tabName, btnEl) {
         });
         content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #00ffff; margin-bottom: 4px;">🏪 Рынок слитков:</div>${marketHTML}`;
     }
+};
+
+window.donateToGuildTreasury = function() {
+    if (!savedData.guild) return;
+    if (savedData.gold < 500) { showAlert("Недостаточно золота!"); return; }
+    savedData.gold -= 500;
+    if (!savedData.guild.treasuryGold) savedData.guild.treasuryGold = 0;
+    savedData.guild.treasuryGold += 500;
+    if (!savedData.guild.tokens) savedData.guild.tokens = 0;
+    savedData.guild.tokens += 20; // бонусные личные жетоны за вклад
+    saveData();
+    switchHubTab('guild', document.querySelectorAll('.hub-tab-btn')[1]);
+    showAlert("Вклад в казну гильдии успешно внесен (+20 жетонов)!");
 };
 
 // ----------------- СИСТЕМА КРАФТА С ЧЕРТЕЖАМИ -----------------
@@ -410,7 +434,7 @@ window.openChest = function(chestType, amount) {
 
     let pulled = []; 
     for (let i = 0; i < amount; i++) { 
-        let r = Math.random(), tr = r < 0.1 ? 'epic' : (r < 0.4 ? 'rare' : 'normal'); 
+        let r = Math.random(), tr = r < 0.05 ? 'legendary' : (r < 0.15 ? 'epic' : (r < 0.45 ? 'rare' : 'normal')); 
         let pool = itemDatabase.filter(x => x.rarity === tr); if(!pool.length) pool = itemDatabase; 
         let item = pool[Math.floor(Math.random()*pool.length)]; 
         savedData.inventory.push({uid: getUid(), id: item.id}); 
@@ -467,6 +491,7 @@ window.upgradeBaseDefense = function() {
 };
 
 let activeRaidBase = null;
+
 window.startBaseRaid = function(baseId) {
     activeRaidBase = enemyBasesConfig.find(x => x.id === baseId);
     if (!activeRaidBase) return;
@@ -487,8 +512,8 @@ window.startBaseRaid = function(baseId) {
     player.maxHp = finalStats.hp; player.hp = finalStats.hp; player.atk = finalStats.atk; 
     let wp = getItemData(savedData.equipped.weapon); 
     if (wp && wp.fireRate) { 
-        currentWeaponStats = { fireRate: wp.fireRate, bullets: wp.bullets, projSpeed: wp.projSpeed, spread: wp.spread }; 
-    } else { currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0 }; } 
+        currentWeaponStats = { fireRate: wp.fireRate, bullets: wp.bullets, projSpeed: wp.projSpeed, spread: wp.spread, isRocket: wp.isRocket }; 
+    } else { currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0, isRocket: false }; } 
     
     runLevel = 1; runXp = 0; runMaxXp = 100; 
     runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
@@ -524,6 +549,7 @@ window.startBaseRaid = function(baseId) {
 };
 
 let allyUnits = [];
+
 window.callGuildSupport = function() {
     if (!savedData.guild) return;
     let btn = document.getElementById('btnCallGuild');
@@ -531,7 +557,7 @@ window.callGuildSupport = function() {
 
     for(let i=0; i<2; i++) {
         allyUnits.push({
-            x: player.x - 30 - i*20, y: player.y + (i === 0 ? 30 : -30),
+            x: player.x - 30 - (i * 20), y: player.y + (i === 0 ? 30 : -30),
             radius: 16, hp: 400, maxHp: 400, atk: 60, speed: 200, aimingAngle: 0, lastAttack: 0
         });
     }
@@ -541,7 +567,7 @@ window.callGuildSupport = function() {
 window.joinGuild = function(guildId) {
     let g = sampleGuilds.find(x => x.id === guildId);
     if (!g) return;
-    savedData.guild = { id: g.id, name: g.name, level: g.level, membersCount: g.members + 1, tokens: 0 };
+    savedData.guild = { id: g.id, name: g.name, level: g.level, membersCount: g.members + 1, tokens: 100, treasuryGold: 1200 };
     saveData();
     switchHubTab('guild', document.querySelectorAll('.hub-tab-btn')[1]);
     showAlert(`Вы вступили в гильдию "${g.name}"!`);
@@ -573,8 +599,8 @@ window.startGuildRaidBattle = function() {
     player.maxHp = finalStats.hp; player.hp = finalStats.hp; player.atk = finalStats.atk; 
     let wp = getItemData(savedData.equipped.weapon); 
     if (wp && wp.fireRate) { 
-        currentWeaponStats = { fireRate: wp.fireRate, bullets: wp.bullets, projSpeed: wp.projSpeed, spread: wp.spread }; 
-    } else { currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0 }; } 
+        currentWeaponStats = { fireRate: wp.fireRate, bullets: wp.bullets, projSpeed: wp.projSpeed, spread: wp.spread, isRocket: wp.isRocket }; 
+    } else { currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0, isRocket: false }; } 
     
     runLevel = 1; runXp = 0; runMaxXp = 100; 
     runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
@@ -692,8 +718,8 @@ window.startArenaBattle = function(botName) {
     player.maxHp = finalStats.hp; player.hp = finalStats.hp; player.atk = finalStats.atk; 
     let wp = getItemData(savedData.equipped.weapon); 
     if (wp && wp.fireRate) { 
-        currentWeaponStats = { fireRate: wp.fireRate, bullets: wp.bullets, projSpeed: wp.projSpeed, spread: wp.spread }; 
-    } else { currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0 }; } 
+        currentWeaponStats = { fireRate: wp.fireRate, bullets: wp.bullets, projSpeed: wp.projSpeed, spread: wp.spread, isRocket: wp.isRocket }; 
+    } else { currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0, isRocket: false }; } 
     
     runLevel = 1; runXp = 0; runMaxXp = 100; 
     runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
@@ -727,8 +753,8 @@ setInterval(() => {
     let afkMult = 1.0 + ((savedData.talentsLevels['t_afk'] || 0) * 0.15);
     let diff = Math.min(Date.now() - savedData.lastAFKTime, 86400000); 
     let minutesPassed = Math.floor(diff / 60000); 
-    pendingGold = Math.floor(minutesPassed * 20 * afkMult); 
-    pendingParts = Math.floor(minutesPassed * 0.1 * afkMult); 
+    pendingGold = Math.floor(minutesPassed * 20 * afkMult * savedData.stage); 
+    pendingParts = Math.floor(minutesPassed * 0.1 * afkMult * savedData.stage); 
     let totalSeconds = Math.floor(diff / 1000); 
     let std = document.getElementById('sweepTimeDisplay');
     if(std) std.innerText = `${Math.floor(totalSeconds / 3600).toString().padStart(2, '0')}:${Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0')}:${(totalSeconds % 60).toString().padStart(2, '0')}`; 
@@ -755,7 +781,7 @@ if(bcs) bcs.addEventListener('click', () => {
 
 updateTopBar();
 
-// ----------------- БОЕВОЙ ДВИЖОК CANVAS С ПРЕПЯТСТВИЯМИ -----------------
+// ----------------- БОЕВОЙ ДВИЖОК CANVAS С ЛОКАЦИЯМИ И РАКЕТАМИ -----------------
 const canvas = document.getElementById('gameCanvas'); 
 const ctx = canvas.getContext('2d');
 const joystickZone = document.getElementById('joystickZone'); 
@@ -875,7 +901,7 @@ window.togglePause = function() {
 
 window.fleeBattle = function() { 
     let pm = document.getElementById('pauseModal'); if(pm) pm.style.display = 'none'; 
-    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
+    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none'; 
     showBattleResult(false, true); 
 };
 
@@ -901,8 +927,8 @@ window.startBattle = function() {
     player.atk = finalStats.atk; 
     let wp = getItemData(savedData.equipped.weapon); 
     if (wp && wp.fireRate) { 
-        currentWeaponStats = { fireRate: wp.fireRate, bullets: wp.bullets, projSpeed: wp.projSpeed, spread: wp.spread }; 
-    } else { currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0 }; } 
+        currentWeaponStats = { fireRate: wp.fireRate, bullets: wp.bullets, projSpeed: wp.projSpeed, spread: wp.spread, isRocket: wp.isRocket }; 
+    } else { currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0, isRocket: false }; } 
     
     runLevel = 1; runXp = 0; runMaxXp = 100; 
     runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
@@ -920,210 +946,6 @@ window.startBattle = function() {
     requestAnimationFrame(gameLoop); 
 };
 
-function startRoom() { 
-    player.x = 100; 
-    player.y = screenH / 2; 
-    enemies = []; 
-    projectiles = []; 
-    floatingTexts = []; 
-    killsInRoom = 0; 
-    roomState = 'fighting'; 
-    portal = null; 
-    isBossStage = (currentRoom === maxRooms); 
-    bossEntity = null; 
-
-    obstacles = [
-        { x: screenW * 0.4, y: screenH * 0.3, w: 50, h: 50 },
-        { x: screenW * 0.6, y: screenH * 0.7, w: 60, h: 40 }
-    ];
-
-    let rcu = document.getElementById('roomCounterUI');
-    if(rcu) rcu.innerText = isBossStage ? 'БОСС КОМНАТА' : `Комната ${currentRoom}/${maxRooms}`; 
-
-    if (isBossStage) { spawnBoss(); } 
-    else {
-        let count = 4 + savedData.stage;
-        for (let i = 0; i < count; i++) { spawnSpecificWaveEnemy(); }
-    }
-}
-
-function spawnSpecificWaveEnemy() {
-    let r = Math.random();
-    let type = 'zombie'; 
-    let cfg = enemyTypesConfig.zombie;
-    if (savedData.stage >= 2 && r < 0.25) { type = 'dog'; cfg = enemyTypesConfig.dog; }
-    else if (savedData.stage >= 2 && r >= 0.25 && r < 0.5) { type = 'shooter'; cfg = enemyTypesConfig.shooter; }
-    else if (savedData.stage >= 3 && r >= 0.5) { type = 'kamikaze'; cfg = enemyTypesConfig.kamikaze; }
-
-    let mobHp = (50 + (savedData.stage * 30)) * cfg.hpMultiplier; 
-    let mobAtk = 10 + (savedData.stage * 4); 
-    let mobSpeed = (70 + (savedData.stage * 2)) * cfg.speedMultiplier; 
-
-    enemies.push({ 
-        x: screenW - 100 + (Math.random() * 60 - 30), 
-        y: 80 + Math.random() * (screenH - 160), 
-        radius: cfg.radius, 
-        hp: mobHp, 
-        maxHp: mobHp, 
-        atk: mobAtk, 
-        speed: mobSpeed, 
-        isBoss: false, 
-        isBot: false, 
-        type: type, 
-        icon: cfg.icon, 
-        angle: 0, 
-        lastAttack: 0 
-    }); 
-}
-
-function spawnBoss() { 
-    let bossHp = (100 + (savedData.stage * 50)) * 15; 
-    let bossAtk = 25 + (savedData.stage * 8); 
-    bossEntity = { x: screenW - 150, y: screenH / 2, radius: 40, hp: bossHp, maxHp: bossHp, atk: bossAtk, speed: 60, isBoss: true, isBot: false, type: 'boss', lastAttack: 0, angle: 0 }; 
-    enemies.push(bossEntity); 
-}
-
-function triggerDeath() { 
-    gameState = 'paused'; 
-    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
-    if (revivesUsed < 3) { 
-        let rc = document.getElementById('reviveCost'); if(rc) rc.innerText = (revivesUsed + 1) * 10; 
-        let rm = document.getElementById('reviveModal'); if(rm) rm.style.display = 'flex'; 
-    } else { showBattleResult(false); } 
-}
-
-window.acceptRevive = function() { 
-    let cost = (revivesUsed + 1) * 10; 
-    if (savedData.gems >= cost) { 
-        savedData.gems -= cost; 
-        saveData(); 
-        revivesUsed++; 
-        player.hp = player.maxHp; 
-        let rm = document.getElementById('reviveModal'); if(rm) rm.style.display = 'none'; 
-        gameState = 'playing'; 
-        lastTime = performance.now(); 
-        requestAnimationFrame(gameLoop); 
-    } else { showAlert("Недостаточно алмазов!"); } 
-};
-
-window.declineRevive = function() { 
-    let rm = document.getElementById('reviveModal'); if(rm) rm.style.display = 'none'; 
-    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
-    showBattleResult(false); 
-};
-
-function checkLevelUp() {
-    if (runXp >= runMaxXp) {
-        runLevel++;
-        runXp -= runMaxXp;
-        runMaxXp = Math.floor(runMaxXp * 1.3);
-        openLevelUpModal();
-    }
-    updateCombatUI();
-}
-
-function updateCombatUI() {
-    let bar = document.getElementById('combatXpBar');
-    let text = document.getElementById('combatLevelText');
-    if (bar) bar.style.width = Math.min(100, (runXp / runMaxXp) * 100) + '%';
-    if (text) text.innerText = `УР. ${runLevel}`;
-}
-
-function openLevelUpModal() {
-    gameState = 'paused';
-    const container = document.getElementById('skillCardsContainer');
-    if (!container) return;
-    container.innerHTML = '';
-
-    let shuffled = [...runSkillsPool].sort(() => 0.5 - Math.random()).slice(0, 3);
-    shuffled.forEach(skill => {
-        let btn = document.createElement('div');
-        btn.className = 'skill-card-btn';
-        btn.innerHTML = `<div style="font-size: 24px;">${skill.icon}</div><div><div style="font-weight: bold; font-size: 13px;">${skill.name}</div><div style="font-size: 10px; color: #aaa;">${skill.desc}</div></div>`;
-        btn.onclick = () => { applyRunSkill(skill.id); document.getElementById('levelUpModal').style.display = 'none'; gameState = 'playing'; lastTime = performance.now(); requestAnimationFrame(gameLoop); };
-        container.appendChild(btn);
-    });
-
-    let lm = document.getElementById('levelUpModal');
-    if (lm) lm.style.display = 'flex';
-}
-
-function applyRunSkill(skillId) {
-    if (skillId === 'atk_up') runMods.atkMult += 0.15;
-    if (skillId === 'spd_up') { runMods.spdMult += 0.1; player.speed += 20; }
-    if (skillId === 'vamp') runMods.vamp += 2;
-    if (skillId === 'regen') runMods.regen += 2;
-    if (skillId === 'max_hp') { player.maxHp = Math.floor(player.maxHp * 1.2); player.hp = player.maxHp; }
-    if (skillId === 'heal') { player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.5); }
-}
-
-function showBattleResult(isVictory, isFlee = false) {
-    gameState = 'paused';
-    let cv = document.getElementById('gameCanvas'); if(cv) cv.style.display = 'none';
-    let jz = document.getElementById('joystickZone'); if(jz) jz.style.display = 'none';
-    let bp = document.getElementById('btnPause'); if(bp) bp.style.display = 'none';
-    let rcu = document.getElementById('roomCounterUI'); if(rcu) rcu.style.display = 'none';
-    let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none';
-    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
-
-    let goldReward = isVictory ? (roomState === 'base_raid_fighting' ? activeRaidBase.lootGold : (savedData.stage * 150 + totalKillsInRun * 15)) : (totalKillsInRun * 5);
-    let partsReward = isVictory ? (roomState === 'base_raid_fighting' ? activeRaidBase.lootParts : (savedData.stage * 10)) : 0;
-
-    savedData.gold += goldReward;
-    savedData.parts += partsReward;
-
-    if (isVictory && roomState === 'base_raid_fighting' && activeRaidBase && activeRaidBase.lootBp) {
-        let bpId = activeRaidBase.lootBp;
-        savedData.blueprints[bpId] = (savedData.blueprints[bpId] || 0) + 1;
-        showAlert(`Найден чертеж: ${bpId === 'bp_w2' ? 'Плазма' : 'Рельсотрон'}!`);
-    }
-
-    if (isVictory && roomState !== 'pvp_fighting' && roomState !== 'guild_raid_fighting' && roomState !== 'base_raid_fighting') {
-        savedData.stage++;
-    }
-    savedData.dailyKills += totalKillsInRun;
-
-    savedData.seasonXp += totalKillsInRun * 10;
-    let requiredXpForNext = savedData.seasonLevel * 100;
-    if (savedData.seasonXp >= requiredXpForNext) {
-        savedData.seasonXp -= requiredXpForNext;
-        savedData.seasonLevel++;
-    }
-
-    if (savedData.guild) {
-        let killsProg = savedData.guildQuestsProgress['gq_1'] || 0;
-        savedData.guildQuestsProgress['gq_1'] = killsProg + totalKillsInRun;
-
-        let goldProg = savedData.guildQuestsProgress['gq_2'] || 0;
-        savedData.guildQuestsProgress['gq_2'] = goldProg + goldReward;
-    }
-
-    saveData();
-
-    let content = document.getElementById('battleResultContent');
-    if (content) {
-        content.innerHTML = `
-            <h2 style="color: ${isVictory ? '#00ff00' : '#ff4a4a'}; margin-top:0;">${isVictory ? 'ПОБЕДА!' : (isFlee ? 'БОЙ ПРЕРВАН' : 'ПОРАЖЕНИЕ')}</h2>
-            <p style="font-size:12px; color:#aaa;">Уничтожено врагов: ${totalKillsInRun}</p>
-            <div style="background:#1a1a24; padding:10px; border-radius:8px; margin:10px 0; display:flex; justify-content:around;">
-                <div>💰 +${goldReward} Золота</div>
-                <div>⚙️ +${partsReward} Деталей</div>
-            </div>
-            <button onclick="closeBattleResult()" style="background:#28a745; color:#fff; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; width:100%; cursor:pointer;">В ЛОББИ</button>
-        `;
-    }
-    let brm = document.getElementById('battleResultModal');
-    if(brm) brm.style.display = 'flex';
-}
-
-window.closeBattleResult = function() {
-    let brm = document.getElementById('battleResultModal'); if(brm) brm.style.display = 'none';
-    let tb = document.getElementById('topBar'); if(tb) tb.style.display = 'flex';
-    let nb = document.getElementById('navBar'); if(nb) nb.style.display = 'flex';
-    switchTab('lobbyScreen', document.getElementById('navLobby'));
-    gameState = 'menu';
-};
-
 function checkObstacleCollision(x, y, radius) {
     for (let obs of obstacles) {
         let closestX = Math.max(obs.x, Math.min(x, obs.x + obs.w));
@@ -1138,6 +960,7 @@ function checkObstacleCollision(x, y, radius) {
 }
 
 let lastTime = performance.now(); 
+
 function gameLoop(timestamp) {
     if (gameState !== 'playing') return; 
     requestAnimationFrame(gameLoop);
@@ -1156,7 +979,8 @@ function gameLoop(timestamp) {
         if (isBossStage) { 
             if (!bossEntity && enemies.length === 0) spawnBoss(); 
         } else { 
-            if (enemies.length < 3 + savedData.stage && killsInRoom + enemies.length < 12 && Math.random() < 1.0 * dt) {
+            let locCfg = locationsConfig.find(l => l.id === savedData.stage) || locationsConfig[0];
+            if (enemies.length < 3 + Math.floor(savedData.stage * locCfg.enemyMultiplier) && killsInRoom + enemies.length < 12 && Math.random() < 1.0 * dt) {
                 spawnSpecificWaveEnemy();
             }
         }
@@ -1202,10 +1026,21 @@ function gameLoop(timestamp) {
             let finalDamage = player.atk * runMods.atkMult; 
             let bullets = currentWeaponStats.bullets; 
             let spread = currentWeaponStats.spread;
+            let isRocket = currentWeaponStats.isRocket;
+            
             for (let b = 0; b < bullets; b++) { 
                 let angleOffset = spread === 0 ? 0 : (b * spread) - (spread * (bullets - 1) / 2); 
                 let finalAngle = player.aimingAngle + angleOffset; 
-                projectiles.push({ x: player.x, y: player.y, vx: Math.cos(finalAngle) * currentWeaponStats.projSpeed, vy: Math.sin(finalAngle) * currentWeaponStats.projSpeed, radius: 4, damage: finalDamage, isEnemy: false, angle: finalAngle }); 
+                projectiles.push({ 
+                    x: player.x, y: player.y, 
+                    vx: Math.cos(finalAngle) * currentWeaponStats.projSpeed, 
+                    vy: Math.sin(finalAngle) * currentWeaponStats.projSpeed, 
+                    radius: isRocket ? 8 : 4, 
+                    damage: finalDamage, 
+                    isEnemy: false, 
+                    angle: finalAngle, 
+                    isRocket: isRocket 
+                }); 
             }
             player.lastAttackTime = timestamp; 
         } 
@@ -1349,6 +1184,16 @@ function gameLoop(timestamp) {
         if (p.x < 0 || p.x > screenW || p.y < 0 || p.y > screenH) { projectiles.splice(i, 1); continue; }
 
         if (checkObstacleCollision(p.x, p.y, p.radius)) {
+            if (p.isRocket) {
+                // АОЕ взрыв ракеты при столкновении со стеной
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    let e = enemies[j];
+                    if (Math.hypot(p.x - e.x, p.y - e.y) < 70) {
+                        e.hp -= p.damage * 1.5;
+                        if (e.hp <= 0) e.isDead = true;
+                    }
+                }
+            }
             projectiles.splice(i, 1);
             continue;
         }
@@ -1365,6 +1210,18 @@ function gameLoop(timestamp) {
                 let e = enemies[j]; 
                 if (Math.hypot(p.x - e.x, p.y - e.y) < p.radius + e.radius) { 
                     e.hp -= p.damage; 
+                    
+                    if (p.isRocket) {
+                        // АОЕ урон по площади при попадании во врага
+                        for (let k = enemies.length - 1; k >= 0; k--) {
+                            let nearby = enemies[k];
+                            if (Math.hypot(p.x - nearby.x, p.y - nearby.y) < 80) {
+                                nearby.hp -= p.damage * 0.75;
+                                if (nearby.hp <= 0) nearby.isDead = true;
+                            }
+                        }
+                    }
+
                     if (isRaid) {
                         savedData.guildBossHp = Math.max(0, Math.floor(e.hp));
                         saveData();
@@ -1378,7 +1235,8 @@ function gameLoop(timestamp) {
         }
     }
 
-    ctx.fillStyle = '#0a0a10'; 
+    let locCfg = locationsConfig.find(l => l.id === savedData.stage) || locationsConfig[0];
+    ctx.fillStyle = locCfg.bgStyle; 
     ctx.fillRect(0, 0, screenW, screenH); 
     
     ctx.strokeStyle = 'rgba(0, 255, 255, 0.1)'; 
@@ -1388,8 +1246,8 @@ function gameLoop(timestamp) {
     for (let i = 0; i <= screenH; i += 50) { ctx.moveTo(0, i); ctx.lineTo(screenW, i); } 
     ctx.stroke();
 
-    ctx.fillStyle = '#2d2d3d';
-    ctx.strokeStyle = '#444455';
+    ctx.fillStyle = locCfg.wallColor;
+    ctx.strokeStyle = '#555566';
     ctx.lineWidth = 2;
     for (let obs of obstacles) {
         ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
@@ -1439,8 +1297,12 @@ function gameLoop(timestamp) {
         ctx.save(); 
         ctx.translate(p.x, p.y); 
         ctx.rotate(p.angle); 
-        ctx.fillStyle = p.isEnemy ? '#ff0000' : '#00ffff'; 
-        ctx.fillRect(-8, -p.radius, 16, p.radius*2); 
+        ctx.fillStyle = p.isEnemy ? '#ff0000' : (p.isRocket ? '#ff8c00' : '#00ffff'); 
+        if (p.isRocket) {
+            ctx.fillRect(-10, -5, 20, 10);
+        } else {
+            ctx.fillRect(-8, -p.radius, 16, p.radius*2); 
+        }
         ctx.restore(); 
     }
     

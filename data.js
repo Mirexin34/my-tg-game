@@ -14,7 +14,16 @@ const itemDatabase = [
     { id: 'w1', type: 'weapon', rarity: 'normal', icon: '🔫', hp: 0, atk: 150, fireRate: 1.0, bullets: 1, projSpeed: 600, spread: 0 },
     { id: 'w2', type: 'weapon', rarity: 'rare', icon: '⚡', hp: 0, atk: 250, fireRate: 2.5, bullets: 1, projSpeed: 800, spread: 0.1 },
     { id: 'w3', type: 'weapon', rarity: 'epic', icon: '☄️', hp: 0, atk: 200, fireRate: 0.8, bullets: 3, projSpeed: 650, spread: 0.25 },
+    { id: 'w4', type: 'weapon', rarity: 'legendary', icon: '🚀', hp: 0, atk: 450, fireRate: 0.6, bullets: 1, projSpeed: 450, spread: 0, isRocket: true },
     { id: 'd1', type: 'drone', rarity: 'rare', icon: '🛸', hp: 200, atk: 100 }
+];
+
+const locationsConfig = [
+    { id: 1, name: 'Ржавые Пустоши', bgStyle: '#1a1a24', wallColor: '#333344', enemyMultiplier: 1.0 },
+    { id: 2, name: 'Заброшенный Бункер', bgStyle: '#14141c', wallColor: '#2b2b3d', enemyMultiplier: 1.3 },
+    { id: 3, name: 'Токсичный Город', bgStyle: '#121c16', wallColor: '#1e3828', enemyMultiplier: 1.7 },
+    { id: 4, name: 'Ядро Корпорации', bgStyle: '#1c1218', wallColor: '#3d1e2b', enemyMultiplier: 2.2 },
+    { id: 5, name: 'Цитадель Омега', bgStyle: '#1b1224', wallColor: '#301e3d', enemyMultiplier: 3.0 }
 ];
 
 const skillDatabase = [
@@ -26,7 +35,8 @@ const skillDatabase = [
 const craftingRecipes = [
     { id: 'w1', name: 'Базовый Пистолет', costGold: 1000, costParts: 50, reqStage: 1, reqBp: null, icon: '🔫' },
     { id: 'w2', name: 'Плазмо-винтовка', costGold: 5000, costParts: 250, reqStage: 2, reqBp: 'bp_w2', icon: '⚡', bpName: 'Чертеж: Плазма' },
-    { id: 'w3', name: 'Рельсотрон (Дробовик)', costGold: 15000, costParts: 800, reqStage: 4, reqBp: 'bp_w3', icon: '☄️', bpName: 'Чертеж: Рельсотрон' }
+    { id: 'w3', name: 'Рельсотрон (Дробовик)', costGold: 15000, costParts: 800, reqStage: 3, reqBp: 'bp_w3', icon: '☄️', bpName: 'Чертеж: Рельсотрон' },
+    { id: 'w4', name: 'Ракетница "Овердрайв"', costGold: 45000, costParts: 2500, reqStage: 5, reqBp: 'bp_w4', icon: '🚀', bpName: 'Чертеж: Ракетница' }
 ];
 
 const runSkillsPool = [
@@ -65,17 +75,6 @@ const sampleGuilds = [
     { id: 'g3', name: 'Дети Пустоши', level: 1, members: 3, maxMembers: 10, leader: 'ScrapLord' }
 ];
 
-const guildQuestsConfig = [
-    { id: 'gq_1', title: 'Очистка секторов', target: 50, rewardTokens: 100, desc: 'Уничтожить 50 зомби в боях' },
-    { id: 'gq_2', title: 'Сбор ресурсов', target: 2000, rewardTokens: 150, desc: 'Заработать 2000 золота' }
-];
-
-const guildShopConfig = [
-    { id: 'gs_parts', name: 'Набор деталей (+50 шт)', icon: '⚙️', costTokens: 50, type: 'parts', amount: 50 },
-    { id: 'gs_gold', name: 'Кошель золота (+2000)', icon: '💰', costTokens: 80, type: 'gold', amount: 2000 },
-    { id: 'gs_gems', name: 'Кристаллы (+50 💎)', icon: '💎', costTokens: 150, type: 'gems', amount: 50 }
-];
-
 const guildRaidBoss = {
     name: 'Мутант-Разрушитель Апекс',
     icon: '👹',
@@ -89,7 +88,7 @@ const guildRaidBoss = {
 const enemyBasesConfig = [
     { id: 'b_1', owner: 'Рейдер_Макс', lootGold: 1200, lootParts: 40, lootBp: 'bp_w2', defenseBm: 180, towersCount: 2, guardsCount: 3 },
     { id: 'b_2', owner: 'Бункер_73', lootGold: 3500, lootParts: 120, lootBp: 'bp_w3', defenseBm: 320, towersCount: 4, guardsCount: 5 },
-    { id: 'b_3', owner: 'Цитадель_Зла', lootGold: 8000, lootParts: 300, lootBp: 'bp_w3', defenseBm: 550, towersCount: 6, guardsCount: 8 }
+    { id: 'b_3', owner: 'Цитадель_Зла', lootGold: 8000, lootParts: 300, lootBp: 'bp_w4', defenseBm: 550, towersCount: 6, guardsCount: 8 }
 ];
 
 const agencyTalentsConfig = [
