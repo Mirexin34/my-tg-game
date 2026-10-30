@@ -1,5 +1,5 @@
 // ==========================================================================
-// БАЗЫ ДАННЫХ ИГРЫ (SPEKTER AGENCY: DATA - ACHIEVEMENTS)
+// БАЗЫ ДАННЫХ ИГРЫ (SPEKTER AGENCY: DATA - GEMS & PROFILE)
 // ==========================================================================
 
 const itemDatabase = [
@@ -30,10 +30,10 @@ const titlesConfig = [
 
 const locationsConfig = [
     { id: 1, name: 'Ржавые Пустоши', bgStyle: '#221e1e', wallColor: '#4d3e3e', particleColor: 'rgba(255, 140, 0, 0.25)', enemyMultiplier: 1.0, effect: 'dust' },
-    { id: 2, name: 'Заброшенный Бункер', bgStyle: '#161c24', wallColor: '#283545', particleColor: 'rgba(0, 170, 255, 0.2)', enemyMultiplier: 1.4, effect: 'sparks' },
+    { id: '2', name: 'Заброшенный Бункер', bgStyle: '#161c24', wallColor: '#283545', particleColor: 'rgba(0, 170, 255, 0.2)', enemyMultiplier: 1.4, effect: 'sparks' },
     { id: '3', name: 'Токсичный Город', bgStyle: '#16241a', wallColor: '#284d32', particleColor: 'rgba(0, 255, 100, 0.2)', enemyMultiplier: 1.8, effect: 'poison' },
-    { id: 4, name: 'Ядро Корпорации', bgStyle: '#241620', wallColor: '#4d283c', particleColor: 'rgba(255, 0, 150, 0.2)', enemyMultiplier: 2.3, effect: 'cyber' },
-    { id: 5, name: 'Цитадель Омега', bgStyle: '#1f160a', wallColor: '#4d3916', particleColor: 'rgba(255, 215, 0, 0.3)', enemyMultiplier: 3.0, effect: 'storm' }
+    { id: '4', name: 'Ядро Корпорации', bgStyle: '#241620', wallColor: '#4d283c', particleColor: 'rgba(255, 0, 150, 0.2)', enemyMultiplier: 2.3, effect: 'cyber' },
+    { id: '5', name: 'Цитадель Омега', bgStyle: '#1f160a', wallColor: '#4d3916', particleColor: 'rgba(255, 215, 0, 0.3)', enemyMultiplier: 3.0, effect: 'storm' }
 ];
 
 const skillDatabase = [
@@ -121,14 +121,8 @@ const leaderboardRivals = [
     { name: 'ShadowStalker', bm: 890, level: 7, title: 'Ветеран Пустоши' }
 ];
 
-const dailyQuestsConfig = [
-    { id: 'q_kills', title: 'Зачистка Пустоши', desc: 'Уничтожьте 10 врагов в вылазках', target: 10, rewardGold: 1500, rewardParts: 30 },
-    { id: 'q_arena', title: 'Проверка на прочность', desc: 'Победите в 2 боях на PvP арене', target: 2, rewardGold: 2500, rewardParts: 50 },
-    { id: 'q_chest', title: 'Черный рынок', desc: 'Откройте 1 контейнер Сталкера', target: 1, rewardGold: 2000, rewardGems: 30 }
-];
-
-const achievementsConfig = [
-    { id: 'ach_slayer', title: 'Охотник на мутантов', desc: 'Уничтожьте всего 50 врагов', target: 50, rewardGems: 50, rewardGold: 5000 },
-    { id: 'ach_arena', title: 'Гладиатор Арены', desc: 'Одержите 5 побед на арене', target: 5, rewardGems: 80, rewardGold: 8000 },
-    { id: 'ach_level', title: 'Опытный Сталкер', desc: 'Достигните 5 уровня Сталкера', target: 5, rewardGems: 100, rewardGold: 10000 }
+const gemsConfig = [
+    { id: 'ruby', name: 'Рубин Атаки', icon: '🔴', stat: 'atk', baseVal: 5, color: '#ff4a4a' },
+    { id: 'emerald', name: 'Изумруд Здоровья', icon: '🟢', stat: 'hp', baseVal: 30, color: '#00ff66' },
+    { id: 'sapphire', name: 'Сапфир Защиты', icon: '🔵', stat: 'def', baseVal: 4, color: '#00aaff' }
 ];

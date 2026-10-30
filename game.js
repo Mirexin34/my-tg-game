@@ -1,5 +1,5 @@
 // ==========================================================================
-// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - ACHIEVEMENTS)
+// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - FULL BUNDLE)
 // ==========================================================================
 
 const tg = window.Telegram?.WebApp;
@@ -56,61 +56,27 @@ const defaultSave = {
     guild: null, guildBossHp: 25000,
     baseDefense: { towers: 2, guards: 3 },
     talentsLevels: {}, seasonClaimed: {},
-    questProgress: { q_kills: 0, q_arena: 0, q_chest: 0 },
-    questClaimed: { q_kills: false, q_arena: false, q_chest: false },
-    lastQuestReset: Date.now(),
-    totalKillsAllTime: 0, totalArenaWins: 0,
-    achievementsClaimed: {}
+    playerGems: { ruby: { level: 1, count: 12 }, emerald: { level: 1, count: 8 }, sapphire: { level: 1, count: 10 } },
+    profilePrivacy: { publicGear: true },
+    totalKillsAllTime: 0, maxStageReached: 1
 };
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try { 
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal38') || 'null'); 
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal39') || 'null'); 
     if (loaded) Object.assign(savedData, loaded); 
 } catch(e) {}
 
 if (!savedData.equipped.weapon) savedData.equipped.weapon = null; 
 if (!savedData.equipped.drone) savedData.equipped.drone = 'd1'; 
 if (!savedData.equipped.mount) savedData.equipped.mount = 'm1';
-if (!savedData.blueprints) savedData.blueprints = {}; 
-if (!savedData.marketLimits) savedData.marketLimits = {};
-if (!savedData.playerLots) savedData.playerLots = [];
-if (savedData.guildBossHp === undefined) savedData.guildBossHp = 25000;
-if (!savedData.baseDefense) savedData.baseDefense = { towers: 2, guards: 3 };
-if (!savedData.talentsLevels) savedData.talentsLevels = {};
-if (!savedData.seasonClaimed) savedData.seasonClaimed = {};
-if (savedData.accountXp === undefined) savedData.accountXp = 0;
-if (!savedData.unlockedTitles) savedData.unlockedTitles = ['t_rookie'];
-if (!savedData.equippedTitle) savedData.equippedTitle = 't_rookie';
-if (!savedData.questProgress) savedData.questProgress = { q_kills: 0, q_arena: 0, q_chest: 0 };
-if (!savedData.questClaimed) savedData.questClaimed = { q_kills: false, q_arena: false, q_chest: false };
-if (!savedData.achievementsClaimed) savedData.achievementsClaimed = {};
+if (!savedData.playerGems) savedData.playerGems = { ruby: { level: 1, count: 12 }, emerald: { level: 1, count: 8 }, sapphire: { level: 1, count: 10 } };
+if (!savedData.profilePrivacy) savedData.profilePrivacy = { publicGear: true };
 
 function saveData() { 
-    localStorage.setItem('spekterSaveFinal38', JSON.stringify(savedData)); 
+    localStorage.setItem('spekterSaveFinal39', JSON.stringify(savedData)); 
     updateTopBar(); 
 }
-
-function checkDailyQuestReset() {
-    let now = Date.now();
-    if (now - (savedData.lastQuestReset || 0) > 86400000) {
-        savedData.questProgress = { q_kills: 0, q_arena: 0, q_chest: 0 };
-        savedData.questClaimed = { q_kills: false, q_arena: false, q_chest: false };
-        savedData.lastQuestReset = now;
-        saveData();
-    }
-}
-checkDailyQuestReset();
-
-function checkMarketDailyReset() {
-    let now = Date.now();
-    if (now - savedData.lastMarketReset > 86400000) {
-        savedData.marketLimits = {};
-        savedData.lastMarketReset = now;
-        saveData();
-    }
-}
-checkMarketDailyReset();
 
 function checkEnergyRegen() { 
     let diff = Date.now() - savedData.lastEnergyTime; 
@@ -178,7 +144,7 @@ function updateTopBar() {
     let xpBar = document.getElementById('accountXpBar');
     if (xpBar) xpBar.style.width = Math.min(100, (savedData.accountXp / maxXp) * 100) + '%';
 
-    let loc = locationsConfig.find(l => l.id === savedData.stage) || locationsConfig[0];
+    let loc = locationsConfig.find(l => l.id == savedData.stage) || locationsConfig[0];
     let locDisp = document.getElementById('locationNameDisplay');
     if(locDisp) locDisp.innerText = loc.name;
 
@@ -198,6 +164,7 @@ function updateTopBar() {
 
 window.changeStage = function(dir) {
     savedData.stage = Math.max(1, Math.min(locationsConfig.length, savedData.stage + dir));
+    if (savedData.stage > (savedData.maxStageReached || 1)) savedData.maxStageReached = savedData.stage;
     saveData();
     updateTopBar();
 };
@@ -235,6 +202,19 @@ function getCalculatedStats() {
         if (itemId) { let data = getItemData(itemId); flatAtk += data.atk; flatHp += data.hp; } 
     }); 
     
+    // Бонусы от рун
+    if (savedData.playerGems) {
+        Object.keys(savedData.playerGems).forEach(gKey => {
+            let gData = savedData.playerGems[gKey];
+            let cfg = gemsConfig.find(x => x.id === gKey);
+            if (cfg && gData.count > 0) {
+                let gemPower = gData.count * (cfg.baseVal * (1 + (gData.level - 1) * 0.2));
+                if (cfg.stat === 'atk') flatAtk += gemPower;
+                if (cfg.stat === 'hp') flatHp += gemPower;
+            }
+        });
+    }
+
     let currentTitle = titlesConfig.find(t => t.id === savedData.equippedTitle);
     if (currentTitle) {
         flatAtk += currentTitle.bonusAtk;
@@ -278,6 +258,51 @@ window.openTitlesModal = function() {
 
     let m = document.getElementById('titlesModal');
     if(m) m.style.display = 'flex';
+};
+
+window.openProfileModal = function() {
+    let pId = document.getElementById('profId');
+    let pTitle = document.getElementById('profTitle');
+    let pLevel = document.getElementById('profLevel');
+    let pKills = document.getElementById('profKills');
+    let pStage = document.getElementById('profStage');
+    let pGear = document.getElementById('profGearList');
+    let chk = document.getElementById('chkPublicGear');
+
+    if(pId) pId.innerText = 'STK-' + (savedData.accountLevel * 334 + 1000);
+    let curTitleObj = titlesConfig.find(t => t.id === savedData.equippedTitle) || titlesConfig[0];
+    if(pTitle) pTitle.innerText = curTitleObj.name;
+    if(pLevel) pLevel.innerText = savedData.accountLevel;
+    if(pKills) pKills.innerText = savedData.totalKillsAllTime || 0;
+    if(pStage) pStage.innerText = savedData.maxStageReached || savedData.stage;
+    if(chk) chk.checked = savedData.profilePrivacy.publicGear;
+
+    if(pGear) {
+        if (!savedData.profilePrivacy.publicGear) {
+            pGear.innerText = 'Снаряжение скрыто настройками приватности.';
+        } else {
+            let gearStr = [];
+            ['helmet', 'armor', 'ring', 'weapon', 'boots', 'drone', 'mount'].forEach(slot => {
+                if (savedData.equipped[slot]) {
+                    let d = getItemData(savedData.equipped[slot]);
+                    gearStr.push(`${d.icon} ${d.id.toUpperCase()}`);
+                }
+            });
+            pGear.innerText = gearStr.length > 0 ? gearStr.join(' | ') : 'Нет надетой экипировки.';
+        }
+    }
+
+    let m = document.getElementById('profileModal');
+    if(m) m.style.display = 'flex';
+};
+
+window.toggleProfilePrivacy = function() {
+    let chk = document.getElementById('chkPublicGear');
+    if(chk) {
+        savedData.profilePrivacy.publicGear = chk.checked;
+        saveData();
+        openProfileModal();
+    }
 };
 
 window.equipTitle = function(titleId) {
@@ -400,79 +425,66 @@ window.switchHubTab = function(tabName, btnEl) {
             `;
         });
         content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #ffaa00; margin-bottom: 4px;">🏆 Таблица лидеров Сектора:</div>${listHtml}`;
-    } else if (tabName === 'quests') {
-        let questsHtml = '';
-        dailyQuestsConfig.forEach(q => {
-            let currentProg = savedData.questProgress[q.id] || 0;
-            let isClaimed = savedData.questClaimed[q.id] || false;
-            let isCompleted = currentProg >= q.target;
-            let rewardText = `+${q.rewardGold} 💰` + (q.rewardParts ? ` +${q.rewardParts} ⚙️` : '') + (q.rewardGems ? ` +${q.rewardGems} 💎` : '');
-
-            questsHtml += `
-                <div style="background: #1e1e2c; border: 1px solid ${isCompleted && !isClaimed ? '#00ffcc' : '#444'}; border-radius: 8px; padding: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+    } else if (tabName === 'gems') {
+        let gemsHtml = '';
+        gemsConfig.forEach(g => {
+            let gData = savedData.playerGems[g.id] || { level: 1, count: 0 };
+            gemsHtml += `
+                <div style="background: #1e1e2c; border: 1px solid #444; border-radius: 8px; padding: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <div style="color: #fff; font-weight: bold; font-size: 11px;">🎯 ${q.title}</div>
-                        <div style="color: #aaa; font-size: 9px; margin: 2px 0;">${q.desc} (${Math.min(currentProg, q.target)}/${q.target})</div>
-                        <div style="color: #00ff66; font-size: 9px;">🎁 ${rewardText}</div>
+                        <div style="color: #fff; font-weight: bold; font-size: 11px;">${g.icon} ${g.name} (Ур. ${g.level})</div>
+                        <div style="color: #aaa; font-size: 9px; margin: 2px 0;">Количество: ${gData.count} шт.</div>
                     </div>
-                    <button onclick="claimDailyQuest('${q.id}')" ${!isCompleted || isClaimed ? 'disabled' : ''} style="background: ${isClaimed ? '#555' : (isCompleted ? '#28a745' : '#444')}; color: white; border: none; padding: 5px 10px; border-radius: 6px; font-weight: bold; font-size: 10px; cursor: pointer;">
-                        ${isClaimed ? 'Получено' : (isCompleted ? 'Забрать' : 'В процессе')}
-                    </button>
+                    <div style="display:flex; gap:4px;">
+                        <button onclick="upgradeGem('${g.id}', 1)" style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer;">Синтез (3->1)</button>
+                        <button onclick="upgradeGem('${g.id}', 'mass')" style="background: #ffaa00; color: #000; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer;">Массово</button>
+                    </div>
                 </div>
             `;
         });
-        content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #00ffcc; margin-bottom: 4px;">📋 Ежедневные поручения:</div>${questsHtml}`;
-    } else if (tabName === 'achievements') {
-        let achHtml = '';
-        achievementsConfig.forEach(ach => {
-            let currentVal = ach.id === 'ach_slayer' ? savedData.totalKillsAllTime : (ach.id === 'ach_arena' ? savedData.totalArenaWins : savedData.accountLevel);
-            let isClaimed = savedData.achievementsClaimed[ach.id] || false;
-            let isCompleted = currentVal >= ach.target;
-
-            achHtml += `
-                <div style="background: #1e1e2c; border: 1px solid ${isCompleted && !isClaimed ? '#ffd700' : '#444'}; border-radius: 8px; padding: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <div style="color: #fff; font-weight: bold; font-size: 11px;">🏅 ${ach.title}</div>
-                        <div style="color: #aaa; font-size: 9px; margin: 2px 0;">${ach.desc} (${Math.min(currentVal, ach.target)}/${ach.target})</div>
-                        <div style="color: #00ffcc; font-size: 9px;">🎁 +${ach.rewardGems} 💎, +${ach.rewardGold} 💰</div>
-                    </div>
-                    <button onclick="claimAchievement('${ach.id}')" ${!isCompleted || isClaimed ? 'disabled' : ''} style="background: ${isClaimed ? '#555' : (isCompleted ? '#ffd700' : '#444')}; color: ${isCompleted && !isClaimed ? '#000' : '#fff'}; border: none; padding: 5px 10px; border-radius: 6px; font-weight: bold; font-size: 10px; cursor: pointer;">
-                        ${isClaimed ? 'Получено' : (isCompleted ? 'Забрать' : 'В процессе')}
-                    </button>
-                </div>
-            `;
-        });
-        content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #ffd700; margin-bottom: 4px;">🏅 Достижения Сталкера:</div>${achHtml}`;
+        content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #00ffcc; margin-bottom: 4px;">💎 Управление рунами и крафт:</div>${gemsHtml} <div id="gemLog" style="color:#aaa; font-size:9px; margin-top:6px; max-height:60px; overflow-y:auto;"></div>`;
     }
 };
 
-window.claimDailyQuest = function(qId) {
-    let q = dailyQuestsConfig.find(x => x.id === qId);
-    if (!q || savedData.questClaimed[qId]) return;
-    let currentProg = savedData.questProgress[qId] || 0;
-    if (currentProg < q.target) return;
+window.upgradeGem = function(gId, mode) {
+    let gData = savedData.playerGems[gId];
+    let logEl = document.getElementById('gemLog');
+    if (!gData) return;
 
-    savedData.questClaimed[qId] = true;
-    savedData.gold += q.rewardGold;
-    if (q.rewardParts) savedData.parts += q.rewardParts;
-    if (q.rewardGems) savedData.gems += q.rewardGems;
+    if (mode === 1) {
+        if (gData.count < 3) { showAlert("Нужно минимум 3 руны для синтеза!"); return; }
+        gData.count -= 3;
+        let successChance = Math.max(30, 90 - (gData.level * 2)); // С ростом уровня шанс падает
+        let isSuccess = Math.random() * 100 < successChance;
+        if (isSuccess) {
+            gData.level++;
+            if(logEl) logEl.innerHTML = `<div>✨ Успешный синтез! Руна поднята до ур. ${gData.level}</div>` + logEl.innerHTML;
+            showBmPopup("Руна улучшена!");
+        } else {
+            if(logEl) logEl.innerHTML = `<div>💥 Неудача! 3 руны сгорели при синтезе.</div>` + logEl.innerHTML;
+            showBmPopup("Руна разрушена при синтезе!");
+        }
+    } else if (mode === 'mass') {
+        if (gData.count < 3) { showAlert("Недостаточно рун для массового синтеза!"); return; }
+        let attempts = Math.floor(gData.count / 3);
+        let successCount = 0;
+        let breakCount = 0;
+
+        for (let i = 0; i < attempts; i++) {
+            gData.count -= 3;
+            let successChance = Math.max(30, 90 - (gData.level * 2));
+            if (Math.random() * 100 < successChance) {
+                gData.level++;
+                successCount++;
+            } else {
+                breakCount++;
+            }
+        }
+        if(logEl) logEl.innerHTML = `<div>📦 Массовый синтез: Успешно: ${successCount}, Сломано: ${breakCount}</div>` + logEl.innerHTML;
+        showBmPopup(`Синтез завершен: +${successCount} уровней!`);
+    }
     saveData();
-    switchHubTab('quests', document.querySelectorAll('.hub-tab-btn')[5]);
-    showBmPopup("Награда за квест получена!");
-};
-
-window.claimAchievement = function(achId) {
-    let ach = achievementsConfig.find(x => x.id === achId);
-    if (!ach || savedData.achievementsClaimed[achId]) return;
-    let currentVal = achId === 'ach_slayer' ? savedData.totalKillsAllTime : (achId === 'ach_arena' ? savedData.totalArenaWins : savedData.accountLevel);
-    if (currentVal < ach.target) return;
-
-    savedData.achievementsClaimed[achId] = true;
-    savedData.gold += ach.rewardGold;
-    savedData.gems += ach.rewardGems;
-    saveData();
-    switchHubTab('achievements', document.querySelectorAll('.hub-tab-btn')[6]);
-    showBmPopup("Награда за достижение получена! 💎");
+    switchHubTab('gems', document.querySelectorAll('.hub-tab-btn')[5]);
 };
 
 window.joinGuild = function(gId) {
@@ -617,8 +629,6 @@ window.openChest = function(chestType, amount) {
     if (savedData.gems < cost) { showAlert("Недостаточно алмазов!"); return; } 
     savedData.gems -= cost; 
 
-    savedData.questProgress.q_chest = (savedData.questProgress.q_chest || 0) + amount;
-
     let chestBox = document.getElementById('gachaChestBox');
     if (chestBox) chestBox.className = 'chest-anim';
 
@@ -650,21 +660,13 @@ window.openChest = function(chestType, amount) {
 };
 
 window.buyMarketItem = function(itemId, qty) {
-    checkMarketDailyReset();
     let cfg = marketSystemConfig.find(x => x.id === itemId);
     if (!cfg || qty <= 0) return;
-    let boughtToday = savedData.marketLimits[itemId] || 0;
-    let leftToday = Math.max(0, cfg.maxDaily - boughtToday);
-    
-    let buyCount = Math.min(qty, leftToday);
-    if (buyCount <= 0) { showAlert("Лимит исчерпан!"); return; }
-    
-    let totalCost = cfg.pricePerUnitGem * buyCount;
+    let totalCost = cfg.pricePerUnitGem * qty;
     if (savedData.gems < totalCost) { showAlert("Недостаточно алмазов!"); return; }
 
     savedData.gems -= totalCost;
-    savedData.marketLimits[itemId] = boughtToday + buyCount;
-    savedData.parts += 10 * buyCount; 
+    savedData.parts += 10 * qty; 
     saveData(); 
     switchHubTab('market', document.querySelectorAll('.hub-tab-btn')[3]);
     showBmPopup(`Успешно куплено!`);
@@ -996,7 +998,7 @@ function startRoom() {
     isBossStage = (currentRoom === maxRooms);
     
     let rcu = document.getElementById('roomCounterUI');
-    if(rcu) rcu.innerText = isBossStage ? `БОСС (Сектор ${currentRoom}/5)` : `Сектор ${currentRoom}/5`;
+    if(rcu) rcu.innerText = isBossStage ? `БОСС (Глава ${savedData.stage}, Комната ${currentRoom}/5)` : `Глава ${savedData.stage} (Комната ${currentRoom}/5)`;
 
     const layouts = [
         [
@@ -1022,7 +1024,7 @@ function startRoom() {
     player.y = screenH / 2;
 
     if (!isBossStage) {
-        let count = 2 + currentRoom + savedData.stage;
+        let count = 2 + currentRoom + (savedData.stage * 1.5);
         let keys = Object.keys(enemyTypesConfig);
         for(let i=0; i<count; i++) {
             let tKey = keys[Math.floor(Math.random() * keys.length)];
@@ -1048,13 +1050,13 @@ function startRoom() {
 function spawnBoss() {
     bossEntity = {
         x: screenW * 0.8, y: screenH / 2,
-        radius: 35,
-        hp: 800 * savedData.stage, 
-        maxHp: 800 * savedData.stage,
-        atk: 40 * savedData.stage,
-        speed: 70,
+        radius: 38,
+        hp: 1200 * savedData.stage, 
+        maxHp: 1200 * savedData.stage,
+        atk: 50 * savedData.stage,
+        speed: 75,
         isBoss: true, isBot: false, isTower: false, type: 'boss',
-        angle: 0, lastAttack: 0
+        angle: 0, lastAttack: 0, patternTimer: 0
     };
     enemies.push(bossEntity);
 }
@@ -1211,7 +1213,7 @@ function gameLoop(timestamp) {
             if (!bossEntity && enemies.length === 0) spawnBoss(); 
         } else { 
             let maxEnemiesOnScreen = 3 + (savedData.stage * 2);
-            let totalEnemiesToKill = 12 + (savedData.stage * 2);
+            let totalEnemiesToKill = 10 + (savedData.stage * 2);
             let spawnChance = (0.5 + (savedData.stage * 0.1)) * dt;
             
             if (enemies.length < maxEnemiesOnScreen && killsInRoom + enemies.length < totalEnemiesToKill && Math.random() < spawnChance) {
@@ -1219,7 +1221,7 @@ function gameLoop(timestamp) {
             }
         }
         
-        let targetKills = isBossStage ? 1 : (12 + (savedData.stage * 2));
+        let targetKills = isBossStage ? 1 : (10 + (savedData.stage * 2));
         if (enemies.length === 0 && (isBossStage ? bossEntity && bossEntity.isDead : killsInRoom >= targetKills)) { 
             roomState = 'cleared'; 
             portal = { x: screenW - 100, y: screenH / 2, radius: 40 }; 
@@ -1320,7 +1322,7 @@ function gameLoop(timestamp) {
         for (let e of enemies) {
             if (e.isTower && timestamp - (e.lastAttack || 0) > 1500) {
                 let tAngle = Math.atan2(player.y - e.y, player.x - e.x);
-                projectiles.push({ x: e.x, y: e.y, vx: Math.cos(tAngle)*280, vy: Math.sin(tAngle)*280, radius: 5, damage: e.atk, isEnemy: true, angle: tAngle });
+                projectiles.push({ x: e.x, y: e.y, vx: Math.cos(tAngle)*280, vy: Math.sin(tAngle)*280, radius: 5, damage: bot.atk, isEnemy: true, angle: tAngle });
                 e.lastAttack = timestamp;
             }
         }
@@ -1358,9 +1360,6 @@ function gameLoop(timestamp) {
         if (e.isDead) { 
             if (isPvp) {
                 roomState = 'pvp_ended';
-                savedData.questProgress.q_arena = (savedData.questProgress.q_arena || 0) + 1;
-                savedData.totalArenaWins = (savedData.totalArenaWins || 0) + 1;
-                saveData();
                 showBattleResult(true);
                 return;
             }
@@ -1384,7 +1383,6 @@ function gameLoop(timestamp) {
             killsInRoom++; 
             totalKillsInRun++; 
             runXp += 15; 
-            savedData.questProgress.q_kills = (savedData.questProgress.q_kills || 0) + 1;
             savedData.totalKillsAllTime = (savedData.totalKillsAllTime || 0) + 1;
             if (runMods.vamp > 0) {
                 player.hp = Math.min(player.maxHp, player.hp + runMods.vamp);
@@ -1396,6 +1394,18 @@ function gameLoop(timestamp) {
         const dx = player.x - e.x, dy = player.y - e.y, dist = Math.hypot(dx, dy) || 0.001; 
         e.angle = Math.atan2(dy, dx);
         
+        // Интеллект босса с паттернами атак
+        if (e.isBoss) {
+            e.patternTimer += dt;
+            if (e.patternTimer > 3.0) {
+                // Выпуск волны снарядов в разные стороны
+                for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+                    projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a) * 260, vy: Math.sin(a) * 260, radius: 6, damage: e.atk * 0.8, isEnemy: true, angle: a });
+                }
+                e.patternTimer = 0;
+            }
+        }
+
         if (e.isBot || e.isTower) {
             if (e.isTower) continue;
             let nx = e.x + (dx / dist) * e.speed * dt;
@@ -1441,12 +1451,6 @@ function gameLoop(timestamp) {
                 e.y = nextY;
             }
 
-            if (e.isBoss && (timestamp - e.lastAttack) > 2000) { 
-                for (let a = 0; a < Math.PI * 2; a += Math.PI / 3) { 
-                    projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a)*280, vy: Math.sin(a)*280, radius: 6, damage: e.atk, isEnemy: true, angle: a }); 
-                } 
-                e.lastAttack = timestamp; 
-            }
             if (dist < player.radius + e.radius) { 
                 player.hp -= e.atk * dt * 2; 
                 if (player.hp <= 0) { triggerDeath(); return; } 
@@ -1512,7 +1516,7 @@ function gameLoop(timestamp) {
         }
     }
 
-    let locCfg = locationsConfig.find(l => l.id === savedData.stage) || locationsConfig[0];
+    let locCfg = locationsConfig.find(l => l.id == savedData.stage) || locationsConfig[0];
     ctx.fillStyle = locCfg.bgStyle; 
     ctx.fillRect(0, 0, screenW, screenH); 
     
@@ -1771,7 +1775,7 @@ window.showBattleResult = function(isWin, isFlee = false) {
     let content = document.getElementById('battleResultContent');
     if (content) {
         content.innerHTML = `
-            <h2 style="color:${isWin?'#00ffcc':'#ff4a4a'}; margin-top:0;">${isWin ? 'ЗАЧИСТКА УСПЕШНА!' : (isFlee ? 'ЭВАКУАЦИЯ ИЗ ЗОНЫ' : 'СМЕРТЬ В ПУСТОШИ')}</h2>
+            <h2 style="color:${isWin?'#00ffcc':'#ff4a4a'}; margin-top:0;">${isWin ? 'ЗАЧИСТКА ГЛАВЫ УСПЕШНА!' : (isFlee ? 'ЭВАКУАЦИЯ ИЗ ЗОНЫ' : 'СМЕРТЬ В ПУСТОШИ')}</h2>
             <p style="color:#888; font-size:12px;">Добытые трофеи:</p>
             <div style="display:flex; justify-content:center; gap:15px; margin:10px 0;">
                 <div>💰 +${goldReward}</div>
