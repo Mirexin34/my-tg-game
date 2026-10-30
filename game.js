@@ -1,5 +1,5 @@
 // ==========================================================================
-// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - FULL BUNDLE)
+// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - SOCKETS & GEMS)
 // ==========================================================================
 
 const tg = window.Telegram?.WebApp;
@@ -56,25 +56,27 @@ const defaultSave = {
     guild: null, guildBossHp: 25000,
     baseDefense: { towers: 2, guards: 3 },
     talentsLevels: {}, seasonClaimed: {},
-    playerGems: { ruby: { level: 1, count: 12 }, emerald: { level: 1, count: 8 }, sapphire: { level: 1, count: 10 } },
+    playerGems: { ruby: { level: 1, count: 6 }, emerald: { level: 1, count: 6 }, sapphire: { level: 1, count: 6 } },
+    socketedGems: { weapon: null, armor: null, helmet: null }, // Сюда вставляются руны
     profilePrivacy: { publicGear: true },
     totalKillsAllTime: 0, maxStageReached: 1
 };
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try { 
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal39') || 'null'); 
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal40') || 'null'); 
     if (loaded) Object.assign(savedData, loaded); 
 } catch(e) {}
 
 if (!savedData.equipped.weapon) savedData.equipped.weapon = null; 
 if (!savedData.equipped.drone) savedData.equipped.drone = 'd1'; 
 if (!savedData.equipped.mount) savedData.equipped.mount = 'm1';
-if (!savedData.playerGems) savedData.playerGems = { ruby: { level: 1, count: 12 }, emerald: { level: 1, count: 8 }, sapphire: { level: 1, count: 10 } };
+if (!savedData.playerGems) savedData.playerGems = { ruby: { level: 1, count: 6 }, emerald: { level: 1, count: 6 }, sapphire: { level: 1, count: 6 } };
+if (!savedData.socketedGems) savedData.socketedGems = { weapon: null, armor: null, helmet: null };
 if (!savedData.profilePrivacy) savedData.profilePrivacy = { publicGear: true };
 
 function saveData() { 
-    localStorage.setItem('spekterSaveFinal39', JSON.stringify(savedData)); 
+    localStorage.setItem('spekterSaveFinal40', JSON.stringify(savedData)); 
     updateTopBar(); 
 }
 
@@ -202,15 +204,17 @@ function getCalculatedStats() {
         if (itemId) { let data = getItemData(itemId); flatAtk += data.atk; flatHp += data.hp; } 
     }); 
     
-    // Бонусы от рун
-    if (savedData.playerGems) {
-        Object.keys(savedData.playerGems).forEach(gKey => {
-            let gData = savedData.playerGems[gKey];
-            let cfg = gemsConfig.find(x => x.id === gKey);
-            if (cfg && gData.count > 0) {
-                let gemPower = gData.count * (cfg.baseVal * (1 + (gData.level - 1) * 0.2));
-                if (cfg.stat === 'atk') flatAtk += gemPower;
-                if (cfg.stat === 'hp') flatHp += gemPower;
+    // Бонусы от вставленных в слоты рун
+    if (savedData.socketedGems) {
+        Object.keys(savedData.socketedGems).forEach(slotKey => {
+            let socket = savedData.socketedGems[slotKey];
+            if (socket) {
+                let cfg = gemsConfig.find(x => x.id === socket.gemId);
+                if (cfg) {
+                    let val = cfg.baseVal * (1 + (socket.level - 1) * 0.25);
+                    if (cfg.stat === 'atk') flatAtk += val;
+                    if (cfg.stat === 'hp') flatHp += val;
+                }
             }
         });
     }
@@ -433,17 +437,29 @@ window.switchHubTab = function(tabName, btnEl) {
                 <div style="background: #1e1e2c; border: 1px solid #444; border-radius: 8px; padding: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <div style="color: #fff; font-weight: bold; font-size: 11px;">${g.icon} ${g.name} (Ур. ${g.level})</div>
-                        <div style="color: #aaa; font-size: 9px; margin: 2px 0;">Количество: ${gData.count} шт.</div>
+                        <div style="color: #aaa; font-size: 9px; margin: 2px 0;">В наличии: ${gData.count} шт.</div>
                     </div>
-                    <div style="display:flex; gap:4px;">
-                        <button onclick="upgradeGem('${g.id}', 1)" style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer;">Синтез (3->1)</button>
-                        <button onclick="upgradeGem('${g.id}', 'mass')" style="background: #ffaa00; color: #000; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer;">Массово</button>
+                    <div style="display:flex; gap:3px;">
+                        <button onclick="upgradeGem('${g.id}', 1)" style="background: #28a745; color: white; border: none; padding: 4px 6px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer;">Синтез</button>
+                        <button onclick="upgradeGem('${g.id}', 'mass')" style="background: #ffaa00; color: #000; border: none; padding: 4px 6px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer;">Массово</button>
+                        <button onclick="socketGem('${g.id}', 'weapon')" style="background: #00aaff; color: white; border: none; padding: 4px 6px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer;">В пушку</button>
                     </div>
                 </div>
             `;
         });
-        content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #00ffcc; margin-bottom: 4px;">💎 Управление рунами и крафт:</div>${gemsHtml} <div id="gemLog" style="color:#aaa; font-size:9px; margin-top:6px; max-height:60px; overflow-y:auto;"></div>`;
+        content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #00ffcc; margin-bottom: 4px;">💎 Управление рунами:</div>${gemsHtml} <div id="gemLog" style="color:#aaa; font-size:9px; margin-top:6px; max-height:50px; overflow-y:auto;"></div>`;
     }
+};
+
+window.socketGem = function(gId, targetSlot) {
+    let gData = savedData.playerGems[gId];
+    if (!gData || gData.count <= 0) { showAlert("У вас нет таких рун в инвентаре!"); return; }
+    
+    savedData.socketedGems[targetSlot] = { gemId: gId, level: gData.level };
+    saveData();
+    switchHubTab('gems', document.querySelectorAll('.hub-tab-btn')[5]);
+    renderInventory();
+    showBmPopup("Руна успешно вставлена в оружие! ⚔️");
 };
 
 window.upgradeGem = function(gId, mode) {
@@ -454,7 +470,7 @@ window.upgradeGem = function(gId, mode) {
     if (mode === 1) {
         if (gData.count < 3) { showAlert("Нужно минимум 3 руны для синтеза!"); return; }
         gData.count -= 3;
-        let successChance = Math.max(30, 90 - (gData.level * 2)); // С ростом уровня шанс падает
+        let successChance = Math.max(30, 90 - (gData.level * 2));
         let isSuccess = Math.random() * 100 < successChance;
         if (isSuccess) {
             gData.level++;
@@ -698,6 +714,18 @@ window.renderInventory = function() {
             slot.innerHTML = `<span style="color:#555;">${slotIcons[type]}</span>`; 
         } 
     }); 
+
+    // Рендер вставленных рун в окне снаряжения
+    let gemsCont = document.getElementById('equippedGemsContainer');
+    if (gemsCont) {
+        gemsCont.innerHTML = '';
+        ['weapon', 'armor', 'helmet'].forEach(sKey => {
+            let socket = savedData.socketedGems[sKey];
+            let cfg = socket ? gemsConfig.find(x => x.id === socket.gemId) : null;
+            gemsCont.innerHTML += `<div><b>${sKey.toUpperCase()}:</b> ${cfg ? `${cfg.icon} Ур.${socket.level}` : 'Пусто'}</div>`;
+        });
+    }
+
     savedData.inventory.forEach(invItem => { 
         let data = getItemData(invItem.id); 
         if(!data) return; 
@@ -894,7 +922,7 @@ window.startBattle = function() {
     savedData.energy -= 5; 
     saveData(); 
 
-    prepareBattleUI("Сектор 1/5");
+    prepareBattleUI(`Глава ${savedData.stage} (Комната 1/5)`);
     let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'block'; 
     let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
 
@@ -1322,7 +1350,7 @@ function gameLoop(timestamp) {
         for (let e of enemies) {
             if (e.isTower && timestamp - (e.lastAttack || 0) > 1500) {
                 let tAngle = Math.atan2(player.y - e.y, player.x - e.x);
-                projectiles.push({ x: e.x, y: e.y, vx: Math.cos(tAngle)*280, vy: Math.sin(tAngle)*280, radius: 5, damage: bot.atk, isEnemy: true, angle: tAngle });
+                projectiles.push({ x: e.x, y: e.y, vx: Math.cos(tAngle)*280, vy: Math.sin(tAngle)*280, radius: 5, damage: 30, isEnemy: true, angle: tAngle });
                 e.lastAttack = timestamp;
             }
         }
@@ -1394,11 +1422,9 @@ function gameLoop(timestamp) {
         const dx = player.x - e.x, dy = player.y - e.y, dist = Math.hypot(dx, dy) || 0.001; 
         e.angle = Math.atan2(dy, dx);
         
-        // Интеллект босса с паттернами атак
         if (e.isBoss) {
             e.patternTimer += dt;
             if (e.patternTimer > 3.0) {
-                // Выпуск волны снарядов в разные стороны
                 for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
                     projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a) * 260, vy: Math.sin(a) * 260, radius: 6, damage: e.atk * 0.8, isEnemy: true, angle: a });
                 }

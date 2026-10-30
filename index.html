@@ -144,7 +144,7 @@
                     <div style="background: #222; border-radius: 3px; height: 5px; width: 100%; margin: 3px 0; border: 1px solid #444;">
                         <div id="accountXpBar" style="background: linear-gradient(90deg, #00ffcc, #ffaa00); height: 100%; width: 0%;"></div>
                     </div>
-                    <div style="color: #00ff66; font-size: 9px; font-weight: bold;">⚔️ БМ: <span id="bmDisplay">100</span></div>
+                    <div style="color: #00ff66; font-size: 9px; font-weight: bold; cursor: pointer; text-decoration: underline;" onclick="openProfileModal()">⚔️ БМ: <span id="bmDisplay">100</span> (Профиль)</div>
                 </div>
             </div>
             
@@ -154,7 +154,7 @@
             </div>
             
             <div style="margin: auto; text-align: center; width: 100%; max-width: 450px; padding: 10px 0;">
-                <div id="stageTitle" style="font-size: 16px; color: #ffaa00; font-weight: bold; margin-bottom: 2px; letter-spacing: 1px;">ЗОНА <span id="stageDisplay">1</span></div>
+                <div id="stageTitle" style="font-size: 16px; color: #ffaa00; font-weight: bold; margin-bottom: 2px; letter-spacing: 1px;">ГЛАВА <span id="stageDisplay">1</span></div>
                 <div id="locationNameDisplay" style="font-size: 12px; color: #00ffcc; margin-bottom: 12px;">Ржавые Пустоши</div>
                 
                 <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 12px;">
@@ -163,7 +163,7 @@
                 </div>
 
                 <button onclick="startBattle()" style="background: linear-gradient(135deg, #ffaa00, #ff5500); color: #000; border: none; padding: 12px 40px; border-radius: 25px; font-size: 18px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(255,170,0,0.4); text-transform: uppercase; letter-spacing: 1px;">В ВЫЛАЗКУ ⚔️</button>
-                <div style="margin-top: 6px; color: #888; font-size: 10px; margin-bottom: 12px;">Расход энергии: 5 ⚡ (5 Секторов)</div>
+                <div style="margin-top: 6px; color: #888; font-size: 10px; margin-bottom: 12px;">Расход энергии: 5 ⚡ (5 комнат, босс на 5)</div>
                 
                 <div id="btnSweep" style="background: rgba(14,14,19,0.85); border: 2px solid #ffaa0055; border-radius: 10px; padding: 8px 14px; margin: 0 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
                     <div style="text-align: left;">
@@ -172,6 +172,32 @@
                     </div>
                     <div style="font-size: 22px;">📦</div>
                 </div>
+            </div>
+        </div>
+
+        <!-- МОДАЛКА ПРОФИЛЯ -->
+        <div id="profileModal" class="modal-overlay">
+            <div class="modal-content" style="border-color: #00ffcc; max-width: 380px;">
+                <button onclick="document.getElementById('profileModal').style.display='none'" style="position:absolute; top:6px; right:6px; background:#dc3545; color:white; border:none; padding:3px 7px; border-radius:4px; font-weight:bold; cursor:pointer;">X</button>
+                <h3 style="color: #00ffcc; margin-top:0; font-size:16px;">🪪 ПРОФИЛЬ СТАЛКЕРА</h3>
+                <div style="text-align: left; font-size: 11px; line-height: 1.6; margin-bottom: 12px; background: #121218; padding: 10px; border-radius: 8px;">
+                    <div>🆔 ID: <span id="profId" style="color:#ffaa00;">STK-9942</span></div>
+                    <div>🏆 Титул: <span id="profTitle" style="color:#ffaa00;">Бродяга</span></div>
+                    <div>⭐ Уровень: <span id="profLevel" style="color:#00ffcc;">1</span></div>
+                    <div>💀 Убито врагов: <span id="profKills" style="color:#ff4a4a;">0</span></div>
+                    <div>🗺️ Макс. Глава: <span id="profStage" style="color:#00ffcc;">1</span></div>
+                </div>
+                <div style="background: #121218; padding: 10px; border-radius: 8px; margin-bottom: 12px; text-align: left;">
+                    <div style="color: #ffaa00; font-size: 11px; font-weight: bold; margin-bottom: 6px;">🔒 Приватность профиля:</div>
+                    <label style="font-size: 10px; display: flex; align-items: center; gap: 6px; cursor: pointer; margin-bottom: 4px;">
+                        <input type="checkbox" id="chkPublicGear" onchange="toggleProfilePrivacy()"> Показывать снаряжение всем
+                    </label>
+                </div>
+                <div style="text-align: left; font-size: 11px; margin-bottom: 10px;">
+                    <div style="color: #00ffcc; font-weight: bold; margin-bottom: 4px;">🎒 Экипировка:</div>
+                    <div id="profGearList" style="color: #aaa; font-size: 10px;">Снаряжение скрыто или пусто.</div>
+                </div>
+                <button onclick="document.getElementById('profileModal').style.display='none'" style="background:#555; color:#fff; border:none; padding:6px; border-radius:6px; font-weight:bold; width:100%; font-size:11px; cursor:pointer;">Закрыть</button>
             </div>
         </div>
 
@@ -244,6 +270,10 @@
                         <div id="slot-mount" class="eq-slot" onclick="unequip('mount')" style="border-color: #ffaa00;"></div>
                     </div>
                 </div>
+                <div style="background: #16161d; padding: 10px; border-radius: 10px; border: 1px solid #333; margin-bottom: 10px;">
+                    <div style="color: #00ffcc; font-size: 11px; font-weight: bold; margin-bottom: 6px;">💎 Вставленные Руны в Экипировку:</div>
+                    <div id="equippedGemsContainer" style="display: flex; gap: 8px; justify-content: space-around; font-size: 10px;"></div>
+                </div>
                 <div style="background: #16161d; padding: 10px; border-radius: 10px; border: 1px solid #333;">
                     <div id="inventoryGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;"></div>
                 </div>
@@ -293,8 +323,7 @@
                     <button class="hub-tab-btn" onclick="switchHubTab('arena', this)">⚔️ PvP</button>
                     <button class="hub-tab-btn" onclick="switchHubTab('market', this)">🏪 Рынок</button>
                     <button class="hub-tab-btn" onclick="switchHubTab('leaderboard', this)">🏆 Топ</button>
-                    <button class="hub-tab-btn" onclick="switchHubTab('quests', this)">🎯 Квесты</button>
-                    <button class="hub-tab-btn" onclick="switchHubTab('achievements', this)">🏅 Достиж.</button>
+                    <button class="hub-tab-btn" onclick="switchHubTab('gems', this)">💎 Руны</button>
                 </div>
 
                 <div id="hubTabContent" style="max-height: 250px; overflow-y: auto; text-align: left;"></div>
