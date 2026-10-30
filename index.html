@@ -25,6 +25,7 @@
         #joystickBase { position: absolute; width: 90px; height: 90px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; transform: translate(-50%, -50%); display: none; pointer-events: none; }
         #joystickStick { position: absolute; top: 50%; left: 50%; width: 35px; height: 35px; background: rgba(255,255,255,0.8); border-radius: 50%; transform: translate(-50%, -50%); }
         #btnPause { position: absolute; top: 10px; right: 15px; width: 36px; height: 36px; background: rgba(0,0,0,0.5); border: 2px solid #fff; border-radius: 8px; color: #fff; font-size: 16px; font-weight: bold; display: none; z-index: 150; cursor: pointer; align-items: center; justify-content: center; }
+        #btnCallGuild { position: absolute; top: 10px; right: 60px; background: rgba(218, 112, 214, 0.8); border: 2px solid #da70d6; border-radius: 8px; color: #fff; font-size: 11px; font-weight: bold; padding: 8px 12px; display: none; z-index: 150; cursor: pointer; }
         #roomCounterUI { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); border: 1px solid #ffd700; color: #ffd700; padding: 4px 12px; border-radius: 12px; font-weight: bold; font-size: 12px; display: none; z-index: 150; }
         #combatXpContainer { display: none; position: absolute; top: 12px; left: 20%; width: 60%; max-width: 320px; background: rgba(0,0,0,0.6); border: 2px solid #555; border-radius: 8px; height: 14px; z-index: 150; }
         #combatXpBar { width: 0%; height: 100%; background: linear-gradient(90deg, #00bfff, #00ffff); border-radius: 6px; transition: width 0.3s ease-out; }
@@ -60,6 +61,7 @@
 
         <canvas id="gameCanvas" style="display:none; position:absolute; top:0; left:0;"></canvas>
         <button id="btnPause" onclick="togglePause()">⏸</button>
+        <button id="btnCallGuild" onclick="callGuildSupport()">👥 ПОДМОГА</button>
         <div id="roomCounterUI">Комната 1/5</div>
         <div id="combatXpContainer"><div id="combatXpBar"></div><div id="combatLevelText">УР. 1</div></div>
         <div id="joystickZone"><div id="joystickBase"><div id="joystickStick"></div></div></div>
@@ -178,9 +180,14 @@
         <div id="cityScreen" class="screen">
             <div style="max-width: 450px; margin: 0 auto; width: 100%;">
                 <h2 style="color: #00ffff; text-align: center; margin-top:0; font-size:16px;">ГОРОД</h2>
+                <div style="background: linear-gradient(135deg, #1b1b2f, #e43f5a); border: 2px solid #e43f5a; border-radius: 10px; padding: 10px; text-align: center; margin-bottom: 10px;">
+                    <h3 style="color: #fff; margin: 0 0 3px 0; font-size:14px;">🏰 РЕЙДЫ НА БАЗЫ И ЗАЩИТА</h3>
+                    <p style="color: #eee; font-size: 10px; margin-bottom: 6px;">Штурмуйте чужие базы с поддержкой согильдийцев!</p>
+                    <button onclick="openRaidModal()" style="width: 100%; background: #e43f5a; color: #fff; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size:12px;">ОТКРЫТЬ БАЗЫ</button>
+                </div>
                 <div style="background: linear-gradient(135deg, #3a1c71, #d76d77); border: 2px solid #da70d6; border-radius: 10px; padding: 10px; text-align: center; margin-bottom: 10px;">
                     <h3 style="color: #fff; margin: 0 0 3px 0; font-size:14px;">🛡️ СИСТЕМА ГИЛЬДИЙ</h3>
-                    <p style="color: #eee; font-size: 10px; margin-bottom: 6px;">Задания, лавка и штаб выживших!</p>
+                    <p style="color: #eee; font-size: 10px; margin-bottom: 6px;">Задания, лавка, рейдовый босс и штаб!</p>
                     <button onclick="openGuildModal()" style="width: 100%; background: #da70d6; color: #fff; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size:12px;">ОТКРЫТЬ ГИЛЬДИЮ</button>
                 </div>
                 <div style="background: linear-gradient(135deg, #8b0000, #4a0000); border: 2px solid #ff4a4a; border-radius: 10px; padding: 10px; text-align: center; margin-bottom: 10px;">
@@ -199,6 +206,15 @@
             </div>
         </div>
         
+        <!-- МОДАЛКА РЕЙДОВ НА БАЗЫ -->
+        <div id="raidModal" class="modal-overlay">
+            <div class="modal-content" style="border-color: #e43f5a; max-width: 420px;">
+                <button onclick="document.getElementById('raidModal').style.display='none'" style="position:absolute; top:6px; right:6px; background:#dc3545; color:white; border:none; padding:3px 7px; border-radius:4px; font-weight:bold; cursor:pointer;">X</button>
+                <h3 style="color: #e43f5a; margin-top:0; font-size:16px;">🏰 ШТУРМ БАЗ ВЫЖИВШИХ</h3>
+                <div id="raidModalContent"></div>
+            </div>
+        </div>
+
         <!-- МОДАЛКА ГИЛЬДИИ -->
         <div id="guildModal" class="modal-overlay">
             <div class="modal-content" style="border-color: #da70d6; max-width: 420px;">

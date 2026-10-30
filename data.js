@@ -75,3 +75,19 @@ const guildShopConfig = [
     { id: 'gs_gold', name: 'Кошель золота (+2000)', icon: '💰', costTokens: 80, type: 'gold', amount: 2000 },
     { id: 'gs_gems', name: 'Кристаллы (+50 💎)', icon: '💎', costTokens: 150, type: 'gems', amount: 50 }
 ];
+
+const guildRaidBoss = {
+    name: 'Мутант-Разрушитель Апекс',
+    icon: '👹',
+    hp: 15000,
+    atk: 140,
+    speed: 55,
+    radius: 45,
+    rewardTokens: 250
+};
+
+const enemyBasesConfig = [
+    { id: 'b_1', owner: 'Рейдер_Макс', lootGold: 1200, lootParts: 40, defenseBm: 180, towersCount: 2, guardsCount: 3 },
+    { id: 'b_2', owner: 'Бункер_73', lootGold: 3500, lootParts: 120, defenseBm: 320, towersCount: 4, guardsCount: 5 },
+    { id: 'b_3', owner: 'Цитадель_Зла', lootGold: 8000, lootParts: 300, defenseBm: 550, towersCount: 6, guardsCount: 8 }
+];

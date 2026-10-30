@@ -52,13 +52,13 @@ const defaultSave = {
     beginnerClaimed: [false, false, false], serverProgressClaimed: [], seasonLevel: 1, seasonXp: 0, 
     missionKillsClaimed: false, lastAFKTime: Date.now(),
     marketLimits: {}, lastMarketReset: Date.now(), playerLots: [],
-    guild: null, // { id, name, level, membersCount, tokens: 0 }
-    guildQuestsProgress: {}, guildQuestsClaimed: {}
+    guild: null, guildQuestsProgress: {}, guildQuestsClaimed: {}, guildBossHp: 15000,
+    baseDefense: { towers: 2, guards: 3 }
 };
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try { 
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal19') || 'null'); 
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal21') || 'null'); 
     if (loaded) Object.assign(savedData, loaded); 
 } catch(e) {}
 
@@ -69,9 +69,11 @@ if (!savedData.marketLimits) savedData.marketLimits = {};
 if (!savedData.playerLots) savedData.playerLots = [];
 if (!savedData.guildQuestsProgress) savedData.guildQuestsProgress = {};
 if (!savedData.guildQuestsClaimed) savedData.guildQuestsClaimed = {};
+if (savedData.guildBossHp === undefined) savedData.guildBossHp = 15000;
+if (!savedData.baseDefense) savedData.baseDefense = { towers: 2, guards: 3 };
 
 function saveData() { 
-    localStorage.setItem('spekterSaveFinal19', JSON.stringify(savedData)); 
+    localStorage.setItem('spekterSaveFinal21', JSON.stringify(savedData)); 
     updateTopBar(); 
 }
 
@@ -163,11 +165,130 @@ function getCalculatedStats() {
         if (itemId) { let data = getItemData(itemId); flatAtk += data.atk; flatHp += data.hp; } 
     }); 
     let percentBonus = (savedData.agencyLevel * 2) / 100; 
-    if (savedData.guild) percentBonus += 0.05; // +5% от гильдии
+    if (savedData.guild) percentBonus += 0.05; 
     let finalAtk = Math.floor((baseAtk + flatAtk) * (1 + percentBonus)); 
     let finalHp = Math.floor((baseHp + flatHp) * (1 + percentBonus)); 
     return { atk: finalAtk, hp: finalHp }; 
 }
+
+// ----------------- ЛОГИКА РЕЙДОВ НА БАЗЫ -----------------
+window.openRaidModal = function() {
+    renderRaidUI();
+    let rm = document.getElementById('raidModal'); if(rm) rm.style.display = 'flex';
+};
+
+window.renderRaidUI = function() {
+    const container = document.getElementById('raidModalContent');
+    if (!container) return;
+
+    let basesHTML = '';
+    enemyBasesConfig.forEach(b => {
+        basesHTML += `
+            <div style="background: #1e1e2c; border: 1px solid #e43f5a; border-radius: 8px; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="text-align: left;">
+                    <div style="color: #fff; font-weight: bold; font-size: 12px;">🏰 База: ${b.owner}</div>
+                    <div style="color: #00ff00; font-size: 9px;">⚔️ Защита БМ: ${b.defenseBm} | Турелей: ${b.towersCount}</div>
+                    <div style="color: #ffd700; font-size: 9px;">💰 Награда: ${b.lootGold} 💰 | ⚙️ ${b.lootParts} ⚙️</div>
+                </div>
+                <button onclick="startBaseRaid('${b.id}')" style="background: #e43f5a; color: white; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Штурм</button>
+            </div>
+        `;
+    });
+
+    container.innerHTML = `
+        <div style="background: #2a2a35; border: 1px solid #555; border-radius: 8px; padding: 8px; margin-bottom: 10px; text-align: left;">
+            <div style="color: #ffd700; font-weight: bold; font-size: 11px; margin-bottom: 2px;">🛡️ Ваша защита базы:</div>
+            <div style="color: #aaa; font-size: 10px;">Турели: ${savedData.baseDefense.towers} шт. | Охрана: ${savedData.baseDefense.guards} мутантов</div>
+            <button onclick="upgradeBaseDefense()" style="background: #28a745; color: white; border: none; padding: 5px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 10px; cursor: pointer; margin-top: 4px;">Улучшить защиту (1000 💰)</button>
+        </div>
+        <div style="font-weight: bold; font-size: 12px; color: #ffea00; margin-bottom: 6px; text-align: left;">🎯 Доступные для штурма базы:</div>
+        <div style="max-height: 220px; overflow-y: auto;">${basesHTML}</div>
+    `;
+};
+
+window.upgradeBaseDefense = function() {
+    if (savedData.gold < 1000) { showAlert("Недостаточно золота!"); return; }
+    savedData.gold -= 1000;
+    savedData.baseDefense.towers += 1;
+    savedData.baseDefense.guards += 1;
+    saveData();
+    renderRaidUI();
+    showAlert("Защита базы усилена!");
+};
+
+let activeRaidBase = null;
+window.startBaseRaid = function(baseId) {
+    activeRaidBase = enemyBasesConfig.find(x => x.id === baseId);
+    if (!activeRaidBase) return;
+
+    let rm = document.getElementById('raidModal'); if(rm) rm.style.display = 'none';
+
+    document.querySelectorAll('.screen').forEach(s => s.style.display = 'none'); 
+    let tb = document.getElementById('topBar'); if(tb) tb.style.display = 'none'; 
+    let nb = document.getElementById('navBar'); if(nb) nb.style.display = 'none'; 
+    let brm = document.getElementById('battleResultModal'); if(brm) brm.style.display = 'none'; 
+    let bp = document.getElementById('btnPause'); if(bp) bp.style.display = 'flex'; 
+    let rcu = document.getElementById('roomCounterUI'); if(rcu) rcu.style.display = 'block'; 
+    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = savedData.guild ? 'flex' : 'none';
+
+    resize(); world.width = screenW; world.height = screenH;
+
+    let finalStats = getCalculatedStats(); 
+    player.maxHp = finalStats.hp; player.hp = finalStats.hp; player.atk = finalStats.atk; 
+    let wp = getItemData(savedData.equipped.weapon); 
+    if (wp && wp.fireRate) { 
+        currentWeaponStats = { fireRate: wp.fireRate, bullets: wp.bullets, projSpeed: wp.projSpeed, spread: wp.spread }; 
+    } else { currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0 }; } 
+    
+    runLevel = 1; runXp = 0; runMaxXp = 100; 
+    runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
+    player.speed = 220; runLoot = { blueprints: {} }; 
+    
+    if(rcu) rcu.innerText = `ШТУРМ: База ${activeRaidBase.owner}`;
+    let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none'; 
+
+    player.x = 100; player.y = screenH / 2;
+    enemies = []; projectiles = []; floatingTexts = []; allyUnits = [];
+    roomState = 'base_raid_fighting'; portal = null; isBossStage = false; bossEntity = null;
+
+    // Спавн охраны базы (турелей и охранников)
+    for(let i=0; i<activeRaidBase.towersCount; i++) {
+        enemies.push({
+            x: screenW - 120, y: 100 + i * (screenH / (activeRaidBase.towersCount + 1)),
+            radius: 18, hp: 400, maxHp: 400, atk: 30, speed: 0,
+            isBoss: false, isBot: false, isTower: true, type: 'tower', icon: '🗼', angle: 0, lastAttack: 0
+        });
+    }
+    for(let i=0; i<activeRaidBase.guardsCount; i++) {
+        enemies.push({
+            x: screenW - 200 + (Math.random()*40-20), y: 80 + Math.random() * (screenH - 160),
+            radius: 14, hp: 200, maxHp: 200, atk: 20, speed: 120,
+            isBoss: false, isBot: false, isTower: false, type: 'zombie', icon: '🧟', angle: 0, lastAttack: 0
+        });
+    }
+
+    gameState = 'playing'; 
+    let cv = document.getElementById('gameCanvas'); if(cv) cv.style.display = 'block'; 
+    let jz = document.getElementById('joystickZone'); if(jz) jz.style.display = 'block'; 
+    lastTime = performance.now(); 
+    requestAnimationFrame(gameLoop);
+};
+
+let allyUnits = [];
+window.callGuildSupport = function() {
+    if (!savedData.guild) return;
+    let btn = document.getElementById('btnCallGuild');
+    if (btn) btn.style.display = 'none';
+
+    // Призываем 2 ботов-союзников из гильдии
+    for(let i=0; i<2; i++) {
+        allyUnits.push({
+            x: player.x - 30 - i*20, y: player.y + (i === 0 ? 30 : -30),
+            radius: 16, hp: 400, maxHp: 400, atk: 60, speed: 200, aimingAngle: 0, lastAttack: 0
+        });
+    }
+    showAlert("Подмога согильдийцев прибыла на поле боя!");
+};
 
 // ----------------- ЛОГИКА ГИЛЬДИЙ И ЗАДАНИЙ -----------------
 window.openGuildModal = function() {
@@ -215,7 +336,7 @@ window.renderGuildUI = function() {
                 <div style="background: #1e1e2c; border: 1px solid #444; border-radius: 8px; padding: 8px; margin-bottom: 6px; text-align: left;">
                     <div style="display:flex; justify-content:between; align-items:center;">
                         <div style="color: #fff; font-weight: bold; font-size: 11px;">${q.title}</div>
-                        <div style="color: #da70d6; font-size: 10px; font-weight: bold;">💎 +${q.rewardTokens} жетонов</div>
+                        <div style="color: #da70d6; font-size: 10px; font-weight: bold;">🪙 +${q.rewardTokens} жетонов</div>
                     </div>
                     <div style="color: #aaa; font-size: 9px; margin: 2px 0;">${q.desc}</div>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
@@ -243,14 +364,19 @@ window.renderGuildUI = function() {
             <div style="background: #1e1e2c; border: 1px solid #da70d6; border-radius: 8px; padding: 10px; text-align: center; margin-bottom: 8px;">
                 <h4 style="color: #da70d6; margin: 0 0 4px 0; font-size: 14px;">🛡️ ${savedData.guild.name}</h4>
                 <div style="color: #00ff00; font-size: 10px; margin-bottom: 2px;">Уровень: ${savedData.guild.level} | Участников: ${savedData.guild.membersCount}/20</div>
-                <div style="color: #da70d6; font-size: 11px; font-weight: bold;">🪙 Жетоны гильдии: ${savedData.guild.tokens || 0}</div>
+                <div style="color: #da70d6; font-size: 11px; font-weight: bold; margin-bottom: 6px;">🪙 Жетоны гильдии: ${savedData.guild.tokens || 0}</div>
+                <div style="background: #2a2a35; border: 1px solid #ff4a4a; padding: 8px; border-radius: 6px; margin-top: 6px;">
+                    <div style="color: #ff4a4a; font-weight: bold; font-size: 11px;">👹 Рейдовый босс: ${guildRaidBoss.name}</div>
+                    <div style="color: #aaa; font-size: 9px; margin: 2px 0;">HP Босса: ${savedData.guildBossHp} / ${guildRaidBoss.hp}</div>
+                    <button onclick="startGuildRaidBattle()" style="background: #ff4a4a; color: white; border: none; padding: 5px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 10px; cursor: pointer; margin-top: 4px;">АТАКОВАТЬ БОССА</button>
+                </div>
             </div>
             
             <div style="font-weight: bold; font-size: 11px; color: #ffea00; margin-bottom: 4px; text-align: left;">📋 Задания клана:</div>
-            <div style="max-height: 130px; overflow-y: auto; margin-bottom: 8px;">${questsHTML}</div>
+            <div style="max-height: 120px; overflow-y: auto; margin-bottom: 8px;">${questsHTML}</div>
 
             <div style="font-weight: bold; font-size: 11px; color: #00ffff; margin-bottom: 4px; text-align: left;">🛒 Лавка гильдии:</div>
-            <div style="max-height: 130px; overflow-y: auto; margin-bottom: 8px;">${shopHTML}</div>
+            <div style="max-height: 120px; overflow-y: auto; margin-bottom: 8px;">${shopHTML}</div>
 
             <button onclick="leaveGuild()" style="background: #dc3545; color: white; border: none; padding: 6px; border-radius: 6px; font-weight: bold; width: 100%; font-size: 10px; cursor: pointer;">Покинуть гильдию</button>
         `;
@@ -317,6 +443,52 @@ window.buyGuildShopItem = function(itemId) {
     saveData();
     renderGuildUI();
     showAlert(`Успешно куплено: ${item.name}!`);
+};
+
+window.startGuildRaidBattle = function() {
+    let gm = document.getElementById('guildModal'); if(gm) gm.style.display = 'none';
+
+    document.querySelectorAll('.screen').forEach(s => s.style.display = 'none'); 
+    let tb = document.getElementById('topBar'); if(tb) tb.style.display = 'none'; 
+    let nb = document.getElementById('navBar'); if(nb) nb.style.display = 'none'; 
+    let brm = document.getElementById('battleResultModal'); if(brm) brm.style.display = 'none'; 
+    let bp = document.getElementById('btnPause'); if(bp) bp.style.display = 'flex'; 
+    let rcu = document.getElementById('roomCounterUI'); if(rcu) rcu.style.display = 'block'; 
+    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
+
+    resize(); world.width = screenW; world.height = screenH;
+
+    let finalStats = getCalculatedStats(); 
+    player.maxHp = finalStats.hp; player.hp = finalStats.hp; player.atk = finalStats.atk; 
+    let wp = getItemData(savedData.equipped.weapon); 
+    if (wp && wp.fireRate) { 
+        currentWeaponStats = { fireRate: wp.fireRate, bullets: wp.bullets, projSpeed: wp.projSpeed, spread: wp.spread }; 
+    } else { currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0 }; } 
+    
+    runLevel = 1; runXp = 0; runMaxXp = 100; 
+    runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
+    player.speed = 220; runLoot = { blueprints: {} }; 
+    
+    if(rcu) rcu.innerText = `РЕЙД: ${guildRaidBoss.name}`;
+    let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none'; 
+
+    player.x = 100; player.y = screenH / 2;
+    enemies = []; projectiles = []; floatingTexts = []; allyUnits = [];
+    roomState = 'guild_raid_fighting'; portal = null; isBossStage = true; 
+
+    bossEntity = {
+        x: screenW - 150, y: screenH / 2,
+        radius: guildRaidBoss.radius, hp: savedData.guildBossHp, maxHp: guildRaidBoss.hp,
+        atk: guildRaidBoss.atk, speed: guildRaidBoss.speed,
+        isBoss: true, isBot: false, type: 'boss', lastAttack: 0, angle: 0
+    };
+    enemies.push(bossEntity);
+
+    gameState = 'playing'; 
+    let cv = document.getElementById('gameCanvas'); if(cv) cv.style.display = 'block'; 
+    let jz = document.getElementById('joystickZone'); if(jz) jz.style.display = 'block'; 
+    lastTime = performance.now(); 
+    requestAnimationFrame(gameLoop);
 };
 
 window.renderCrafting = function() { 
@@ -525,15 +697,12 @@ window.startArenaBattle = function(botName) {
     let brm = document.getElementById('battleResultModal'); if(brm) brm.style.display = 'none'; 
     let bp = document.getElementById('btnPause'); if(bp) bp.style.display = 'flex'; 
     let rcu = document.getElementById('roomCounterUI'); if(rcu) rcu.style.display = 'block'; 
+    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
 
-    resize(); 
-    world.width = screenW; 
-    world.height = screenH;
+    resize(); world.width = screenW; world.height = screenH;
 
     let finalStats = getCalculatedStats(); 
-    player.maxHp = finalStats.hp; 
-    player.hp = finalStats.hp; 
-    player.atk = finalStats.atk; 
+    player.maxHp = finalStats.hp; player.hp = finalStats.hp; player.atk = finalStats.atk; 
     let wp = getItemData(savedData.equipped.weapon); 
     if (wp && wp.fireRate) { 
         currentWeaponStats = { fireRate: wp.fireRate, bullets: wp.bullets, projSpeed: wp.projSpeed, spread: wp.spread }; 
@@ -541,14 +710,13 @@ window.startArenaBattle = function(botName) {
     
     runLevel = 1; runXp = 0; runMaxXp = 100; 
     runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
-    player.speed = 220; 
-    runLoot = { blueprints: {} }; 
+    player.speed = 220; runLoot = { blueprints: {} }; 
     
     if(rcu) rcu.innerText = `ДУЭЛЬ: ${activeArenaBot.name}`;
     let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none'; 
 
     player.x = 100; player.y = screenH / 2;
-    enemies = []; projectiles = []; floatingTexts = []; 
+    enemies = []; projectiles = []; floatingTexts = []; allyUnits = [];
     roomState = 'pvp_fighting'; portal = null; isBossStage = false; bossEntity = null;
 
     enemies.push({
@@ -719,6 +887,7 @@ window.togglePause = function() {
 
 window.fleeBattle = function() { 
     let pm = document.getElementById('pauseModal'); if(pm) pm.style.display = 'none'; 
+    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
     showBattleResult(false, true); 
 };
 
@@ -741,6 +910,7 @@ window.startBattle = function() {
     let brm = document.getElementById('battleResultModal'); if(brm) brm.style.display = 'none'; 
     let bp = document.getElementById('btnPause'); if(bp) bp.style.display = 'flex'; 
     let rcu = document.getElementById('roomCounterUI'); if(rcu) rcu.style.display = 'block'; 
+    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
 
     resize(); 
     world.width = screenW; 
@@ -830,6 +1000,7 @@ function spawnBoss() {
 
 function triggerDeath() { 
     gameState = 'paused'; 
+    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
     if (revivesUsed < 3) { 
         let rc = document.getElementById('reviveCost'); if(rc) rc.innerText = (revivesUsed + 1) * 10; 
         let rm = document.getElementById('reviveModal'); if(rm) rm.style.display = 'flex'; 
@@ -852,6 +1023,7 @@ window.acceptRevive = function() {
 
 window.declineRevive = function() { 
     let rm = document.getElementById('reviveModal'); if(rm) rm.style.display = 'none'; 
+    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
     showBattleResult(false); 
 };
 
@@ -907,18 +1079,18 @@ function showBattleResult(isVictory, isFlee = false) {
     let bp = document.getElementById('btnPause'); if(bp) bp.style.display = 'none';
     let rcu = document.getElementById('roomCounterUI'); if(rcu) rcu.style.display = 'none';
     let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none';
+    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
 
-    let goldReward = isVictory ? (savedData.stage * 150 + totalKillsInRun * 15) : (totalKillsInRun * 5);
-    let partsReward = isVictory ? (savedData.stage * 10) : 0;
+    let goldReward = isVictory ? (roomState === 'base_raid_fighting' ? activeRaidBase.lootGold : (savedData.stage * 150 + totalKillsInRun * 15)) : (totalKillsInRun * 5);
+    let partsReward = isVictory ? (roomState === 'base_raid_fighting' ? activeRaidBase.lootParts : (savedData.stage * 10)) : 0;
 
     savedData.gold += goldReward;
     savedData.parts += partsReward;
-    if (isVictory && roomState !== 'pvp_fighting') {
+    if (isVictory && roomState !== 'pvp_fighting' && roomState !== 'guild_raid_fighting' && roomState !== 'base_raid_fighting') {
         savedData.stage++;
     }
     savedData.dailyKills += totalKillsInRun;
 
-    // Учет прогресса заданий гильдии
     if (savedData.guild) {
         let killsProg = savedData.guildQuestsProgress['gq_1'] || 0;
         savedData.guildQuestsProgress['gq_1'] = killsProg + totalKillsInRun;
@@ -962,8 +1134,10 @@ function gameLoop(timestamp) {
     if (dt > 0.1) dt = 0.016; 
     
     let isPvp = (roomState === 'pvp_fighting');
+    let isRaid = (roomState === 'guild_raid_fighting');
+    let isBaseRaid = (roomState === 'base_raid_fighting');
 
-    if (!isPvp && roomState === 'fighting') {
+    if (!isPvp && !isRaid && !isBaseRaid && roomState === 'fighting') {
         if (runMods.regen > 0 && player.hp < player.maxHp) { 
             player.hp = Math.min(player.maxHp, player.hp + (runMods.regen * dt)); 
         }
@@ -1026,6 +1200,39 @@ function gameLoop(timestamp) {
             bot.lastShootTime = timestamp;
         }
     }
+
+    // Логика стрельбы турелей при штурме баз
+    if (isBaseRaid) {
+        for (let e of enemies) {
+            if (e.isTower && timestamp - (e.lastAttack || 0) > 1500) {
+                let tAngle = Math.atan2(player.y - e.y, player.x - e.x);
+                projectiles.push({ x: e.x, y: e.y, vx: Math.cos(tAngle)*280, vy: Math.sin(tAngle)*280, radius: 5, damage: e.atk, isEnemy: true, angle: tAngle });
+                e.lastAttack = timestamp;
+            }
+        }
+    }
+
+    // Логика стрельбы союзников (подмоги)
+    for (let ally of allyUnits) {
+        let target = null, minDist = Infinity;
+        for (let e of enemies) {
+            let dist = Math.hypot(e.x - ally.x, e.y - ally.y);
+            if (dist < minDist) { minDist = dist; target = e; }
+        }
+        if (target) {
+            let dx = target.x - ally.x, dy = target.y - ally.y;
+            ally.aimingAngle = Math.atan2(dy, dx);
+            let dist = Math.hypot(dx, dy);
+            if (dist > 120) {
+                ally.x += (dx / dist) * ally.speed * dt;
+                ally.y += (dy / dist) * ally.speed * dt;
+            }
+            if (timestamp - (ally.lastAttack || 0) > 800) {
+                projectiles.push({ x: ally.x, y: ally.y, vx: Math.cos(ally.aimingAngle)*500, vy: Math.sin(ally.aimingAngle)*500, radius: 4, damage: ally.atk, isEnemy: false, angle: ally.aimingAngle });
+                ally.lastAttack = timestamp;
+            }
+        }
+    }
     
     for (let i = floatingTexts.length - 1; i >= 0; i--) { 
         floatingTexts[i].life -= dt; 
@@ -1041,6 +1248,22 @@ function gameLoop(timestamp) {
                 showBattleResult(true);
                 return;
             }
+            if (isRaid) {
+                savedData.guildBossHp = guildRaidBoss.hp;
+                if (!savedData.guild.tokens) savedData.guild.tokens = 0;
+                savedData.guild.tokens += guildRaidBoss.rewardTokens;
+                saveData();
+                showBattleResult(true);
+                return;
+            }
+            if (isBaseRaid) {
+                enemies.splice(i, 1);
+                if (enemies.length === 0) {
+                    showBattleResult(true);
+                    return;
+                }
+                continue;
+            }
             enemies.splice(i, 1); 
             killsInRoom++; 
             totalKillsInRun++; 
@@ -1055,7 +1278,8 @@ function gameLoop(timestamp) {
         const dx = player.x - e.x, dy = player.y - e.y, dist = Math.hypot(dx, dy) || 0.001; 
         e.angle = Math.atan2(dy, dx);
         
-        if (e.isBot) {
+        if (e.isBot || e.isTower) {
+            if (e.isTower) continue;
             if (dist > 180) { e.x += (dx / dist) * e.speed * dt; e.y += (dy / dist) * e.speed * dt; }
             else { e.x -= (dy / dist) * e.speed * 0.5 * dt; e.y += (dx / dist) * e.speed * 0.5 * dt; }
         } else if (e.type === 'shooter' && !e.isBoss) {
@@ -1109,6 +1333,10 @@ function gameLoop(timestamp) {
                 let e = enemies[j]; 
                 if (Math.hypot(p.x - e.x, p.y - e.y) < p.radius + e.radius) { 
                     e.hp -= p.damage; 
+                    if (isRaid) {
+                        savedData.guildBossHp = Math.max(0, Math.floor(e.hp));
+                        saveData();
+                    }
                     floatingTexts.push({ x: e.x, y: e.y - 20, text: Math.floor(p.damage), color: "#fff", life: 1.0 }); 
                     projectiles.splice(i, 1); 
                     if (e.hp <= 0) { e.isDead = true; } 
@@ -1128,7 +1356,7 @@ function gameLoop(timestamp) {
     for (let i = 0; i <= screenH; i += 50) { ctx.moveTo(0, i); ctx.lineTo(screenW, i); } 
     ctx.stroke();
 
-    ctx.strokeStyle = isPvp ? '#ff4a4a' : '#00ffff'; 
+    ctx.strokeStyle = isBaseRaid ? '#e43f5a' : (isRaid ? '#ff4a4a' : (isPvp ? '#ff4a4a' : '#00ffff')); 
     ctx.lineWidth = 3; 
     ctx.strokeRect(0, 0, screenW, screenH);
     
@@ -1136,7 +1364,10 @@ function gameLoop(timestamp) {
         ctx.save(); 
         ctx.translate(e.x, e.y); 
         ctx.rotate(e.angle);
-        if (e.isBot) {
+        if (e.isTower) {
+            ctx.fillStyle = '#ff8c00'; ctx.beginPath(); ctx.arc(0, 0, e.radius, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#222'; ctx.fillRect(-6, -6, 12, 12);
+        } else if (e.isBot) {
             ctx.fillStyle = '#ff4a4a'; ctx.beginPath(); ctx.arc(0, 0, e.radius, 0, Math.PI * 2); ctx.fill();
             ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(5, 0, e.radius * 0.7, -Math.PI/2, Math.PI/2); ctx.fill();
         } else {
@@ -1146,7 +1377,7 @@ function gameLoop(timestamp) {
         }
         ctx.restore();
         
-        let hpBarWidth = (e.isBoss || e.isBot) ? 50 : 30; 
+        let hpBarWidth = (e.isBoss || e.isBot || e.isTower) ? 50 : 30; 
         ctx.fillStyle = '#ff0000'; ctx.fillRect(e.x - hpBarWidth/2, e.y - e.radius - 12, hpBarWidth, 4); 
         ctx.fillStyle = '#00ff00'; ctx.fillRect(e.x - hpBarWidth/2, e.y - e.radius - 12, hpBarWidth * (Math.max(0, e.hp) / e.maxHp), 4); 
 
@@ -1154,6 +1385,15 @@ function gameLoop(timestamp) {
             ctx.fillStyle = '#fff'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
             ctx.fillText(e.name, e.x, e.y - e.radius - 18);
         }
+    }
+
+    // Отрисовка союзников
+    for (let ally of allyUnits) {
+        ctx.save(); ctx.translate(ally.x, ally.y); ctx.rotate(ally.aimingAngle);
+        ctx.fillStyle = '#da70d6'; ctx.beginPath(); ctx.arc(0, 0, ally.radius, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = '#ff0000'; ctx.fillRect(ally.x - 20, ally.y - ally.radius - 10, 40, 4);
+        ctx.fillStyle = '#00ff00'; ctx.fillRect(ally.x - 20, ally.y - ally.radius - 10, 40 * (Math.max(0, ally.hp) / ally.maxHp), 4);
     }
     
     for (let p of projectiles) { 
