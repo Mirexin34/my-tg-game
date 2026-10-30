@@ -19,11 +19,11 @@ const itemDatabase = [
 ];
 
 const locationsConfig = [
-    { id: 1, name: 'Ржавые Пустоши', bgStyle: '#1a1a24', wallColor: '#333344', enemyMultiplier: 1.0 },
-    { id: 2, name: 'Заброшенный Бункер', bgStyle: '#14141c', wallColor: '#2b2b3d', enemyMultiplier: 1.3 },
-    { id: 3, name: 'Токсичный Город', bgStyle: '#121c16', wallColor: '#1e3828', enemyMultiplier: 1.7 },
-    { id: 4, name: 'Ядро Корпорации', bgStyle: '#1c1218', wallColor: '#3d1e2b', enemyMultiplier: 2.2 },
-    { id: 5, name: 'Цитадель Омега', bgStyle: '#1b1224', wallColor: '#301e3d', enemyMultiplier: 3.0 }
+    { id: 1, name: 'Ржавые Пустоши', bgStyle: '#2a2626', wallColor: '#5c4e4e', enemyMultiplier: 1.0 }, // Ржавый, коричневатый
+    { id: 2, name: 'Заброшенный Бункер', bgStyle: '#1a1f26', wallColor: '#2d3b4d', enemyMultiplier: 1.4 }, // Стальной, синеватый
+    { id: 3, name: 'Токсичный Город', bgStyle: '#1a261c', wallColor: '#2b4d31', enemyMultiplier: 1.8 }, // Ядовито-зеленый
+    { id: 4, name: 'Ядро Корпорации', bgStyle: '#2b1b24', wallColor: '#5e2b45', enemyMultiplier: 2.3 }, // Пурпурный/кибер
+    { id: 5, name: 'Цитадель Омега', bgStyle: '#1f1505', wallColor: '#594411', enemyMultiplier: 3.0 }  // Золотисто-черный
 ];
 
 const skillDatabase = [

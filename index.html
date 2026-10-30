@@ -7,7 +7,12 @@
         body { margin: 0; padding: 0; background: #050508; font-family: sans-serif; overflow: hidden; user-select: none; width: 100vw; height: 100vh; }
         #appContainer { width: 100%; height: 100%; position: relative; background: #1a1a24; overflow: hidden; }
         #orientationWarning { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f0f16; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: #fff; padding: 20px; }
+        
+        /* Увеличен отступ сверху, чтобы не перекрывать новую шапку с кнопкой Назад */
         .screen { display: none; width: 100%; height: 100%; flex-direction: column; overflow-y: auto; padding: calc(50px + env(safe-area-inset-top)) 15px calc(70px + env(safe-area-inset-bottom)); box-sizing: border-box; position: absolute; top: 0; left: 0; background: #1a1a24; }
+        .screen-header { position: sticky; top: 0; background: rgba(26,26,36,0.95); padding: 10px 0; margin: -15px -15px 15px -15px; border-bottom: 2px solid #333; z-index: 10; display: flex; align-items: center; }
+        .btn-back { background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; padding: 0 15px; display: flex; align-items: center; }
+        
         .navBtn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: none; border: none; font-size: 11px; font-weight: bold; cursor: pointer; color: #777; transition: 0.2s; }
         .navBtn.active { color: #ffd700; transform: scale(1.1); }
         .eq-slot { width: 55px; height: 55px; background: #2a2a35; border: 2px solid #555; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; position: relative; cursor: pointer; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
@@ -23,7 +28,7 @@
             50% { transform: translate(-50%, -25px) scale(1.2); }
             100% { opacity: 0; transform: translate(-50%, -50px) scale(1); }
         }
-        .bm-popup { position: absolute; top: 50px; left: 50%; transform: translateX(-50%); color: #00ff00; font-size: 18px; font-weight: bold; text-shadow: 0 0 10px #00ff00; pointer-events: none; animation: floatUpBm 1.2s ease-out forwards; z-index: 5000; }
+        .bm-popup { position: absolute; top: 50px; left: 50%; transform: translateX(-50%); color: #00ff00; font-size: 18px; font-weight: bold; text-shadow: 0 0 10px #00ff00; pointer-events: none; animation: floatUpBm 1.2s ease-out forwards; z-index: 5000; text-align: center; }
 
         @keyframes chestShake {
             0% { transform: rotate(0deg); }
@@ -112,8 +117,11 @@
         <div id="lobbyScreen" class="screen" style="display: flex; background: url('https://img.freepik.com/free-vector/dark-hexagonal-background-with-gradient-color_79603-1409.jpg') center/cover;">
             <div style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 10px; border: 1px solid #444; width: fit-content; margin: 0 auto; margin-top: 2px;">
                 <div style="width: 30px; height: 30px; background: #555; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px;">🐱</div>
-                <div>
+                <div style="width: 120px;">
                     <div style="color: #fff; font-size: 11px; font-weight: bold;">Агент (ур. <span id="accountLevelDisplay">1</span>)</div>
+                    <div style="background: #333; border-radius: 3px; height: 4px; width: 100%; margin: 2px 0;">
+                        <div id="accountXpBar" style="background: #00ffff; height: 100%; width: 0%;"></div>
+                    </div>
                     <div style="color: #00ff00; font-size: 9px;">⚔️ БМ: <span id="bmDisplay">100</span></div>
                 </div>
             </div>
@@ -254,18 +262,22 @@
         </div>
         
         <div id="agencyScreen" class="screen">
+            <div class="screen-header">
+                <button class="btn-back" onclick="switchTab('lobbyScreen', document.getElementById('navLobby'))">🔙</button>
+                <h2 style="color: #00ffff; margin:0; font-size:16px;">АГЕНТСТВО (ТАЛАНТЫ)</h2>
+            </div>
             <div style="max-width: 450px; margin: 0 auto; width: 100%;">
-                <button onclick="switchTab('lobbyScreen', document.getElementById('navLobby'))" style="background:#dc3545; color:#fff; border:none; padding:5px 10px; border-radius:6px; font-weight:bold; margin-bottom:8px; font-size:11px;">⬅ Назад</button>
-                <h2 style="color: #00ffff; text-align: center; margin-top:0; font-size:16px;">🏢 АГЕНТСТВО (ТАЛАНТЫ)</h2>
                 <div style="color: #aaa; font-size: 10px; text-align: center; margin-bottom: 10px;">Прокачивайте постоянные пассивные бонусы для всех вылазок!</div>
                 <div id="talentsContainer" style="display:flex; flex-direction:column; gap:8px;"></div>
             </div>
         </div>
         
         <div id="questsScreen" class="screen">
+            <div class="screen-header">
+                <button class="btn-back" onclick="switchTab('lobbyScreen', document.getElementById('navLobby'))">🔙</button>
+                <h2 style="color: #ffea00; margin:0; font-size:16px;">СЕЗОН 9: ПРОПУСК</h2>
+            </div>
             <div style="max-width: 450px; margin: 0 auto; width: 100%;">
-                <button onclick="switchTab('lobbyScreen', document.getElementById('navLobby'))" style="background:#dc3545; color:#fff; border:none; padding:5px 10px; border-radius:6px; font-weight:bold; margin-bottom:8px; font-size:11px;">⬅ Назад</button>
-                <h2 style="color: #ffea00; text-align: center; margin-top:0; font-size:16px;">📋 БОЕВОЙ ПРОПУСК: СЕЗОН 9</h2>
                 <div style="background: #1e1e2c; border: 1px solid #ffd700; border-radius: 8px; padding: 10px; margin-bottom: 10px; text-align: center;">
                     <div style="color: #ffd700; font-weight: bold; font-size: 13px;">Уровень сезона: <span id="seasonLevelDisplay">1</span></div>
                     <div style="color: #aaa; font-size: 10px; margin: 4px 0;">Уничтожайте врагов в боях, чтобы повышать уровень пропуска!</div>
@@ -293,8 +305,6 @@
         function checkOrientation() {
             const warning = document.getElementById('orientationWarning');
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            
-            // Показываем предупреждение ТОЛЬКО на мобильных устройствах, если ориентация вертикальная
             if (isMobile && window.innerHeight > window.innerWidth) {
                 warning.style.display = 'flex';
             } else {
@@ -307,4 +317,4 @@
     </script>
     <script src="data.js"></script>
     <script src="game.js"></script>
-</body></html>
+</body></html>ы
