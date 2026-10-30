@@ -29,7 +29,7 @@
     </style>
 </head>
 <body>
-    <!-- ЗАГРУЗОЧНЫЙ ЭКРАН (НОВОЕ)[cite: 2] -->
+    <!-- ЗАГРУЗОЧНЫЙ ЭКРАН -->
     <div id="splashScreen" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background: #0f0f16; z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align: center;">
         <h1 style="color:#00ffff; font-size:46px; text-shadow: 0 0 20px #00ffff, 0 0 40px #00bfff; margin-bottom: 10px; font-style: italic;">SPEKTER<br>AGENCY</h1>
         <div style="color:#aaa; margin-bottom: 50px; font-size: 14px;">Инициализация агента...</div>
@@ -257,7 +257,7 @@
             </div>
         </div>
 
-        <!-- 5. ГОРОД -->
+        <!-- 5. ГОРОД (ОБНОВЛЕН С БАЗОЙ И ГИЛЬДИЯМИ) -->
         <div id="cityScreen" class="screen" style="display: none; padding: 60px 15px; background: #1a1a24;">
             <h2 style="color: #00ffff; text-align: center; margin-bottom: 20px;">ГОРОД И СОЦИУМ</h2>
             
@@ -269,6 +269,18 @@
                 </button>
             </div>
 
+            <!-- НОВЫЕ КНОПКИ: БАЗА И ГИЛЬДИИ -->
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <div onclick="switchTab('baseScreen', document.getElementById('navCity'))" style="flex: 1; background: #2a2a35; border: 1px solid #00bcd4; border-radius: 15px; padding: 15px; text-align: center; cursor: pointer;">
+                    <div style="font-size: 24px; margin-bottom: 5px;">🏗️</div>
+                    <div style="color: #fff; font-weight: bold; font-size: 14px;">Моя База</div>
+                </div>
+                <div onclick="switchTab('guildScreen', document.getElementById('navCity'))" style="flex: 1; background: #2a2a35; border: 1px solid #9932CC; border-radius: 15px; padding: 15px; text-align: center; cursor: pointer;">
+                    <div style="font-size: 24px; margin-bottom: 5px;">🛡️</div>
+                    <div style="color: #fff; font-weight: bold; font-size: 14px;">Гильдии</div>
+                </div>
+            </div>
+
             <div style="background: #2a2a35; border: 2px solid #ffd700; border-radius: 15px; padding: 15px; margin-bottom: 15px; text-align: center;">
                 <h3 style="color: #ffd700; margin: 0 0 5px 0;">🏪 Рынок</h3>
                 <button onclick="sellPartsOnMarket()" style="width: 100%; background: #28a745; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold;">Продать 10 ⚙️ за 1000 💰</button>
@@ -276,6 +288,53 @@
             <div style="background: #2a2a35; border: 2px solid #ff4a4a; border-radius: 15px; padding: 15px; margin-bottom: 15px; text-align: center;">
                 <h3 style="color: #ff4a4a; margin: 0 0 5px 0;">⚔️ ПвП Арена</h3>
                 <button onclick="startPvP()" style="width: 100%; background: #dc3545; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold;">Искать бой (10 ⚡)</button>
+            </div>
+        </div>
+
+        <!-- ДОП: МОЯ БАЗА -->
+        <div id="baseScreen" class="screen" style="display: none; padding: 60px 15px; background: #1a1a24;">
+            <button onclick="switchTab('cityScreen', document.getElementById('navCity'))" style="background:#dc3545; color:#fff; border:none; padding:8px 15px; border-radius:8px; font-weight:bold; margin-bottom:15px;">⬅ В Город</button>
+            <h2 style="color: #00ffff; text-align: center; margin-bottom: 15px;">МОЯ БАЗА</h2>
+            <p style="text-align: center; color: #aaa; font-size: 12px; margin-bottom: 20px;">Прокачивайте шахты для увеличения пассивного дохода (Sweep).</p>
+            
+            <div style="background: #2a2a35; border: 1px solid #ffd700; border-radius: 14px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="color: #fff; font-weight: bold;">Шахта Золота</div>
+                    <div style="color: #aaa; font-size: 12px;">Уровень: <span id="baseGoldLvl">1</span></div>
+                </div>
+                <button onclick="upgradeBase('gold')" style="background: #ffd700; color: #000; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold;">Улучшить</button>
+            </div>
+            <div style="background: #2a2a35; border: 1px solid #da70d6; border-radius: 14px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="color: #fff; font-weight: bold;">Фабрика Деталей</div>
+                    <div style="color: #aaa; font-size: 12px;">Уровень: <span id="basePartsLvl">1</span></div>
+                </div>
+                <button onclick="upgradeBase('parts')" style="background: #da70d6; color: #fff; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold;">Улучшить</button>
+            </div>
+        </div>
+
+        <!-- ДОП: ГИЛЬДИИ -->
+        <div id="guildScreen" class="screen" style="display: none; padding: 60px 15px; background: #1a1a24;">
+            <button onclick="switchTab('cityScreen', document.getElementById('navCity'))" style="background:#dc3545; color:#fff; border:none; padding:8px 15px; border-radius:8px; font-weight:bold; margin-bottom:15px;">⬅ В Город</button>
+            <h2 style="color: #9932CC; text-align: center; margin-bottom: 15px;">ГИЛЬДИЯ</h2>
+            
+            <div id="guildJoinBlock" style="text-align: center;">
+                <p style="color: #aaa; font-size: 14px; margin-bottom: 20px;">Вы еще не состоите в гильдии. Найдите соратников!</p>
+                <button onclick="joinGuild()" style="background: #9932CC; color: #fff; border: none; padding: 12px 30px; border-radius: 10px; font-weight: bold; font-size: 16px;">Вступить в Гильдию</button>
+            </div>
+            
+            <div id="guildActiveBlock" style="display: none;">
+                <div style="background: #2a2a35; border: 2px solid #9932CC; border-radius: 14px; padding: 15px; text-align: center; margin-bottom: 20px;">
+                    <h3 style="color: #fff; margin-top: 0;">Spekter Elites</h3>
+                    <p style="color: #aaa; font-size: 12px;">Участников: 42/50 | Уровень: 5</p>
+                    <button id="btnGuildCheckIn" onclick="guildCheckIn()" style="background: #28a745; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; width: 100%; margin-top: 10px;">Ежедневная Отметка</button>
+                </div>
+                <div style="background: linear-gradient(135deg, #8b0000, #000); border: 1px solid #ff4a4a; border-radius: 14px; padding: 20px; text-align: center;">
+                    <div style="font-size: 30px; margin-bottom: 10px;">👹</div>
+                    <h3 style="color: #ff4a4a; margin-top: 0;">Босс Гильдии</h3>
+                    <p style="color: #aaa; font-size: 12px;">Сражайтесь вместе ради общих наград!</p>
+                    <button onclick="alert('Рейд на босса откроется в следующем сезоне!')" style="background: #dc3545; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; width: 100%;">Атаковать (Скоро)</button>
+                </div>
             </div>
         </div>
 
@@ -320,7 +379,7 @@
             <button class="navBtn" onclick="switchTab('equipmentScreen', this)"><span style="font-size:24px; margin-bottom:4px;">🎒</span> Экипировка</button>
             <button id="navLobby" class="navBtn active" onclick="switchTab('lobbyScreen', this)" style="color:#ffd700;"><span style="font-size:24px; margin-bottom:4px;">⚔️</span> Лобби</button>
             <button class="navBtn" onclick="switchTab('skillsScreen', this)"><span style="font-size:24px; margin-bottom:4px;">🔥</span> Навыки</button>
-            <button class="navBtn" onclick="switchTab('cityScreen', this)"><span style="font-size:24px; margin-bottom:4px;">🏙️</span> Город</button>
+            <button id="navCity" class="navBtn" onclick="switchTab('cityScreen', this)"><span style="font-size:24px; margin-bottom:4px;">🏙️</span> Город</button>
         </div>
     </div>
     <script src="game.js"></script>

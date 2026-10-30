@@ -3,29 +3,26 @@ tg.expand();
 try { tg.disableVerticalSwipes(); tg.setHeaderColor('#1a1a24'); tg.setBackgroundColor('#1a1a24'); } catch(e) {}
 document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
 
-// === ИМИТАЦИЯ ЗАГРУЗОЧНОГО ЭКРАНА (SPLASH SCREEN)[cite: 2] ===
 window.onload = () => {
-    let progress = 0;
-    const bar = document.getElementById('splashProgress');
+    let progress = 0; const bar = document.getElementById('splashProgress');
     const interval = setInterval(() => {
-        progress += 5;
-        bar.style.width = progress + '%';
-        if (progress >= 100) {
-            clearInterval(interval);
-            document.getElementById('splashScreen').style.opacity = '0';
-            setTimeout(() => { document.getElementById('splashScreen').style.display = 'none'; }, 500);
-        }
+        progress += 5; bar.style.width = progress + '%';
+        if (progress >= 100) { clearInterval(interval); document.getElementById('splashScreen').style.opacity = '0'; setTimeout(() => { document.getElementById('splashScreen').style.display = 'none'; }, 500); }
     }, 50);
 };
 
 function switchTab(screenId, btnElement) {
     document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
     document.getElementById(screenId).style.display = 'flex';
-    document.querySelectorAll('.navBtn').forEach(b => { b.classList.remove('active'); b.style.color = '#777'; });
-    if(btnElement) { btnElement.classList.add('active'); btnElement.style.color = '#ffd700'; }
+    if(btnElement) {
+        document.querySelectorAll('.navBtn').forEach(b => { b.classList.remove('active'); b.style.color = '#777'; });
+        btnElement.classList.add('active'); btnElement.style.color = '#ffd700';
+    }
     if (screenId === 'equipmentScreen') renderInventory();
     if (screenId === 'skillsScreen') renderSkills();
     if (screenId === 'shopScreen') updateVIPUI(); 
+    if (screenId === 'baseScreen') renderBase();
+    if (screenId === 'guildScreen') renderGuild();
 }
 
 const itemDatabase = [
@@ -49,18 +46,21 @@ const skillDatabase = [
     { id: 'sk_fire', name: 'Огонь', rarity: 'normal', icon: '🔥' }
 ];
 
-let savedData = JSON.parse(localStorage.getItem('spekterSaveFull5')) || { 
+let savedData = JSON.parse(localStorage.getItem('spekterSaveFull6')) || { 
     gems: 2000, gold: 10000, energy: 30, accountLevel: 1, stage: 1, parts: 0,
     inventory: [], equipped: { helmet: null, armor: null, ring: null, boots: null },
     skillsInventory: [], equippedSkills: [null, null, null, null, null, null],
     pityCounter: 0, lastAFKTime: Date.now(), agencyLevel: 0,
     seasonLevel: 1, seasonXp: 0, dailyKills: 0, dailySweep: 0, missionKillsClaimed: false,
-    vipActive: false, vipLastClaim: 0, beginnerClaimed: [false, false, false],
-    serverProgressClaimed: []
+    vipActive: false, vipLastClaim: 0, beginnerClaimed: [false, false, false], serverProgressClaimed: [],
+    baseLevels: { gold: 1, parts: 1 }, // НОВОЕ: Уровни базы
+    guild: { joined: false, lastCheckIn: 0 } // НОВОЕ: Гильдия
 };
-if(!savedData.serverProgressClaimed) savedData.serverProgressClaimed = [];
+// Фикс для старых сейвов
+if(!savedData.baseLevels) savedData.baseLevels = { gold: 1, parts: 1 };
+if(!savedData.guild) savedData.guild = { joined: false, lastCheckIn: 0 };
 
-function saveData() { localStorage.setItem('spekterSaveFull5', JSON.stringify(savedData)); updateTopBar(); }
+function saveData() { localStorage.setItem('spekterSaveFull6', JSON.stringify(savedData)); updateTopBar(); }
 
 function updateTopBar() {
     document.getElementById('gemDisplay').innerText = savedData.gems;
@@ -68,16 +68,54 @@ function updateTopBar() {
     document.getElementById('partsDisplay').innerText = savedData.parts;
     document.getElementById('energyDisplay').innerText = savedData.energy;
     document.getElementById('accountLevelDisplay').innerText = savedData.accountLevel;
-    
-    // Подсказка, если босс-этап
     let stageTxt = savedData.stage;
-    if (savedData.stage % 5 === 0) {
-        document.getElementById('stageTitle').style.color = '#ff4a4a';
-        stageTxt += " (БОСС)";
-    } else {
-        document.getElementById('stageTitle').style.color = '#ffea00';
-    }
+    if (savedData.stage % 5 === 0) { document.getElementById('stageTitle').style.color = '#ff4a4a'; stageTxt += " (БОСС)"; } 
+    else document.getElementById('stageTitle').style.color = '#ffea00';
     document.getElementById('stageDisplay').innerText = stageTxt;
+}
+
+// === НОВОЕ: БАЗА И ГИЛЬДИЯ ===
+function renderBase() {
+    document.getElementById('baseGoldLvl').innerText = savedData.baseLevels.gold;
+    document.getElementById('basePartsLvl').innerText = savedData.baseLevels.parts;
+}
+
+function upgradeBase(type) {
+    let cost = savedData.baseLevels[type] * 2000;
+    if (savedData.gold < cost) { alert(`Недостаточно Золота! Нужно: ${cost} 💰`); return; }
+    savedData.gold -= cost;
+    savedData.baseLevels[type]++;
+    saveData(); renderBase();
+    alert(`Здание успешно улучшено до уровня ${savedData.baseLevels[type]}!`);
+}
+
+function renderGuild() {
+    if (savedData.guild.joined) {
+        document.getElementById('guildJoinBlock').style.display = 'none';
+        document.getElementById('guildActiveBlock').style.display = 'block';
+        let btn = document.getElementById('btnGuildCheckIn');
+        if (Date.now() - savedData.guild.lastCheckIn > 86400000) {
+            btn.innerText = "Ежедневная Отметка"; btn.disabled = false; btn.style.background = "#28a745";
+        } else {
+            btn.innerText = "Уже отмечено"; btn.disabled = true; btn.style.background = "#555";
+        }
+    } else {
+        document.getElementById('guildJoinBlock').style.display = 'block';
+        document.getElementById('guildActiveBlock').style.display = 'none';
+    }
+}
+
+function joinGuild() {
+    savedData.guild.joined = true;
+    saveData(); renderGuild();
+    alert("Вы успешно вступили в гильдию 'Spekter Elites'!");
+}
+
+function guildCheckIn() {
+    savedData.guild.lastCheckIn = Date.now();
+    savedData.gems += 20;
+    saveData(); renderGuild();
+    alert("Отметка выполнена! Вы получили +20 💎");
 }
 
 // ЗОЛОТОЙ СЛОТ И ПРОГРЕСС
@@ -146,7 +184,6 @@ function openChest(chestType, amount) {
     if (savedData.gems < cost) { alert("Недостаточно алмазов!"); return; }
     savedData.gems -= cost;
     let pulledItems = [];
-    
     for (let i = 0; i < amount; i++) {
         let rarityRoll = Math.random(), targetRarity = 'normal';
         if (chestType === 'skills') {
@@ -268,9 +305,16 @@ setInterval(() => {
     let diff = Math.min(Date.now() - savedData.lastAFKTime, 86400000);
     let totalSeconds = Math.floor(diff / 1000);
     document.getElementById('sweepTimeDisplay').innerText = `${Math.floor(totalSeconds / 3600).toString().padStart(2, '0')}:${Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0')}:${(totalSeconds % 60).toString().padStart(2, '0')}`;
+    
+    // ДОХОД С БАЗЫ + БАЗОВЫЙ ДОХОД
+    let goldPerMin = 20 + (savedData.baseLevels.gold * 5);
+    let partsPerMin = 0.1 + (savedData.baseLevels.parts * 0.05);
+    
     let minutesPassed = Math.floor(diff / 60000);
-    pendingGold = minutesPassed * 20; pendingParts = Math.floor(minutesPassed * 0.1);
+    pendingGold = Math.floor(minutesPassed * goldPerMin); 
+    pendingParts = Math.floor(minutesPassed * partsPerMin);
 }, 1000);
+
 document.getElementById('btnSweep').addEventListener('click', () => { document.getElementById('sweepGoldResult').innerText = pendingGold; document.getElementById('sweepPartsResult').innerText = pendingParts; document.getElementById('sweepModal').style.display = 'flex'; });
 document.getElementById('btnClaimSweep').addEventListener('click', () => {
     if (pendingGold > 0 || pendingParts > 0) { savedData.gold += pendingGold; savedData.parts += pendingParts; savedData.lastAFKTime = Date.now(); savedData.dailySweep++; saveData(); updateMissionsUI(); }
@@ -305,9 +349,7 @@ joystickZone.addEventListener('touchend', endTouch); joystickZone.addEventListen
 
 let player = { x: 800, y: 800, radius: 15, speed: 200, hp: 100, maxHp: 100, atk: 10, attackRate: 2.5, lastAttackTime: 0, skillTimers: { lightning: 0, fire: 0 } };
 let enemies = []; let projectiles = []; let floatingTexts = []; let killsInBattle = 0;
-
-let isBossStage = false; // НОВОЕ: Проверка на босса
-let bossEntity = null;
+let isBossStage = false; let bossEntity = null;
 
 document.getElementById('btnStartBattle').addEventListener('click', () => {
     if (savedData.energy < 5) { alert("Недостаточно энергии!"); return; }
@@ -321,10 +363,7 @@ document.getElementById('btnStartBattle').addEventListener('click', () => {
     player.x = world.width / 2; player.y = world.height / 2;
     enemies = []; projectiles = []; floatingTexts = []; killsInBattle = 0;
     
-    // Каждый 5-й этап - БОСС
-    isBossStage = (savedData.stage % 5 === 0);
-    bossEntity = null;
-
+    isBossStage = (savedData.stage % 5 === 0); bossEntity = null;
     gameState = 'playing';
 });
 
@@ -333,10 +372,9 @@ function spawnEnemy() {
     let hp = 50 + (savedData.stage * 20);
     enemies.push({ x: player.x + Math.cos(angle)*distance, y: player.y + Math.sin(angle)*distance, radius: 16, hp: hp, maxHp: hp, speed: 100 + Math.random()*40, isBoss: false });
 }
-
 function spawnBoss() {
     const angle = Math.random() * Math.PI * 2; const distance = Math.max(canvas.width, canvas.height) / 2 + 100;
-    let hp = (50 + (savedData.stage * 20)) * 10; // У босса в 10 раз больше ХП
+    let hp = (50 + (savedData.stage * 20)) * 10;
     bossEntity = { x: player.x + Math.cos(angle)*distance, y: player.y + Math.sin(angle)*distance, radius: 40, hp: hp, maxHp: hp, speed: 80, isBoss: true, lastAttack: 0 };
     enemies.push(bossEntity);
 }
@@ -355,12 +393,8 @@ function gameLoop(timestamp) {
     let dt = (timestamp - lastTime) / 1000; lastTime = timestamp; if (dt > 0.1) dt = 0.016; 
     
     if (gameState === 'playing') {
-        // Логика спавна
-        if (isBossStage) {
-            if (!bossEntity && enemies.length === 0) spawnBoss();
-        } else {
-            if (enemies.length < 5 + savedData.stage && Math.random() < 0.02) spawnEnemy();
-        }
+        if (isBossStage) { if (!bossEntity && enemies.length === 0) spawnBoss(); } 
+        else { if (enemies.length < 5 + savedData.stage && Math.random() < 0.02) spawnEnemy(); }
 
         if (input.isMoving && (input.x !== 0 || input.y !== 0)) {
             player.x += input.x * player.speed * dt; player.y += input.y * player.speed * dt;
@@ -396,26 +430,15 @@ function gameLoop(timestamp) {
         
         for (let i = enemies.length - 1; i >= 0; i--) {
             let e = enemies[i]; 
-            if (e.isDead) { 
-                enemies.splice(i, 1); killsInBattle++; 
-                if (e.isBoss) { exitBattle(true); continue; }
-                if (!isBossStage && killsInBattle >= 15) exitBattle(true); 
-                continue; 
-            }
+            if (e.isDead) { enemies.splice(i, 1); killsInBattle++; if (e.isBoss) { exitBattle(true); continue; } if (!isBossStage && killsInBattle >= 15) exitBattle(true); continue; }
             const dx = player.x - e.x, dy = player.y - e.y, dist = Math.hypot(dx, dy);
-            
-            // Движение к игроку
             if (dist > 0) { e.x += (dx / dist) * e.speed * dt; e.y += (dy / dist) * e.speed * dt; }
             
-            // Атака Босса (стреляет пулями)
             if (e.isBoss && (timestamp - e.lastAttack) > 2000) {
-                for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
-                    projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a)*300, vy: Math.sin(a)*300, radius: 8, damage: (20 + savedData.stage * 5), isEnemy: true });
-                }
+                for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) { projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a)*300, vy: Math.sin(a)*300, radius: 8, damage: (20 + savedData.stage * 5), isEnemy: true }); }
                 e.lastAttack = timestamp;
             }
 
-            // Контактный урон
             if (dist < player.radius + e.radius) {
                 let hasShield = savedData.equippedSkills.includes('sk_shield');
                 if (hasShield && Math.random() < 0.3) { floatingTexts.push({ x: player.x, y: player.y - 20, text: `🛡️ БЛОК`, color: "#fff", life: 1.0 }); e.x -= (dx/dist)*50; e.y -= (dy/dist)*50; } 
@@ -455,7 +478,6 @@ function gameLoop(timestamp) {
         for (let e of enemies) {
             ctx.fillStyle = e.isBoss ? '#9932CC' : '#ff4a4a'; ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); ctx.fill();
             if(e.isBoss) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); }
-            
             let hpBarWidth = e.isBoss ? 60 : 30;
             ctx.fillStyle = '#ff0000'; ctx.fillRect(e.x - hpBarWidth/2, e.y - e.radius - 10, hpBarWidth, 4);
             ctx.fillStyle = '#00ff00'; ctx.fillRect(e.x - hpBarWidth/2, e.y - e.radius - 10, hpBarWidth * (Math.max(0, e.hp) / e.maxHp), 4);
@@ -472,11 +494,8 @@ function gameLoop(timestamp) {
         ctx.fillStyle = '#fff'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(`${Math.floor(Math.max(0, player.hp))} / ${player.maxHp}`, 20, 55);
         
         ctx.textAlign = 'right'; 
-        if (isBossStage && bossEntity) {
-            ctx.fillText(`БОСС: ${Math.floor(Math.max(0, bossEntity.hp))} HP`, canvas.width - 20, 35);
-        } else {
-            ctx.fillText(`Убито: ${killsInBattle} / 15`, canvas.width - 20, 35);
-        }
+        if (isBossStage && bossEntity) ctx.fillText(`БОСС: ${Math.floor(Math.max(0, bossEntity.hp))} HP`, canvas.width - 20, 35);
+        else ctx.fillText(`Убито: ${killsInBattle} / 15`, canvas.width - 20, 35);
     }
     requestAnimationFrame(gameLoop);
 }
