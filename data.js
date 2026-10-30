@@ -1,5 +1,5 @@
 // ==========================================================================
-// БАЗЫ ДАННЫХ ИГРЫ (SPEKTER AGENCY: DATA - PETS & DRONES)
+// БАЗЫ ДАННЫХ ИГРЫ (SPEKTER AGENCY: DATA - TITLES & RANKS)
 // ==========================================================================
 
 const itemDatabase = [
@@ -18,6 +18,14 @@ const itemDatabase = [
     { id: 'd1', type: 'drone', rarity: 'rare', icon: '🛸', hp: 200, atk: 100 }
 ];
 
+const titlesConfig = [
+    { id: 't_rookie', name: 'Бродяга', reqLevel: 1, bonusAtk: 0, bonusHp: 0 },
+    { id: 't_stalker', name: 'Сталкер', reqLevel: 3, bonusAtk: 50, bonusHp: 200 },
+    { id: 't_veteran', name: 'Ветеран Пустоши', reqLevel: 6, bonusAtk: 150, bonusHp: 600 },
+    { id: 't_elite', name: 'Элита Сектора', reqLevel: 10, bonusAtk: 300, bonusHp: 1500 },
+    { id: 't_legend', name: 'Легенда Пустоши', reqLevel: 15, bonusAtk: 600, bonusHp: 3000 }
+];
+
 const petsConfig = [
     { id: 'pet_drone', name: 'Боевой Дрон "Коршун"', icon: '🛸', atk: 80, fireRate: 1.2, speed: 250, range: 300 },
     { id: 'pet_dog', name: 'Мутант-Пёс "Рекс"', icon: '🐕', atk: 120, fireRate: 0.9, speed: 280, range: 120 }
@@ -26,7 +34,7 @@ const petsConfig = [
 const locationsConfig = [
     { id: 1, name: 'Ржавые Пустоши', bgStyle: '#221e1e', wallColor: '#4d3e3e', particleColor: 'rgba(255, 140, 0, 0.25)', enemyMultiplier: 1.0, effect: 'dust' },
     { id: 2, name: 'Заброшенный Бункер', bgStyle: '#161c24', wallColor: '#283545', particleColor: 'rgba(0, 170, 255, 0.2)', enemyMultiplier: 1.4, effect: 'sparks' },
-    { id: 3, name: 'Токсичный Город', bgStyle: '#16241a', wallColor: '#284d32', particleColor: 'rgba(0, 255, 100, 0.2)', enemyMultiplier: 1.8, effect: 'poison' },
+    { id: '3', name: 'Токсичный Город', bgStyle: '#16241a', wallColor: '#284d32', particleColor: 'rgba(0, 255, 100, 0.2)', enemyMultiplier: 1.8, effect: 'poison' },
     { id: 4, name: 'Ядро Корпорации', bgStyle: '#241620', wallColor: '#4d283c', particleColor: 'rgba(255, 0, 150, 0.2)', enemyMultiplier: 2.3, effect: 'cyber' },
     { id: 5, name: 'Цитадель Омега', bgStyle: '#1f160a', wallColor: '#4d3916', particleColor: 'rgba(255, 215, 0, 0.3)', enemyMultiplier: 3.0, effect: 'storm' }
 ];

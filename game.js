@@ -1,5 +1,5 @@
 // ==========================================================================
-// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - WITH PET / DRONE)
+// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - WITH TITLES & RANKS)
 // ==========================================================================
 
 const tg = window.Telegram?.WebApp;
@@ -45,6 +45,7 @@ const getUid = () => Date.now().toString(36) + '_' + (uidCounter++);
 
 const defaultSave = {
     gems: 2000, gold: 10000, energy: 30, accountLevel: 1, accountXp: 0, stage: 1, parts: 0,
+    equippedTitle: 't_rookie', unlockedTitles: ['t_rookie'],
     inventory: [], equipped: { helmet: null, armor: null, ring: null, boots: null, weapon: null, drone: 'd1' },
     skillsInventory: [], equippedSkills: [null, null, null, null, null, null], blueprints: {},
     lastEnergyTime: Date.now(), agencyLevel: 0, dailyKills: 0, vipActive: false, vipLastClaim: 0, 
@@ -58,7 +59,7 @@ const defaultSave = {
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try { 
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal31') || 'null'); 
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal32') || 'null'); 
     if (loaded) Object.assign(savedData, loaded); 
 } catch(e) {}
 
@@ -74,9 +75,11 @@ if (!savedData.baseDefense) savedData.baseDefense = { towers: 2, guards: 3 };
 if (!savedData.talentsLevels) savedData.talentsLevels = {};
 if (!savedData.seasonClaimed) savedData.seasonClaimed = {};
 if (savedData.accountXp === undefined) savedData.accountXp = 0;
+if (!savedData.unlockedTitles) savedData.unlockedTitles = ['t_rookie'];
+if (!savedData.equippedTitle) savedData.equippedTitle = 't_rookie';
 
 function saveData() { 
-    localStorage.setItem('spekterSaveFinal31', JSON.stringify(savedData)); 
+    localStorage.setItem('spekterSaveFinal32', JSON.stringify(savedData)); 
     updateTopBar(); 
 }
 
@@ -140,6 +143,14 @@ function updateTopBar() {
     el = document.getElementById('accountLevelDisplay'); if(el) el.innerText = savedData.accountLevel; 
     el = document.getElementById('stageDisplay'); if(el) el.innerText = savedData.stage; 
 
+    // Автоматическая проверка разблокировки новых титулов по уровню
+    titlesConfig.forEach(t => {
+        if (savedData.accountLevel >= t.reqLevel && !savedData.unlockedTitles.includes(t.id)) {
+            savedData.unlockedTitles.push(t.id);
+            showBmPopup(`🏆 НОВЫЙ ТИТУЛ: [${t.name}]!`);
+        }
+    });
+
     let maxXp = savedData.accountLevel * 500;
     let xpBar = document.getElementById('accountXpBar');
     if (xpBar) xpBar.style.width = Math.min(100, (savedData.accountXp / maxXp) * 100) + '%';
@@ -201,6 +212,13 @@ function getCalculatedStats() {
         if (itemId) { let data = getItemData(itemId); flatAtk += data.atk; flatHp += data.hp; } 
     }); 
     
+    // Добавление бонусов от выбранного титула
+    let currentTitle = titlesConfig.find(t => t.id === savedData.equippedTitle);
+    if (currentTitle) {
+        flatAtk += currentTitle.bonusAtk;
+        flatHp += currentTitle.bonusHp;
+    }
+
     let percentBonus = (savedData.agencyLevel * 2) / 100; 
     if (savedData.guild) percentBonus += 0.05; 
     
@@ -212,6 +230,43 @@ function getCalculatedStats() {
     let finalHp = Math.floor((baseHp + flatHp) * (1 + percentBonus + (tHpLvl * 0.10))); 
     return { atk: finalAtk, hp: finalHp }; 
 }
+
+// ----------------- МОДАЛКА ВЫБОРА ТИТУЛОВ -----------------
+window.openTitlesModal = function() {
+    let container = document.getElementById('titlesListContainer');
+    if(!container) return;
+    container.innerHTML = '';
+
+    titlesConfig.forEach(t => {
+        let isUnlocked = savedData.unlockedTitles.includes(t.id);
+        let isEquipped = savedData.equippedTitle === t.id;
+
+        container.innerHTML += `
+            <div style="background: #181820; border: 1px solid ${isEquipped ? '#ffaa00' : '#444'}; border-radius: 8px; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="text-align: left;">
+                    <div style="color: ${isUnlocked ? '#ffaa00' : '#777'}; font-weight: bold; font-size: 12px;">[${t.name}]</div>
+                    <div style="color: #888; font-size: 9px; margin-top: 2px;">Бонусы: +${t.bonusAtk} АТК, +${t.bonusHp} HP</div>
+                    <div style="color: #555; font-size: 9px;">Требуется ур. Сталкера: ${t.reqLevel}</div>
+                </div>
+                <button onclick="equipTitle('${t.id}')" ${!isUnlocked || isEquipped ? 'disabled' : ''} style="background: ${isEquipped ? '#28a745' : (isUnlocked ? '#ffaa00' : '#444')}; color: ${isUnlocked ? '#000' : '#fff'}; border: none; padding: 5px 10px; border-radius: 6px; font-weight: bold; font-size: 10px; cursor: pointer;">
+                    ${isEquipped ? 'Надето' : (isUnlocked ? 'Надеть' : 'Заблокировано')}
+                </button>
+            </div>
+        `;
+    });
+
+    let m = document.getElementById('titlesModal');
+    if(m) m.style.display = 'flex';
+};
+
+window.equipTitle = function(titleId) {
+    if (!savedData.unlockedTitles.includes(titleId)) return;
+    savedData.equippedTitle = titleId;
+    saveData();
+    openTitlesModal();
+    updateTopBar();
+    showBmPopup("Титул успешно изменен!");
+};
 
 // ----------------- УМНЫЙ ХАБ С ВКЛАДКАМИ -----------------
 window.openHubModal = function() {
@@ -589,7 +644,7 @@ if(bcs) bcs.addEventListener('click', () => {
 updateTopBar();
 
 // ==========================================================================
-// БОЕВОЙ ДВИЖОК CANVAS (С ПОДДЕРЖКОЙ БОЕВОГО ПИТОМЦА / ДРОНА)
+// БОЕВОЙ ДВИЖОК CANVAS (С ПОДДЕРЖКОЙ ТИТУЛОВ И БОЕВОГО ПИТОМЦА)
 // ==========================================================================
 
 const canvas = document.getElementById('gameCanvas'); 
@@ -679,7 +734,6 @@ function prepareBattleUI(titleText) {
     player.speed = 220;
     enemies = []; projectiles = []; floatingTexts = []; allyUnits = []; obstacles = []; portal = null;
 
-    // СПАВН ПИТОМЦА / ДРОНА ПРИ СТАРТЕ БОЯ
     activePet = {
         x: player.x - 40,
         y: player.y,
@@ -1088,7 +1142,6 @@ function gameLoop(timestamp) {
         } 
     }
 
-    // ЛОГИКА БОЕВОГО ПИТОМЦА / ДРОНА
     if (activePet && enemies.length > 0) {
         let target = null, minDist = Infinity;
         for (let e of enemies) {
@@ -1097,8 +1150,6 @@ function gameLoop(timestamp) {
         }
         if (target) {
             let pdx = target.x - activePet.x, pdy = target.y - activePet.y;
-            let pdist = Math.hypot(pdx, pdy) || 0.001;
-            // Дрон следует за игроком, но держится ближе к цели
             let targetX = player.x + 35;
             let targetY = player.y - 35;
             activePet.x += (targetX - activePet.x) * 4 * dt;
@@ -1388,7 +1439,6 @@ function gameLoop(timestamp) {
         }
     }
 
-    // ОТРИСОВКА ПИТОМЦА / ДРОНА НА АРЕНЕ
     if (activePet) {
         ctx.save();
         ctx.translate(activePet.x, activePet.y);
@@ -1579,7 +1629,7 @@ window.showBattleResult = function(isWin, isFlee = false) {
             <h2 style="color:${isWin?'#00ffcc':'#ff4a4a'}; margin-top:0;">${isWin ? 'ЗАЧИСТКА УСПЕШНА!' : (isFlee ? 'ЭВАКУАЦИЯ ИЗ ЗОНЫ' : 'СМЕРТЬ В ПУСТОШИ')}</h2>
             <p style="color:#888; font-size:12px;">Добытые трофеи:</p>
             <div style="display:flex; justify-content:center; gap:15px; margin:10px 0;">
-                <div>💰 +${goldRender(goldReward)}</div>
+                <div>💰 +${goldReward}</div>
                 <div>⚙️ +${partsReward}</div>
             </div>
             <div style="color: #00ffcc; font-size: 11px; margin-bottom: 10px;">🌟 Опыт сталкера: +${accountXpReward}</div>
@@ -1590,8 +1640,3 @@ window.showBattleResult = function(isWin, isFlee = false) {
     let brm = document.getElementById('battleResultModal');
     if(brm) brm.style.display = 'flex';
 };
-
-// Вспомогательная функция для форматирования золота
-function goldRender(val) {
-    return val;
-}
