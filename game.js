@@ -53,12 +53,13 @@ const defaultSave = {
     missionKillsClaimed: false, lastAFKTime: Date.now(),
     marketLimits: {}, lastMarketReset: Date.now(), playerLots: [],
     guild: null, guildQuestsProgress: {}, guildQuestsClaimed: {}, guildBossHp: 15000,
-    baseDefense: { towers: 2, guards: 3 }
+    baseDefense: { towers: 2, guards: 3 },
+    talentsLevels: {}, seasonClaimed: {}
 };
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try { 
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal22') || 'null'); 
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal23') || 'null'); 
     if (loaded) Object.assign(savedData, loaded); 
 } catch(e) {}
 
@@ -71,9 +72,11 @@ if (!savedData.guildQuestsProgress) savedData.guildQuestsProgress = {};
 if (!savedData.guildQuestsClaimed) savedData.guildQuestsClaimed = {};
 if (savedData.guildBossHp === undefined) savedData.guildBossHp = 15000;
 if (!savedData.baseDefense) savedData.baseDefense = { towers: 2, guards: 3 };
+if (!savedData.talentsLevels) savedData.talentsLevels = {};
+if (!savedData.seasonClaimed) savedData.seasonClaimed = {};
 
 function saveData() { 
-    localStorage.setItem('spekterSaveFinal22', JSON.stringify(savedData)); 
+    localStorage.setItem('spekterSaveFinal23', JSON.stringify(savedData)); 
     updateTopBar(); 
 }
 
@@ -169,8 +172,9 @@ window.switchTab = function(screenId, btnElement) {
     } 
     if(screenId === 'equipmentScreen') renderInventory(); 
     if(screenId === 'skillsScreen') renderSkills(); 
-    if(screenId === 'shopScreen') {} 
     if(screenId === 'cityScreen') renderCrafting(); 
+    if(screenId === 'agencyScreen') renderTalentsUI();
+    if(screenId === 'questsScreen') renderSeasonUI();
 };
 
 function getItemData(itemId) { return itemDatabase.find(i => i.id === itemId) || itemDatabase[0]; }
@@ -182,14 +186,101 @@ function getCalculatedStats() {
     Object.values(savedData.equipped).forEach(itemId => { 
         if (itemId) { let data = getItemData(itemId); flatAtk += data.atk; flatHp += data.hp; } 
     }); 
+    
     let percentBonus = (savedData.agencyLevel * 2) / 100; 
     if (savedData.guild) percentBonus += 0.05; 
+    
+    // Бонусы от Древа Талантов
+    let tAtkLvl = savedData.talentsLevels['t_atk'] || 0;
+    let tHpLvl = savedData.talentsLevels['t_hp'] || 0;
+    percentBonus += (tAtkLvl * 0.10);
+    
     let finalAtk = Math.floor((baseAtk + flatAtk) * (1 + percentBonus)); 
-    let finalHp = Math.floor((baseHp + flatHp) * (1 + percentBonus)); 
+    let finalHp = Math.floor((baseHp + flatHp) * (1 + percentBonus + (tHpLvl * 0.10))); 
     return { atk: finalAtk, hp: finalHp }; 
 }
 
-// ----------------- СОЧНАЯ ГАЧА С АНИМАЦИЕЙ СУНДУКА -----------------
+// ----------------- ДРЕВО ТАЛАНТОВ АГЕНТСТВА -----------------
+window.renderTalentsUI = function() {
+    const container = document.getElementById('talentsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    agencyTalentsConfig.forEach(t => {
+        let lvl = savedData.talentsLevels[t.id] || 0;
+        let cost = Math.floor(t.baseCostParts * Math.pow(t.costScale, lvl));
+        let maxed = lvl >= t.maxLevel;
+
+        container.innerHTML += `
+            <div style="background: #1e1e2c; border: 1px solid #555; border-radius: 8px; padding: 10px; display:flex; justify-content:space-between; align-items:center;">
+                <div style="text-align:left;">
+                    <div style="font-size:13px; color:#fff; font-weight:bold;">${t.icon} ${t.name} (ур. ${lvl}/${t.maxLevel})</div>
+                    <div style="font-size:9px; color:#aaa; margin-top:2px;">${t.desc}</div>
+                    <div style="font-size:9px; color:#da70d6; margin-top:2px;">Цена: ${maxed ? 'МАКС' : cost + ' ⚙️'}</div>
+                </div>
+                <button onclick="upgradeTalent('${t.id}')" ${maxed ? 'disabled' : ''} style="background: ${maxed ? '#555' : '#28a745'}; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; font-size:10px; cursor:pointer;">${maxed ? 'Макс' : 'Улучшить'}</button>
+            </div>
+        `;
+    });
+};
+
+window.upgradeTalent = function(tId) {
+    let t = agencyTalentsConfig.find(x => x.id === tId);
+    if (!t) return;
+    let lvl = savedData.talentsLevels[tId] || 0;
+    if (lvl >= t.maxLevel) return;
+    let cost = Math.floor(t.baseCostParts * Math.pow(t.costScale, lvl));
+
+    if (savedData.parts < cost) { showAlert("Недостаточно деталей (⚙️)!"); return; }
+
+    savedData.parts -= cost;
+    savedData.talentsLevels[tId] = lvl + 1;
+    saveData();
+    renderTalentsUI();
+    showAlert(`Талант "${t.name}" улучшен!`);
+};
+
+// ----------------- СЕЗОННЫЙ ПРОПУСК ("СЕЗОН 9") -----------------
+window.renderSeasonUI = function() {
+    let lvlDisplay = document.getElementById('seasonLevelDisplay');
+    let xpBar = document.getElementById('seasonXpBar');
+    let container = document.getElementById('seasonRewardsContainer');
+    if (!container) return;
+
+    if(lvlDisplay) lvlDisplay.innerText = savedData.seasonLevel;
+    let maxXpForLevel = savedData.seasonLevel * 100;
+    if(xpBar) xpBar.style.width = Math.min(100, (savedData.seasonXp / maxXpForLevel) * 100) + '%';
+
+    container.innerHTML = '';
+    seasonPassRewardsConfig.forEach(r => {
+        let isClaimed = savedData.seasonClaimed[r.level] || false;
+        let canClaim = savedData.seasonLevel >= r.level && !isClaimed;
+
+        container.innerHTML += `
+            <div style="background: #1e1e2c; border: 1px solid #444; border-radius: 8px; padding: 10px; display:flex; justify-content:space-between; align-items:center;">
+                <div style="text-align:left;">
+                    <div style="font-size:12px; color:#ffd700; font-weight:bold;">Уровень ${r.level}: ${r.desc}</div>
+                    <div style="font-size:10px; color:#00ff00; margin-top:2px;">🎁 Награда: +${r.rewardGold} 💰, +${r.rewardGems} 💎</div>
+                </div>
+                <button onclick="claimSeasonReward(${r.level})" ${canClaim ? '' : 'disabled'} style="background: ${isClaimed ? '#555' : (canClaim ? '#28a745' : '#444')}; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; font-size:10px; cursor:pointer;">${isClaimed ? 'Получено' : 'Забрать'}</button>
+            </div>
+        `;
+    });
+};
+
+window.claimSeasonReward = function(lvl) {
+    let r = seasonPassRewardsConfig.find(x => x.level === lvl);
+    if (!r || savedData.seasonClaimed[lvl] || savedData.seasonLevel < lvl) return;
+
+    savedData.seasonClaimed[lvl] = true;
+    savedData.gold += r.rewardGold;
+    savedData.gems += r.rewardGems;
+    saveData();
+    renderSeasonUI();
+    showAlert(`Награда за ${lvl} уровень сезона получена!`);
+};
+
+// ----------------- СОЧНАЯ ГАЧА -----------------
 window.openDropRatesModal = function() {
     let m = document.getElementById('dropRatesModal'); if(m) m.style.display = 'flex';
 };
@@ -229,7 +320,7 @@ window.openChest = function(chestType, amount) {
     }, 500);
 };
 
-// ----------------- РЫНОК СЛИТКОВ С УДОБНЫМ ВЫБОРОМ КОЛИЧЕСТВА -----------------
+// ----------------- РЫНОК СЛИТКОВ -----------------
 window.openAuctionModal = function() {
     checkMarketDailyReset();
     renderMarketUI();
@@ -281,7 +372,6 @@ window.buyMarketItem = function(itemId, qty) {
     showAlert(`Успешно куплено (${buyCount} шт)!`);
 };
 
-// ----------------- ОСТАЛЬНЫЕ СИСТЕМЫ И ИГРОВОЙ ЦИКЛ -----------------
 window.openRaidModal = function() {
     renderRaidUI();
     let rm = document.getElementById('raidModal'); if(rm) rm.style.display = 'flex';
@@ -695,7 +785,6 @@ window.upgradeAgency = function() {
     } else { showAlert("Недостаточно деталей!"); } 
 };
 
-// ----------------- ЛОГИКА АРЕНЫ И БОТОВ (PvP) -----------------
 window.openArenaModal = function() {
     const container = document.getElementById('arenaBotsContainer');
     if (!container) return;
@@ -772,10 +861,11 @@ window.startArenaBattle = function(botName) {
 let pendingGold = 0, pendingParts = 0; 
 setInterval(() => { 
     updateEnergyTimerUI(); 
+    let afkMult = 1.0 + ((savedData.talentsLevels['t_afk'] || 0) * 0.15);
     let diff = Math.min(Date.now() - savedData.lastAFKTime, 86400000); 
     let minutesPassed = Math.floor(diff / 60000); 
-    pendingGold = Math.floor(minutesPassed * 20); 
-    pendingParts = Math.floor(minutesPassed * 0.1); 
+    pendingGold = Math.floor(minutesPassed * 20 * afkMult); 
+    pendingParts = Math.floor(minutesPassed * 0.1 * afkMult); 
     let totalSeconds = Math.floor(diff / 1000); 
     let std = document.getElementById('sweepTimeDisplay');
     if(std) std.innerText = `${Math.floor(totalSeconds / 3600).toString().padStart(2, '0')}:${Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0')}:${(totalSeconds % 60).toString().padStart(2, '0')}`; 
@@ -1125,6 +1215,14 @@ function showBattleResult(isVictory, isFlee = false) {
         savedData.stage++;
     }
     savedData.dailyKills += totalKillsInRun;
+
+    // Начисление опыта сезонного пропуска за убийства
+    savedData.seasonXp += totalKillsInRun * 10;
+    let requiredXpForNext = savedData.seasonLevel * 100;
+    if (savedData.seasonXp >= requiredXpForNext) {
+        savedData.seasonXp -= requiredXpForNext;
+        savedData.seasonLevel++;
+    }
 
     if (savedData.guild) {
         let killsProg = savedData.guildQuestsProgress['gq_1'] || 0;

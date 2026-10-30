@@ -91,3 +91,15 @@ const enemyBasesConfig = [
     { id: 'b_2', owner: 'Бункер_73', lootGold: 3500, lootParts: 120, defenseBm: 320, towersCount: 4, guardsCount: 5 },
     { id: 'b_3', owner: 'Цитадель_Зла', lootGold: 8000, lootParts: 300, defenseBm: 550, towersCount: 6, guardsCount: 8 }
 ];
+
+const agencyTalentsConfig = [
+    { id: 't_atk', name: 'Огневая мощь', icon: '⚔️', desc: '+10% к урону за уровень', baseCostParts: 20, costScale: 1.5, maxLevel: 10 },
+    { id: 't_hp', name: 'Титановая броня', icon: '🛡️', desc: '+10% к здоровью за уровень', baseCostParts: 20, costScale: 1.5, maxLevel: 10 },
+    { id: 't_afk', name: 'Логистика патруля', icon: '🎁', desc: '+15% к АФК наградам за уровень', baseCostParts: 30, costScale: 1.6, maxLevel: 5 }
+];
+
+const seasonPassRewardsConfig = [
+    { level: 1, rewardGold: 1000, rewardGems: 50, desc: 'Набор новичка сезона' },
+    { level: 2, rewardGold: 2500, rewardGems: 100, desc: 'Снаряжение выжившего' },
+    { level: 3, rewardGold: 5000, rewardGems: 200, desc: 'Элитный фонд сезона' }
+];

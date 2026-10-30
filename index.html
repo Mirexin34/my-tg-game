@@ -20,7 +20,6 @@
         .rarity-bg-legendary { background: linear-gradient(135deg, #ffd700, #ff8c00); border-color: #ffff00; }
         .stat-badge { position: absolute; bottom: 2px; right: 4px; font-size: 9px; font-weight: bold; color: white; background: rgba(0,0,0,0.7); padding: 2px 4px; border-radius: 4px; }
         
-        /* Анимация всплывающего изменения БМ */
         @keyframes floatUpBm {
             0% { opacity: 1; transform: translate(-50%, 0) scale(0.8); }
             50% { transform: translate(-50%, -25px) scale(1.2); }
@@ -28,7 +27,6 @@
         }
         .bm-popup { position: absolute; top: 50px; left: 50%; transform: translateX(-50%); color: #00ff00; font-size: 18px; font-weight: bold; text-shadow: 0 0 10px #00ff00; pointer-events: none; animation: floatUpBm 1.2s ease-out forwards; z-index: 5000; }
 
-        /* Анимация тряски сундука */
         @keyframes chestShake {
             0% { transform: rotate(0deg); }
             25% { transform: rotate(-10deg) scale(1.1); }
@@ -152,7 +150,7 @@
             </div>
         </div>
 
-        <!-- МАГАЗИН И СУНДУКИ С АНИМАЦИЕЙ -->
+        <!-- МАГАЗИН И СУНДУКИ -->
         <div id="shopScreen" class="screen">
             <div style="max-width: 450px; margin: 0 auto; width: 100%;">
                 <h3 style="color: #00ffff; text-align: center; margin-top: 0; font-size: 15px;">МАГАЗИН И СУНДУКИ</h3>
@@ -166,7 +164,7 @@
             </div>
         </div>
 
-        <!-- МОДАЛКА ШАНСОВ ВЫПАДЕНИЯ -->
+        <!-- МОДАЛКА ШАНСОВ -->
         <div id="dropRatesModal" class="modal-overlay">
             <div class="modal-content" style="border-color: #ffd700; max-width: 350px;">
                 <h3 style="color:#ffd700; margin-top:0; font-size:15px;">📊 Шансы выпадения</h3>
@@ -179,13 +177,13 @@
             </div>
         </div>
 
-        <!-- КРАСИВАЯ МОДАЛКА ОТКРЫТИЯ СУНДУКА -->
+        <!-- МОДАЛКА ГАЧИ -->
         <div id="gachaResult" class="modal-overlay">
             <div class="modal-content" style="border-color: #00ff00;">
                 <h3 style="color:#00ff00; margin-top:0; font-size:16px;">✨ НАХОДКА!</h3>
                 <div id="gachaChestBox" style="font-size: 60px; margin: 10px 0;" class="chest-anim">🎁</div>
                 <div id="gachaItemsList" style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-bottom:12px;"></div>
-                <button onclick="document.getElementById('gachaResult').style.display='none'" style="background:#28a745; color:#fff; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; width:100%; font-size:12px; cursor:pointer;">ЗАБРАТЬ</button>
+                <button onclick="document.getElementById('gachaResult').style.display='none'" style="background:#28a745; color:#fff; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; width:100%; cursor:pointer; font-size:12px;">ЗАБРАТЬ</button>
             </div>
         </div>
 
@@ -212,12 +210,12 @@
 
         <div id="skillsScreen" class="screen">
             <div style="max-width: 450px; margin: 0 auto; width: 100%;">
-                <h3 style="color:#fff; margin:0 0 8px 0; font-size:15px; text-align:center;">НАВЫКИ</h3>
+                <h3 style="color:#fff; margin:0 0 8px 0; font-size:15px; text-align:center;">НАВЫКИ БОЯ</h3>
                 <div id="skillsGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;"></div>
             </div>
         </div>
 
-        <!-- УПОРЯДОЧЕННЫЙ И ПОНЯТНЫЙ ЭКРАН "ГОРОД" -->
+        <!-- ГОРОД -->
         <div id="cityScreen" class="screen">
             <div style="max-width: 450px; margin: 0 auto; width: 100%;">
                 <h2 style="color: #00ffff; text-align: center; margin-top:0; font-size:16px;">ГОРОД И АКТИВНОСТИ</h2>
@@ -246,7 +244,33 @@
             </div>
         </div>
         
-        <!-- МОДАЛКА РЕЙДОВ НА БАЗЫ -->
+        <!-- АГЕНТСТВО С ДРЕВОМ ТАЛАНТОВ -->
+        <div id="agencyScreen" class="screen">
+            <div style="max-width: 450px; margin: 0 auto; width: 100%;">
+                <button onclick="switchTab('lobbyScreen', document.getElementById('navLobby'))" style="background:#dc3545; color:#fff; border:none; padding:5px 10px; border-radius:6px; font-weight:bold; margin-bottom:8px; font-size:11px;">⬅ Назад</button>
+                <h2 style="color: #00ffff; text-align: center; margin-top:0; font-size:16px;">🏢 АГЕНТСТВО (ТАЛАНТЫ)</h2>
+                <div style="color: #aaa; font-size: 10px; text-align: center; margin-bottom: 10px;">Прокачивайте постоянные пассивные бонусы для всех вылазок!</div>
+                <div id="talentsContainer" style="display:flex; flex-direction:column; gap:8px;"></div>
+            </div>
+        </div>
+        
+        <!-- СЕЗОННЫЙ ПРОПУСК ("СЕЗОН 9") -->
+        <div id="questsScreen" class="screen">
+            <div style="max-width: 450px; margin: 0 auto; width: 100%;">
+                <button onclick="switchTab('lobbyScreen', document.getElementById('navLobby'))" style="background:#dc3545; color:#fff; border:none; padding:5px 10px; border-radius:6px; font-weight:bold; margin-bottom:8px; font-size:11px;">⬅ Назад</button>
+                <h2 style="color: #ffea00; text-align: center; margin-top:0; font-size:16px;">📋 БОЕВОЙ ПРОПУСК: СЕЗОН 9</h2>
+                <div style="background: #1e1e2c; border: 1px solid #ffd700; border-radius: 8px; padding: 10px; margin-bottom: 10px; text-align: center;">
+                    <div style="color: #ffd700; font-weight: bold; font-size: 13px;">Уровень сезона: <span id="seasonLevelDisplay">1</span></div>
+                    <div style="color: #aaa; font-size: 10px; margin: 4px 0;">Уничтожайте врагов в боях, чтобы повышать уровень пропуска!</div>
+                    <div style="background: #333; border-radius: 4px; height: 10px; width: 100%; overflow: hidden; margin-top: 6px;">
+                        <div id="seasonXpBar" style="background: linear-gradient(90deg, #ffd700, #ff8c00); width: 0%; height: 100%;"></div>
+                    </div>
+                </div>
+                <div id="seasonRewardsContainer" style="display:flex; flex-direction:column; gap:8px;"></div>
+            </div>
+        </div>
+
+        <!-- МОДАЛКИ -->
         <div id="raidModal" class="modal-overlay">
             <div class="modal-content" style="border-color: #e43f5a; max-width: 420px;">
                 <button onclick="document.getElementById('raidModal').style.display='none'" style="position:absolute; top:6px; right:6px; background:#dc3545; color:white; border:none; padding:3px 7px; border-radius:4px; font-weight:bold; cursor:pointer;">X</button>
@@ -255,7 +279,6 @@
             </div>
         </div>
 
-        <!-- МОДАЛКА ГИЛЬДИИ -->
         <div id="guildModal" class="modal-overlay">
             <div class="modal-content" style="border-color: #da70d6; max-width: 420px;">
                 <button onclick="document.getElementById('guildModal').style.display='none'" style="position:absolute; top:6px; right:6px; background:#dc3545; color:white; border:none; padding:3px 7px; border-radius:4px; font-weight:bold; cursor:pointer;">X</button>
@@ -264,7 +287,6 @@
             </div>
         </div>
 
-        <!-- МОДАЛКА АРЕНЫ -->
         <div id="arenaModal" class="modal-overlay">
             <div class="modal-content" style="border-color: #ff4a4a; max-width: 420px;">
                 <button onclick="document.getElementById('arenaModal').style.display='none'" style="position:absolute; top:6px; right:6px; background:#dc3545; color:white; border:none; padding:3px 7px; border-radius:4px; font-weight:bold; cursor:pointer;">X</button>
@@ -274,27 +296,12 @@
             </div>
         </div>
 
-        <!-- МОДАЛКА РЫНКА С УДОБНЫМ ВЫБОРОМ КОЛИЧЕСТВА -->
         <div id="auctionModal" class="modal-overlay">
             <div class="modal-content" style="border-color: #00ffff; max-width: 420px;">
                 <button onclick="document.getElementById('auctionModal').style.display='none'" style="position:absolute; top:6px; right:6px; background:#dc3545; color:white; border:none; padding:3px 7px; border-radius:4px; font-weight:bold; cursor:pointer;">X</button>
                 <h3 style="color: #00ffff; margin-top:0; font-size:16px;">🏪 РЫНОК СЛИТКОВ</h3>
                 <div id="marketItemsContainer" style="max-height: 240px; overflow-y: auto; margin-bottom: 8px;"></div>
                 <button onclick="document.getElementById('auctionModal').style.display='none'" style="background: #28a745; color: #fff; border: none; padding: 8px; border-radius: 6px; font-weight: bold; width: 100%; cursor: pointer; font-size:12px;">ЗАКРЫТЬ</button>
-            </div>
-        </div>
-        
-        <div id="agencyScreen" class="screen">
-            <div style="max-width: 450px; margin: 0 auto; width: 100%;">
-                <button onclick="switchTab('lobbyScreen', document.getElementById('navLobby'))" style="background:#dc3545; color:#fff; border:none; padding:5px 10px; border-radius:6px; font-weight:bold; margin-bottom:8px; font-size:11px;">⬅ Назад</button>
-                <h2 style="color: #00ffff; text-align: center; margin-top:0; font-size:16px;">АГЕНТСТВО</h2>
-            </div>
-        </div>
-        
-        <div id="questsScreen" class="screen">
-            <div style="max-width: 450px; margin: 0 auto; width: 100%;">
-                <button onclick="switchTab('lobbyScreen', document.getElementById('navLobby'))" style="background:#dc3545; color:#fff; border:none; padding:5px 10px; border-radius:6px; font-weight:bold; margin-bottom:8px; font-size:11px;">⬅ Назад</button>
-                <h2 style="color: #ffea00; text-align: center; margin-top:0; font-size:16px;">СЕЗОН 9</h2>
             </div>
         </div>
 
@@ -313,7 +320,6 @@
     <script>
         function checkOrientation() {
             const warning = document.getElementById('orientationWarning');
-            // На десктопах или широких экранах принудительно отключаем предупреждение
             if (window.innerWidth >= 768) {
                 warning.style.display = 'none';
                 return;
