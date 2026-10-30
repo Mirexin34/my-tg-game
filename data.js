@@ -58,3 +58,9 @@ const simulationBots = [
     { name: 'Вантед', bm: 340, hp: 1600, atk: 150, speed: 230, icon: '⚡' },
     { name: 'Громобой', bm: 500, hp: 2500, atk: 220, speed: 190, icon: '👹' }
 ];
+
+const sampleGuilds = [
+    { id: 'g1', name: 'Стальные Тени', level: 3, members: 8, maxMembers: 15, leader: 'Apex_Viper' },
+    { id: 'g2', name: 'Атомный Легион', level: 5, members: 14, maxMembers: 20, leader: 'AtomKing' },
+    { id: 'g3', name: 'Дети Пустоши', level: 1, members: 3, maxMembers: 10, leader: 'ScrapLord' }
+];

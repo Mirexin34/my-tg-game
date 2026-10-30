@@ -51,12 +51,13 @@ const defaultSave = {
     lastEnergyTime: Date.now(), agencyLevel: 0, dailyKills: 0, vipActive: false, vipLastClaim: 0, 
     beginnerClaimed: [false, false, false], serverProgressClaimed: [], seasonLevel: 1, seasonXp: 0, 
     missionKillsClaimed: false, lastAFKTime: Date.now(),
-    marketLimits: {}, lastMarketReset: Date.now(), playerLots: []
+    marketLimits: {}, lastMarketReset: Date.now(), playerLots: [],
+    guild: null // { id, name, level, membersCount }
 };
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try { 
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal17') || 'null'); 
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal18') || 'null'); 
     if (loaded) Object.assign(savedData, loaded); 
 } catch(e) {}
 
@@ -65,6 +66,11 @@ if (!savedData.equipped.drone) savedData.equipped.drone = null;
 if (!savedData.blueprints) savedData.blueprints = {}; 
 if (!savedData.marketLimits) savedData.marketLimits = {};
 if (!savedData.playerLots) savedData.playerLots = [];
+
+function saveData() { 
+    localStorage.setItem('spekterSaveFinal18', JSON.stringify(savedData)); 
+    updateTopBar(); 
+}
 
 function checkMarketDailyReset() {
     let now = Date.now();
@@ -115,11 +121,6 @@ window.openEnergyShop = function() {
     } 
 };
 
-function saveData() { 
-    localStorage.setItem('spekterSaveFinal17', JSON.stringify(savedData)); 
-    updateTopBar(); 
-}
-
 function updateTopBar() { 
     checkEnergyRegen(); 
     let el;
@@ -163,6 +164,90 @@ function getCalculatedStats() {
     let finalHp = Math.floor((baseHp + flatHp) * (1 + percentBonus)); 
     return { atk: finalAtk, hp: finalHp }; 
 }
+
+// ----------------- ЛОГИКА ГИЛЬДИЙ -----------------
+window.openGuildModal = function() {
+    renderGuildUI();
+    let gm = document.getElementById('guildModal'); if(gm) gm.style.display = 'flex';
+};
+
+window.renderGuildUI = function() {
+    const container = document.getElementById('guildModalContent');
+    if (!container) return;
+
+    if (!savedData.guild) {
+        let sampleListHTML = '';
+        sampleGuilds.forEach(g => {
+            sampleListHTML += `
+                <div style="background: #1e1e2c; border: 1px solid #555; border-radius: 8px; padding: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="text-align: left;">
+                        <div style="color: #fff; font-weight: bold; font-size: 12px;">🛡️ ${g.name}</div>
+                        <div style="color: #aaa; font-size: 9px;">Уровень: ${g.level} | Участников: ${g.members}/${g.maxMembers} | Глава: ${g.leader}</div>
+                    </div>
+                    <button onclick="joinGuild('${g.id}')" style="background: #da70d6; color: white; border: none; padding: 5px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Вступить</button>
+                </div>
+            `;
+        });
+
+        container.innerHTML = `
+            <p style="color: #ccc; font-size: 11px; margin-top: 0;">Вы не состоите ни в одной гильдии. Вступите в существующую или создайте собственную!</p>
+            <div style="background: #1e1e2c; border: 1px solid #da70d6; border-radius: 8px; padding: 10px; margin-bottom: 12px; text-align: left;">
+                <div style="color: #da70d6; font-weight: bold; font-size: 12px; margin-bottom: 4px;">🛠️ Создать свой клан</div>
+                <div style="color: #aaa; font-size: 9px; margin-bottom: 6px;">Стоимость: 5000 💰 и 100 💎</div>
+                <input id="newGuildNameInput" type="text" placeholder="Название гильдии" style="width: 100%; padding: 6px; background: #111; border: 1px solid #555; color: #fff; border-radius: 4px; box-sizing: border-box; margin-bottom: 6px; font-size: 11px;">
+                <button onclick="createGuild()" style="background: #28a745; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 11px; cursor: pointer;">Создать гильдию</button>
+            </div>
+            <div style="font-weight: bold; font-size: 12px; color: #ffea00; margin-bottom: 6px; text-align: left;">📋 Доступные гильдии:</div>
+            <div style="max-height: 180px; overflow-y: auto;">${sampleListHTML}</div>
+        `;
+    } else {
+        container.innerHTML = `
+            <div style="background: #1e1e2c; border: 1px solid #da70d6; border-radius: 8px; padding: 12px; text-align: center; margin-bottom: 10px;">
+                <h4 style="color: #da70d6; margin: 0 0 6px 0; font-size: 15px;">🛡️ ${savedData.guild.name}</h4>
+                <div style="color: #00ff00; font-size: 11px; margin-bottom: 4px;">Уровень штаба: ${savedData.guild.level}</div>
+                <div style="color: #ccc; font-size: 10px;">Участников в клане: ${savedData.guild.membersCount} / 20</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; margin-bottom: 10px; text-align: left;">
+                <div style="font-weight: bold; color: #ffd700; font-size: 11px; margin-bottom: 2px;">⚡ Бонусы гильдии:</div>
+                <div style="color: #aaa; font-size: 10px;">• +5% к боевой мощи во всех режимах</div>
+                <div style="color: #aaa; font-size: 10px;">• Ускорение патруля на 10%</div>
+            </div>
+            <button onclick="leaveGuild()" style="background: #dc3545; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; width: 100%; font-size: 11px; cursor: pointer;">Покинуть гильдию</button>
+        `;
+    }
+};
+
+window.createGuild = function() {
+    let input = document.getElementById('newGuildNameInput');
+    let name = input ? input.value.trim() : '';
+    if (!name) { showAlert("Введите название гильдии!"); return; }
+    if (savedData.gold < 5000 || savedData.gems < 100) { showAlert("Недостаточно ресурсов (нужно 5000 💰 и 100 💎)!"); return; }
+
+    savedData.gold -= 5000;
+    savedData.gems -= 100;
+    savedData.guild = { id: 'custom_' + Date.now(), name: name, level: 1, membersCount: 1 };
+    saveData();
+    renderGuildUI();
+    showAlert("Гильдия успешно создана!");
+};
+
+window.joinGuild = function(guildId) {
+    let g = sampleGuilds.find(x => x.id === guildId);
+    if (!g) return;
+    savedData.guild = { id: g.id, name: g.name, level: g.level, membersCount: g.members + 1 };
+    saveData();
+    renderGuildUI();
+    showAlert(`Вы вступили в гильдию "${g.name}"!`);
+};
+
+window.leaveGuild = function() {
+    if (confirm("Вы действительно хотите покинуть гильдию?")) {
+        savedData.guild = null;
+        saveData();
+        renderGuildUI();
+        showAlert("Вы покинули гильдию.");
+    }
+};
 
 window.renderCrafting = function() { 
     const list = document.getElementById('craftingList'); 
@@ -371,7 +456,9 @@ window.startArenaBattle = function(botName) {
     let bp = document.getElementById('btnPause'); if(bp) bp.style.display = 'flex'; 
     let rcu = document.getElementById('roomCounterUI'); if(rcu) rcu.style.display = 'block'; 
 
-    resize(); world.width = screenW; world.height = screenH;
+    resize(); 
+    world.width = screenW; 
+    world.height = screenH;
 
     let finalStats = getCalculatedStats(); 
     player.maxHp = finalStats.hp; 
@@ -1015,6 +1102,7 @@ function gameLoop(timestamp) {
     for (let ft of floatingTexts) { 
         ctx.globalAlpha = ft.life; 
         ctx.fillStyle = ft.color; 
+        str = 'bold 18px sans-serif'; 
         ctx.font = 'bold 18px sans-serif'; 
         ctx.textAlign = 'center'; 
         ctx.strokeStyle = '#000'; 
