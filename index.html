@@ -1,34 +1,37 @@
 <!DOCTYPE html><html lang="ru"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Spekter Agency: MMO</title>
+    <title>Spekter Agency: Wasteland MMO</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { margin: 0; padding: 0; background: #050508; font-family: sans-serif; overflow: hidden; user-select: none; width: 100vw; height: 100vh; }
-        #appContainer { width: 100%; height: 100%; position: relative; background: #1a1a24; overflow: hidden; }
-        #orientationWarning { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f0f16; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: #fff; padding: 20px; }
+        body { margin: 0; padding: 0; background: #0c0c10; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; user-select: none; width: 100vw; height: 100vh; color: #e0e0e0; }
+        #appContainer { width: 100%; height: 100%; position: relative; background: #121218; overflow: hidden; }
+        #orientationWarning { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0a0a0f; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: #fff; padding: 20px; }
         
-        /* Увеличен отступ сверху, чтобы не перекрывать новую шапку с кнопкой Назад */
-        .screen { display: none; width: 100%; height: 100%; flex-direction: column; overflow-y: auto; padding: calc(50px + env(safe-area-inset-top)) 15px calc(70px + env(safe-area-inset-bottom)); box-sizing: border-box; position: absolute; top: 0; left: 0; background: #1a1a24; }
-        .screen-header { position: sticky; top: 0; background: rgba(26,26,36,0.95); padding: 10px 0; margin: -15px -15px 15px -15px; border-bottom: 2px solid #333; z-index: 10; display: flex; align-items: center; }
-        .btn-back { background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; padding: 0 15px; display: flex; align-items: center; }
+        /* Стилизованные экраны с шапкой в стиле постапокалипсиса */
+        .screen { display: none; width: 100%; height: 100%; flex-direction: column; overflow-y: auto; padding: calc(55px + env(safe-area-inset-top)) 15px calc(70px + env(safe-area-inset-bottom)); box-sizing: border-box; position: absolute; top: 0; left: 0; background: radial-gradient(circle at center, #1a1a24 0%, #0e0e13 100%); }
+        .screen-header { position: sticky; top: 0; background: rgba(14, 14, 19, 0.95); padding: 12px 15px; margin: calc(-55px - env(safe-area-inset-top)) -15px 15px -15px; border-bottom: 2px solid #ffaa0033; z-index: 10; display: flex; align-items: center; justify-content: space-between; backdrop-filter: blur(5px); }
+        .screen-title { color: #ffaa00; font-size: 16px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; text-shadow: 0 0 10px rgba(255,170,0,0.3); }
+        .btn-back { background: #252530; border: 1px solid #ffaa0055; color: #ffaa00; font-size: 14px; font-weight: bold; cursor: pointer; padding: 6px 14px; border-radius: 6px; display: flex; align-items: center; gap: 5px; transition: 0.2s; }
+        .btn-back:active { transform: scale(0.95); background: #353545; }
         
-        .navBtn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: none; border: none; font-size: 11px; font-weight: bold; cursor: pointer; color: #777; transition: 0.2s; }
-        .navBtn.active { color: #ffd700; transform: scale(1.1); }
-        .eq-slot { width: 55px; height: 55px; background: #2a2a35; border: 2px solid #555; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; position: relative; cursor: pointer; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
-        .inv-item { width: 100%; aspect-ratio: 1; background: #333; border: 2px solid #555; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; position: relative; }
-        .rarity-bg-normal { background: linear-gradient(135deg, #444, #222); border-color: #aaa; }
-        .rarity-bg-rare { background: linear-gradient(135deg, #4169e1, #00008b); border-color: #00bfff; }
-        .rarity-bg-epic { background: linear-gradient(135deg, #9370db, #4b0082); border-color: #da70d6; }
-        .rarity-bg-legendary { background: linear-gradient(135deg, #ffd700, #ff8c00); border-color: #ffff00; }
-        .stat-badge { position: absolute; bottom: 2px; right: 4px; font-size: 9px; font-weight: bold; color: white; background: rgba(0,0,0,0.7); padding: 2px 4px; border-radius: 4px; }
+        .navBtn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: none; border: none; font-size: 11px; font-weight: bold; cursor: pointer; color: #666; transition: 0.2s; }
+        .navBtn.active { color: #ffaa00; transform: scale(1.05); text-shadow: 0 0 8px rgba(255,170,0,0.4); }
+        
+        .eq-slot { width: 55px; height: 55px; background: #1c1c24; border: 2px solid #444; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; position: relative; cursor: pointer; box-shadow: inset 0 0 10px rgba(0,0,0,0.8); }
+        .inv-item { width: 100%; aspect-ratio: 1; background: #1c1c24; border: 2px solid #444; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; position: relative; }
+        .rarity-bg-normal { background: linear-gradient(135deg, #333, #1a1a1a); border-color: #777; }
+        .rarity-bg-rare { background: linear-gradient(135deg, #1a3a6b, #0d1a33); border-color: #00aaff; }
+        .rarity-bg-epic { background: linear-gradient(135deg, #4a1a6b, #220d33); border-color: #aa00ff; }
+        .rarity-bg-legendary { background: linear-gradient(135deg, #6b4a1a, #33220d); border-color: #ffaa00; box-shadow: 0 0 10px rgba(255,170,0,0.3); }
+        .stat-badge { position: absolute; bottom: 2px; right: 4px; font-size: 9px; font-weight: bold; color: white; background: rgba(0,0,0,0.8); padding: 2px 4px; border-radius: 4px; border: 1px solid #444; }
         
         @keyframes floatUpBm {
             0% { opacity: 1; transform: translate(-50%, 0) scale(0.8); }
             50% { transform: translate(-50%, -25px) scale(1.2); }
             100% { opacity: 0; transform: translate(-50%, -50px) scale(1); }
         }
-        .bm-popup { position: absolute; top: 50px; left: 50%; transform: translateX(-50%); color: #00ff00; font-size: 18px; font-weight: bold; text-shadow: 0 0 10px #00ff00; pointer-events: none; animation: floatUpBm 1.2s ease-out forwards; z-index: 5000; text-align: center; }
+        .bm-popup { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); color: #00ff66; font-size: 18px; font-weight: bold; text-shadow: 0 0 10px #00ff66; pointer-events: none; animation: floatUpBm 1.2s ease-out forwards; z-index: 5000; text-align: center; }
 
         @keyframes chestShake {
             0% { transform: rotate(0deg); }
@@ -39,168 +42,185 @@
         }
         .chest-anim { animation: chestShake 0.6s ease-in-out; }
 
-        .modal-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; }
-        .modal-content { background: #2a2a35; border: 2px solid #ffea00; border-radius: 15px; padding: 15px; width: 80%; max-width: 420px; max-height: 85%; overflow-y: auto; text-align: center; color: white; position: relative; }
+        .modal-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(3px); }
+        .modal-content { background: #181820; border: 2px solid #ffaa00; border-radius: 15px; padding: 15px; width: 85%; max-width: 420px; max-height: 85%; overflow-y: auto; text-align: center; color: white; position: relative; box-shadow: 0 0 25px rgba(255,170,0,0.2); }
+        
         #joystickZone { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; touch-action: none; display: none; }
-        #joystickBase { position: absolute; width: 90px; height: 90px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; transform: translate(-50%, -50%); display: none; pointer-events: none; }
-        #joystickStick { position: absolute; top: 50%; left: 50%; width: 35px; height: 35px; background: rgba(255,255,255,0.8); border-radius: 50%; transform: translate(-50%, -50%); }
-        #btnPause { position: absolute; top: 10px; right: 15px; width: 36px; height: 36px; background: rgba(0,0,0,0.5); border: 2px solid #fff; border-radius: 8px; color: #fff; font-size: 16px; font-weight: bold; display: none; z-index: 150; cursor: pointer; align-items: center; justify-content: center; }
-        #btnCallGuild { position: absolute; top: 10px; right: 60px; background: rgba(218, 112, 214, 0.8); border: 2px solid #da70d6; border-radius: 8px; color: #fff; font-size: 11px; font-weight: bold; padding: 8px 12px; display: none; z-index: 150; cursor: pointer; }
-        #roomCounterUI { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); border: 1px solid #ffd700; color: #ffd700; padding: 4px 12px; border-radius: 12px; font-weight: bold; font-size: 12px; display: none; z-index: 150; }
-        #combatXpContainer { display: none; position: absolute; top: 12px; left: 20%; width: 60%; max-width: 320px; background: rgba(0,0,0,0.6); border: 2px solid #555; border-radius: 8px; height: 14px; z-index: 150; }
-        #combatXpBar { width: 0%; height: 100%; background: linear-gradient(90deg, #00bfff, #00ffff); border-radius: 6px; transition: width 0.3s ease-out; }
-        #combatLevelText { position: absolute; top: -3px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px #000; }
-        .skill-card-btn { background: #2a2a35; border: 2px solid #555; border-radius: 8px; padding: 10px; display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: left; color: white; width: 100%; }
-        .craft-card { background: #1e1e2c; border: 1px solid #555; border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; text-align: left; }
-        .hub-tab-btn { flex: 1; padding: 6px; background: #1a1a24; border: 1px solid #555; color: #aaa; font-size: 10px; font-weight: bold; cursor: pointer; border-radius: 6px; }
-        .hub-tab-btn.active { background: #00bcd4; border-color: #00ffff; color: #000; }
+        #joystickBase { position: absolute; width: 90px; height: 90px; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,170,0,0.3); border-radius: 50%; transform: translate(-50%, -50%); display: none; pointer-events: none; }
+        #joystickStick { position: absolute; top: 50%; left: 50%; width: 35px; height: 35px; background: rgba(255,170,0,0.7); border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 10px rgba(255,170,0,0.5); }
+        
+        #btnPause { position: absolute; top: 12px; right: 15px; width: 38px; height: 38px; background: #1c1c24; border: 2px solid #ffaa00; border-radius: 8px; color: #ffaa00; font-size: 16px; font-weight: bold; display: none; z-index: 150; cursor: pointer; align-items: center; justify-content: center; }
+        #btnCallGuild { position: absolute; top: 12px; right: 65px; background: rgba(170, 0, 255, 0.2); border: 2px solid #aa00ff; border-radius: 8px; color: #d880ff; font-size: 11px; font-weight: bold; padding: 9px 12px; display: none; z-index: 150; cursor: pointer; }
+        #roomCounterUI { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); background: rgba(14,14,19,0.8); border: 1px solid #ffaa00; color: #ffaa00; padding: 4px 14px; border-radius: 12px; font-weight: bold; font-size: 12px; display: none; z-index: 150; letter-spacing: 1px; }
+        
+        #combatXpContainer { display: none; position: absolute; top: 14px; left: 18%; width: 55%; max-width: 300px; background: rgba(14,14,19,0.8); border: 2px solid #444; border-radius: 8px; height: 14px; z-index: 150; }
+        #combatXpBar { width: 0%; height: 100%; background: linear-gradient(90deg, #00aaff, #00ffcc); border-radius: 5px; transition: width 0.3s ease-out; }
+        #combatLevelText { position: absolute; top: -4px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 10px; font-weight: bold; text-shadow: 1px 1px 2px #000; }
+        
+        .skill-card-btn { background: #1c1c24; border: 2px solid #444; border-radius: 8px; padding: 10px; display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: left; color: white; width: 100%; transition: 0.2s; }
+        .skill-card-btn:active { border-color: #ffaa00; background: #252530; }
+        .craft-card { background: #16161d; border: 1px solid #333; border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; text-align: left; }
+        .hub-tab-btn { flex: 1; padding: 6px; background: #16161d; border: 1px solid #333; color: #888; font-size: 10px; font-weight: bold; cursor: pointer; border-radius: 6px; transition: 0.2s; }
+        .hub-tab-btn.active { background: #ffaa00; border-color: #ffaa00; color: #000; }
     </style></head><body>
+    
     <div id="orientationWarning">
         <div style="font-size: 50px; margin-bottom: 15px;">📱🔄</div>
-        <h2 style="color: #00ffff; margin: 0 0 10px 0; font-size: 20px;">ПОВЕРНИТЕ ТЕЛЕФОН</h2>
-        <p style="color: #aaa; font-size: 13px; max-width: 300px; line-height: 1.4;">Для комфортной игры требуется горизонтальный (альбомный) режим.</p>
+        <h2 style="color: #ffaa00; margin: 0 0 10px 0; font-size: 20px;">ПОВЕРНИТЕ ТЕЛЕФОН</h2>
+        <p style="color: #aaa; font-size: 13px; max-width: 300px; line-height: 1.4;">Для комфортного выживания в Пустоши требуется альбомный режим.</p>
     </div>
 
     <div id="appContainer">
-        <div id="splashScreen" onclick="this.style.display='none'" style="position:absolute; top:0; left:0; width:100%; height:100%; background: #0f0f16; z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align: center;">
-            <h1 style="color:#00ffff; font-size:38px; text-shadow: 0 0 20px #00ffff; margin-bottom: 8px; font-style: italic;">SPEKTER<br>AGENCY</h1>
-            <div style="color:#aaa; margin-bottom: 25px; font-size: 12px;">Загрузка игровых систем...</div>
-            <div style="width: 45%; height: 6px; background: #333; border-radius: 3px; overflow: hidden;"><div id="splashProgress" style="width: 0%; height: 100%; background: #00ffff; transition: 0.1s;"></div></div>
+        <div id="splashScreen" onclick="this.style.display='none'" style="position:absolute; top:0; left:0; width:100%; height:100%; background: #0c0c10; z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align: center;">
+            <h1 style="color:#ffaa00; font-size:38px; text-shadow: 0 0 20px rgba(255,170,0,0.4); margin-bottom: 8px; font-style: italic; letter-spacing: 2px;">SPEKTER<br><span style="color:#00ffcc; font-size:24px;">WASTELAND MMO</span></h1>
+            <div style="color:#888; margin-bottom: 25px; font-size: 12px;">Инициализация нейросети убежища...</div>
+            <div style="width: 45%; height: 6px; background: #222; border-radius: 3px; overflow: hidden; border: 1px solid #444;"><div id="splashProgress" style="width: 0%; height: 100%; background: #ffaa00; transition: 0.1s;"></div></div>
         </div>
 
+        <!-- Верхняя панель ресурсов -->
         <div id="topBar" style="position: absolute; top: 8px; left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; z-index: 1000;">
             <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; pointer-events: none;">
-                <div style="background: rgba(0,0,0,0.8); padding: 3px 7px; border-radius: 15px; color: #00ff00; font-weight: bold; border: 1px solid #32cd32; font-size: 10px; pointer-events: auto; cursor: pointer; display: flex; align-items: center; gap: 3px;" onclick="openEnergyShop()">
+                <div style="background: rgba(14,14,19,0.9); padding: 4px 8px; border-radius: 12px; color: #00ff66; font-weight: bold; border: 1px solid #00ff6655; font-size: 10px; pointer-events: auto; cursor: pointer; display: flex; align-items: center; gap: 3px;" onclick="openEnergyShop()">
                     ⚡ <span id="energyDisplay">30</span>/30 <span id="energyTimer" style="color: #aaa; font-size: 8px;">(00:00)</span>
                 </div>
-                <div style="background: rgba(0,0,0,0.6); padding: 3px 7px; border-radius: 15px; color: #ffd700; font-weight: bold; border: 1px solid #ffd700; font-size: 10px;">💰 <span id="goldDisplay">0</span></div>
-                <div style="background: rgba(0,0,0,0.6); padding: 3px 7px; border-radius: 15px; color: #00ffff; font-weight: bold; border: 1px solid #00ffff; font-size: 10px;">💎 <span id="gemDisplay">0</span></div>
-                <div style="background: rgba(0,0,0,0.6); padding: 3px 7px; border-radius: 15px; color: #da70d6; font-weight: bold; border: 1px solid #da70d6; font-size: 10px;">⚙️ <span id="partsDisplay">0</span></div>
+                <div style="background: rgba(14,14,19,0.9); padding: 4px 8px; border-radius: 12px; color: #ffaa00; font-weight: bold; border: 1px solid #ffaa0055; font-size: 10px;">💰 <span id="goldDisplay">0</span></div>
+                <div style="background: rgba(14,14,19,0.9); padding: 4px 8px; border-radius: 12px; color: #00ffcc; font-weight: bold; border: 1px solid #00ffcc55; font-size: 10px;">💎 <span id="gemDisplay">0</span></div>
+                <div style="background: rgba(14,14,19,0.9); padding: 4px 8px; border-radius: 12px; color: #d880ff; font-weight: bold; border: 1px solid #d880ff55; font-size: 10px;">⚙️ <span id="partsDisplay">0</span></div>
             </div>
         </div>
 
         <canvas id="gameCanvas" style="display:none; position:absolute; top:0; left:0;"></canvas>
         <button id="btnPause" onclick="togglePause()">⏸</button>
         <button id="btnCallGuild" onclick="callGuildSupport()">👥 ПОДМОГА</button>
-        <div id="roomCounterUI">Комната 1/5</div>
+        <div id="roomCounterUI">СЕКТОР 1/5</div>
         <div id="combatXpContainer"><div id="combatXpBar"></div><div id="combatLevelText">УР. 1</div></div>
         <div id="joystickZone"><div id="joystickBase"><div id="joystickStick"></div></div></div>
 
         <div id="battleResultModal" class="modal-overlay"><div class="modal-content" id="battleResultContent"></div></div>
         
         <div id="pauseModal" class="modal-overlay">
-            <div class="modal-content" style="border-color: #00ffff;">
-                <h2 style="color: #00ffff; margin-top:0; font-size:18px;">ПАУЗА</h2>
-                <button onclick="togglePause()" style="background: #28a745; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; width: 100%; margin-bottom: 8px; font-size: 13px; cursor: pointer;">ПРОДОЛЖИТЬ</button>
-                <button onclick="fleeBattle()" style="background: #dc3545; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; width: 100%; font-size: 13px; cursor: pointer;">ПОКИНУТЬ БОЙ</button>
+            <div class="modal-content" style="border-color: #00ffcc;">
+                <h2 style="color: #00ffcc; margin-top:0; font-size:18px;">ПАУЗА УБЕЖИЩА</h2>
+                <button onclick="togglePause()" style="background: #28a745; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; width: 100%; margin-bottom: 8px; font-size: 13px; cursor: pointer;">ПРОДОЛЖИТЬ ВЫЛАЗКУ</button>
+                <button onclick="fleeBattle()" style="background: #dc3545; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; width: 100%; font-size: 13px; cursor: pointer;">ЭВАКУИРОВАТЬСЯ (ПОКИНУТЬ БОЙ)</button>
             </div>
         </div>
 
         <div id="reviveModal" class="modal-overlay">
             <div class="modal-content" style="border-color: #ff4a4a;">
                 <div style="font-size: 35px; margin-bottom: 4px;">💀</div>
-                <h2 style="color: #ff4a4a; margin-top: 0; font-size: 18px;">АГЕНТ ПОВЕРЖЕН</h2>
-                <button onclick="acceptRevive()" style="background: #28a745; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; width: 100%; margin-bottom: 8px; font-size: 13px; cursor: pointer;">ВОСКРЕСНУТЬ (<span id="reviveCost">10</span> 💎)</button>
-                <button onclick="declineRevive()" style="background: #555; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; width: 100%; font-size: 13px; cursor: pointer;">СДАТЬСЯ</button>
+                <h2 style="color: #ff4a4a; margin-top: 0; font-size: 18px;">СИГНАЛ ПОТЕРЯН</h2>
+                <button onclick="acceptRevive()" style="background: #28a745; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; width: 100%; margin-bottom: 8px; font-size: 13px; cursor: pointer;">ВОССТАНОВИТЬСЯ (<span id="reviveCost">10</span> 💎)</button>
+                <button onclick="declineRevive()" style="background: #444; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; width: 100%; font-size: 13px; cursor: pointer;">ПРИНЯТЬ ПОРАЖЕНИЕ</button>
             </div>
         </div>
 
         <div id="levelUpModal" class="modal-overlay">
-            <div class="modal-content" style="border-color: #ffd700;">
-                <h2 style="color: #ffd700; margin-top: 0; font-size: 18px;">НОВЫЙ УРОВЕНЬ!</h2>
-                <p style="color: #aaa; font-size: 12px; margin-bottom: 10px;">Выберите улучшение:</p>
+            <div class="modal-content" style="border-color: #ffaa00;">
+                <h2 style="color: #ffaa00; margin-top: 0; font-size: 18px;">МУТАЦИЯ / НАВЫК ДОСТУПЕН!</h2>
+                <p style="color: #aaa; font-size: 12px; margin-bottom: 10px;">Выберите боевой апгрейд секторного сканера:</p>
                 <div id="skillCardsContainer" style="display: flex; flex-direction: column; gap: 6px;"></div>
             </div>
         </div>
 
         <!-- ЛОББИ -->
         <div id="lobbyScreen" class="screen" style="display: flex; background: url('https://img.freepik.com/free-vector/dark-hexagonal-background-with-gradient-color_79603-1409.jpg') center/cover;">
-            <div style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 10px; border: 1px solid #444; width: fit-content; margin: 0 auto; margin-top: 2px;">
-                <div style="width: 30px; height: 30px; background: #555; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px;">🐱</div>
-                <div style="width: 120px;">
-                    <div style="color: #fff; font-size: 11px; font-weight: bold;">Агент (ур. <span id="accountLevelDisplay">1</span>)</div>
-                    <div style="background: #333; border-radius: 3px; height: 4px; width: 100%; margin: 2px 0;">
-                        <div id="accountXpBar" style="background: #00ffff; height: 100%; width: 0%;"></div>
+            <div style="display: flex; align-items: center; gap: 8px; background: rgba(14,14,19,0.85); padding: 6px 12px; border-radius: 10px; border: 1px solid #333; width: fit-content; margin: 0 auto; margin-top: 2px;">
+                <div style="width: 32px; height: 32px; background: #222; border-radius: 50%; border: 1px solid #ffaa00; display: flex; align-items: center; justify-content: center; font-size: 16px;">☣️</div>
+                <div style="width: 130px;">
+                    <div style="color: #fff; font-size: 11px; font-weight: bold; display: flex; justify-content: space-between;">
+                        <span>Сталкер</span>
+                        <span style="color: #ffaa00;">Ур. <span id="accountLevelDisplay">1</span></span>
                     </div>
-                    <div style="color: #00ff00; font-size: 9px;">⚔️ БМ: <span id="bmDisplay">100</span></div>
+                    <div style="background: #222; border-radius: 3px; height: 5px; width: 100%; margin: 3px 0; border: 1px solid #444;">
+                        <div id="accountXpBar" style="background: linear-gradient(90deg, #00ffcc, #ffaa00); height: 100%; width: 0%;"></div>
+                    </div>
+                    <div style="color: #00ff66; font-size: 9px; font-weight: bold;">⚔️ БМ: <span id="bmDisplay">100</span></div>
                 </div>
             </div>
             
             <div style="display: flex; justify-content: center; gap: 8px; margin-top: 8px; padding: 0 10px; max-width: 450px; margin-left: auto; margin-right: auto; width: 100%;">
-                <button onclick="switchTab('agencyScreen', null)" style="background: rgba(0,0,0,0.7); color: #00ffff; border: 1px solid #00bcd4; border-radius: 8px; padding: 5px 10px; flex: 1; font-weight: bold; font-size: 11px;">🏢 Агентство</button>
-                <button onclick="switchTab('questsScreen', null)" style="background: rgba(0,0,0,0.7); color: #ffea00; border: 1px solid #ffd700; border-radius: 8px; padding: 5px 10px; flex: 1; font-weight: bold; font-size: 11px;">📋 Сезон</button>
+                <button onclick="switchTab('agencyScreen', null)" style="background: rgba(14,14,19,0.8); color: #00ffcc; border: 1px solid #00ffcc55; border-radius: 8px; padding: 6px 10px; flex: 1; font-weight: bold; font-size: 11px; cursor: pointer;">🏢 Агентство</button>
+                <button onclick="switchTab('questsScreen', null)" style="background: rgba(14,14,19,0.8); color: #ffaa00; border: 1px solid #ffaa0055; border-radius: 8px; padding: 6px 10px; flex: 1; font-weight: bold; font-size: 11px; cursor: pointer;">📋 Сезон</button>
             </div>
             
             <div style="margin: auto; text-align: center; width: 100%; max-width: 450px; padding: 10px 0;">
-                <div id="stageTitle" style="font-size: 15px; color: #ffea00; font-weight: bold; margin-bottom: 4px;">ЛОКАЦИЯ <span id="stageDisplay">1</span></div>
-                <div id="locationNameDisplay" style="font-size: 12px; color: #00ffff; margin-bottom: 8px;">Ржавые Пустоши</div>
+                <div id="stageTitle" style="font-size: 16px; color: #ffaa00; font-weight: bold; margin-bottom: 2px; letter-spacing: 1px;">ЗОНА <span id="stageDisplay">1</span></div>
+                <div id="locationNameDisplay" style="font-size: 12px; color: #00ffcc; margin-bottom: 12px;">Ржавые Пустоши</div>
                 
-                <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 10px;">
-                    <button onclick="changeStage(-1)" style="background: rgba(0,0,0,0.6); color: #fff; border: 1px solid #555; border-radius: 6px; padding: 4px 10px; font-weight: bold; cursor: pointer;">◀</button>
-                    <button onclick="changeStage(1)" style="background: rgba(0,0,0,0.6); color: #fff; border: 1px solid #555; border-radius: 6px; padding: 4px 10px; font-weight: bold; cursor: pointer;">▶</button>
+                <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 12px;">
+                    <button onclick="changeStage(-1)" style="background: rgba(20,20,28,0.9); color: #fff; border: 1px solid #555; border-radius: 6px; padding: 6px 14px; font-weight: bold; cursor: pointer;">◀</button>
+                    <button onclick="changeStage(1)" style="background: rgba(20,20,28,0.9); color: #fff; border: 1px solid #555; border-radius: 6px; padding: 6px 14px; font-weight: bold; cursor: pointer;">▶</button>
                 </div>
 
-                <button onclick="startBattle()" style="background: linear-gradient(135deg, #ffd700, #ff8c00); color: #000; border: none; padding: 10px 35px; border-radius: 20px; font-size: 18px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(255,140,0,0.4);">В БОЙ ⚔️</button>
-                <div style="margin-top: 5px; color: #aaa; font-size: 10px; margin-bottom: 10px;">Стоимость: 5 ⚡ (5 Комнат)</div>
-                <div id="btnSweep" style="background: rgba(0,0,0,0.7); border: 2px solid #ffd700; border-radius: 10px; padding: 8px 12px; margin: 0 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                <button onclick="startBattle()" style="background: linear-gradient(135deg, #ffaa00, #ff5500); color: #000; border: none; padding: 12px 40px; border-radius: 25px; font-size: 18px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(255,170,0,0.4); text-transform: uppercase; letter-spacing: 1px;">В ВЫЛАЗКУ ⚔️</button>
+                <div style="margin-top: 6px; color: #888; font-size: 10px; margin-bottom: 12px;">Расход энергии: 5 ⚡ (5 Секторов)</div>
+                
+                <div id="btnSweep" style="background: rgba(14,14,19,0.85); border: 2px solid #ffaa0055; border-radius: 10px; padding: 8px 14px; margin: 0 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
                     <div style="text-align: left;">
-                        <div style="color: #ffea00; font-weight: bold; font-size: 12px;">Патруль (АФК)</div>
-                        <div style="color: #aaa; font-size: 10px;">Накоплено: <span id="sweepTimeDisplay" style="color:#00ff00;">00:00:00</span></div>
+                        <div style="color: #ffaa00; font-weight: bold; font-size: 12px;">Авто-добыча (АФК)</div>
+                        <div style="color: #888; font-size: 10px;">Накоплено: <span id="sweepTimeDisplay" style="color:#00ff66;">00:00:00</span></div>
                     </div>
-                    <div style="font-size: 22px;">🎁</div>
+                    <div style="font-size: 22px;">📦</div>
                 </div>
             </div>
         </div>
 
         <div id="sweepModal" class="modal-overlay">
             <div class="modal-content">
-                <h3 style="color:#ffea00; margin-top:0; font-size:16px;">СБОР АФК НАГРАД</h3>
+                <h3 style="color:#ffaa00; margin-top:0; font-size:16px;">СБОР РЕСУРСОВ АФК</h3>
                 <div style="display:flex; justify-content:center; gap:12px; margin-bottom:12px;">
-                    <div style="background:#1a1a24; padding:8px; border-radius:8px; border:1px solid #555;"><div style="font-size:18px;">💰</div><div style="color:#ffd700; font-weight:bold; font-size:12px;">+<span id="sweepGoldResult">0</span></div></div>
-                    <div style="background:#1a1a24; padding:8px; border-radius:8px; border:1px solid #555;"><div style="font-size:18px;">⚙️</div><div style="color:#da70d6; font-weight:bold; font-size:12px;">+<span id="sweepPartsResult">0</span></div></div>
+                    <div style="background:#121218; padding:8px; border-radius:8px; border:1px solid #444;"><div style="font-size:18px;">💰</div><div style="color:#ffaa00; font-weight:bold; font-size:12px;">+<span id="sweepGoldResult">0</span></div></div>
+                    <div style="background:#121218; padding:8px; border-radius:8px; border:1px solid #444;"><div style="font-size:18px;">⚙️</div><div style="color:#d880ff; font-weight:bold; font-size:12px;">+<span id="sweepPartsResult">0</span></div></div>
                 </div>
-                <button id="btnClaimSweep" style="background:#28a745; color:#fff; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; width:100%; cursor:pointer; font-size:12px;">ЗАБРАТЬ</button>
+                <button id="btnClaimSweep" style="background:#28a745; color:#fff; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; width:100%; cursor:pointer; font-size:12px;">ЗАБРАТЬ ЛОТ</button>
             </div>
         </div>
 
         <div id="shopScreen" class="screen">
+            <div class="screen-header">
+                <span class="screen-title">🏪 ЧЕРНЫЙ РЫНОК / СУНДУКИ</span>
+                <button class="btn-back" onclick="switchTab('lobbyScreen', document.getElementById('navLobby'))">↩ Назад</button>
+            </div>
             <div style="max-width: 450px; margin: 0 auto; width: 100%;">
-                <h3 style="color: #00ffff; text-align: center; margin-top: 0; font-size: 15px;">МАГАЗИН И СУНДУКИ</h3>
-                <div style="background: #2a2a35; border: 2px solid #ffd700; border-radius: 12px; padding: 12px; text-align: center; margin-bottom: 12px; position:relative;">
-                    <button onclick="openDropRatesModal()" style="position:absolute; top:8px; right:8px; background:rgba(255,255,255,0.1); border:1px solid #777; border-radius:50%; width:24px; height:24px; color:#fff; font-size:12px; font-weight:bold; cursor:pointer;">i</button>
-                    <div style="font-size: 40px; margin-bottom: 6px;" id="shopChestIcon">🎁</div>
-                    <div style="color: #ffd700; font-weight: bold; font-size: 14px; margin-bottom: 2px;">Сундук S-Gear</div>
-                    <div style="color: #aaa; font-size: 10px; margin-bottom: 8px;">Содержит редкое оружие и снаряжение</div>
+                <div style="background: #181820; border: 2px solid #ffaa0055; border-radius: 12px; padding: 12px; text-align: center; margin-bottom: 12px; position:relative;">
+                    <button onclick="openDropRatesModal()" style="position:absolute; top:8px; right:8px; background:rgba(255,255,255,0.05); border:1px solid #666; border-radius:50%; width:24px; height:24px; color:#fff; font-size:12px; font-weight:bold; cursor:pointer;">i</button>
+                    <div style="font-size: 40px; margin-bottom: 6px;">🎁</div>
+                    <div style="color: #ffaa00; font-weight: bold; font-size: 14px; margin-bottom: 2px;">Контейнер Сталкера (S-Gear)</div>
+                    <div style="color: #888; font-size: 10px; margin-bottom: 8px;">Содержит редкое оружие и модификаторы</div>
                     <button onclick="openChest('sgear', 1)" style="background: linear-gradient(135deg, #28a745, #1e7e34); color:#fff; border:none; padding:8px 20px; border-radius:8px; font-weight:bold; width:100%; cursor:pointer; font-size:12px;">Открыть (💎 400)</button>
                 </div>
             </div>
         </div>
 
         <div id="dropRatesModal" class="modal-overlay">
-            <div class="modal-content" style="border-color: #ffd700; max-width: 350px;">
-                <h3 style="color:#ffd700; margin-top:0; font-size:15px;">📊 Шансы выпадения</h3>
+            <div class="modal-content" style="border-color: #ffaa00; max-width: 350px;">
+                <h3 style="color:#ffaa00; margin-top:0; font-size:15px;">📊 ШАНСЫ ВЫПАДЕНИЯ</h3>
                 <div style="text-align: left; font-size: 11px; color: #ddd; line-height: 1.5; margin-bottom: 12px;">
-- 🟢 Обычный (Normal): <b>60%</b><br>
-- 🔵 Редкий (Rare): <b>30%</b><br>
-- 🟣 Эпический (Epic): <b>10%</b>
+                    - 🟢 Обычный (Normal): <b>60%</b><br>
+                    - 🔵 Редкий (Rare): <b>30%</b><br>
+                    - 🟣 Эпический (Epic): <b>10%</b>
                 </div>
-                <button onclick="document.getElementById('dropRatesModal').style.display='none'" style="background:#555; color:#fff; border:none; padding:6px; border-radius:6px; font-weight:bold; width:100%; font-size:11px; cursor:pointer;">Закрыть</button>
+                <button onclick="document.getElementById('dropRatesModal').style.display='none'" style="background:#444; color:#fff; border:none; padding:6px; border-radius:6px; font-weight:bold; width:100%; font-size:11px; cursor:pointer;">Закрыть</button>
             </div>
         </div>
 
         <div id="gachaResult" class="modal-overlay">
-            <div class="modal-content" style="border-color: #00ff00;">
-                <h3 style="color:#00ff00; margin-top:0; font-size:16px;">✨ НАХОДКА!</h3>
+            <div class="modal-content" style="border-color: #00ff66;">
+                <h3 style="color:#00ff66; margin-top:0; font-size:16px;">✨ ДОБЫЧА ИЗ КОНТЕЙНЕРА!</h3>
                 <div id="gachaChestBox" style="font-size: 60px; margin: 10px 0;" class="chest-anim">🎁</div>
                 <div id="gachaItemsList" style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-bottom:12px;"></div>
-                <button onclick="document.getElementById('gachaResult').style.display='none'" style="background:#28a745; color:#fff; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; width:100%; cursor:pointer; font-size:12px;">ЗАБРАТЬ</button>
+                <button onclick="document.getElementById('gachaResult').style.display='none'" style="background:#28a745; color:#fff; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; width:100%; cursor:pointer; font-size:12px;">ЗАБРАТЬ В ИНВЕНТАРЬ</button>
             </div>
         </div>
 
         <div id="equipmentScreen" class="screen">
+            <div class="screen-header">
+                <span class="screen-title">🎒 ЭКИПИРОВКА СТАЛКЕРА</span>
+                <button class="btn-back" onclick="switchTab('lobbyScreen', document.getElementById('navLobby'))">↩ Назад</button>
+            </div>
             <div style="max-width: 450px; margin: 0 auto; width: 100%;">
-                <h3 style="color:#fff; margin:0 0 8px 0; font-size:15px; text-align:center;">ЭКИПИРОВКА</h3>
-                <div style="display: flex; justify-content: space-around; margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-around; margin-bottom: 12px;">
                     <div style="display: flex; flex-direction: column; gap: 6px;">
                         <div id="slot-helmet" class="eq-slot" onclick="unequip('helmet')"></div>
                         <div id="slot-armor" class="eq-slot" onclick="unequip('armor')"></div>
@@ -212,33 +232,38 @@
                         <div id="slot-drone" class="eq-slot" onclick="unequip('drone')"></div>
                     </div>
                 </div>
-                <div style="background: #1e1e2c; padding: 10px; border-radius: 10px;">
+                <div style="background: #16161d; padding: 10px; border-radius: 10px; border: 1px solid #333;">
                     <div id="inventoryGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;"></div>
                 </div>
             </div>
         </div>
 
         <div id="skillsScreen" class="screen">
+            <div class="screen-header">
+                <span class="screen-title">🔥 НАВЫКИ И МОДИФИКАТОРЫ</span>
+                <button class="btn-back" onclick="switchTab('lobbyScreen', document.getElementById('navLobby'))">↩ Назад</button>
+            </div>
             <div style="max-width: 450px; margin: 0 auto; width: 100%;">
-                <h3 style="color:#fff; margin:0 0 8px 0; font-size:15px; text-align:center;">НАВЫКИ БОЯ</h3>
                 <div id="skillsGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;"></div>
             </div>
         </div>
 
-        <!-- ГОРОД С УМНЫМ ХАБОМ -->
+        <!-- ГОРОД (ХАБ) -->
         <div id="cityScreen" class="screen">
+            <div class="screen-header">
+                <span class="screen-title">🏙️ ЦЕНТР ВЫЖИВШИХ (ХАБ)</span>
+                <button class="btn-back" onclick="switchTab('lobbyScreen', document.getElementById('navLobby'))">↩ Назад</button>
+            </div>
             <div style="max-width: 450px; margin: 0 auto; width: 100%;">
-                <h2 style="color: #00ffff; text-align: center; margin-top:0; font-size:16px;">ЦЕНТР ВЫЖИВШИХ</h2>
-                
-                <div style="background: linear-gradient(135deg, #1f4068, #162447); border: 2px solid #00ffff; border-radius: 12px; padding: 12px; text-align: center; margin-bottom: 12px;">
-                    <div style="font-size: 28px; margin-bottom: 4px;">🏙️</div>
-                    <h3 style="color: #00ffff; margin: 0 0 4px 0; font-size: 14px;">Командный Центр</h3>
-                    <p style="color: #ccc; font-size: 10px; margin-bottom: 8px;">Выберите нужный сектор активности ниже:</p>
-                    <button onclick="openHubModal()" style="width: 100%; background: #00bcd4; color: #fff; border: none; padding: 9px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">ОТКРЫТЬ МЕНЮ АКТИВНОСТЕЙ</button>
+                <div style="background: linear-gradient(135deg, #1f3040, #121c28); border: 2px solid #00ffcc55; border-radius: 12px; padding: 12px; text-align: center; margin-bottom: 12px;">
+                    <div style="font-size: 28px; margin-bottom: 4px;">📡</div>
+                    <h3 style="color: #00ffcc; margin: 0 0 4px 0; font-size: 14px;">Командный Центр Сектора</h3>
+                    <p style="color: #888; font-size: 10px; margin-bottom: 8px;">Доступ к рейдам, рынку, гильдиям и аренам:</p>
+                    <button onclick="openHubModal()" style="width: 100%; background: #00ffcc; color: #000; border: none; padding: 9px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; text-transform: uppercase;">ОТКРЫТЬ СЕТЬ АКТИВНОСТЕЙ</button>
                 </div>
 
-                <div style="background: #2a2a35; border: 2px solid #00bcd4; border-radius: 10px; padding: 10px; text-align: center;">
-                    <h3 style="color: #00bcd4; margin: 0 0 6px 0; font-size:13px;">🛠️ Оружейная (Крафт с чертежами)</h3>
+                <div style="background: #181820; border: 2px solid #00ffcc33; border-radius: 10px; padding: 10px; text-align: center;">
+                    <h3 style="color: #00ffcc; margin: 0 0 6px 0; font-size:13px;">🛠️ Оружейная (Крафт по чертежам)</h3>
                     <div id="craftingList"></div>
                 </div>
             </div>
@@ -246,9 +271,9 @@
 
         <!-- УНИВЕРСАЛЬНАЯ МОДАЛКА ХАБА -->
         <div id="hubModal" class="modal-overlay">
-            <div class="modal-content" style="border-color: #00ffff; max-width: 420px;">
+            <div class="modal-content" style="border-color: #00ffcc; max-width: 420px;">
                 <button onclick="document.getElementById('hubModal').style.display='none'" style="position:absolute; top:6px; right:6px; background:#dc3545; color:white; border:none; padding:3px 7px; border-radius:4px; font-weight:bold; cursor:pointer;">X</button>
-                <h3 style="color: #00ffff; margin-top:0; font-size:15px; margin-bottom: 10px;">⚡ ЦЕНТР АКТИВНОСТЕЙ</h3>
+                <h3 style="color: #00ffcc; margin-top:0; font-size:15px; margin-bottom: 10px;">📡 СЕТЕВОЙ ТЕРМИНАЛ</h3>
                 
                 <div style="display:flex; gap:4px; margin-bottom:10px;">
                     <button class="hub-tab-btn active" onclick="switchHubTab('raid', this)">🏰 Рейды</button>
@@ -263,26 +288,26 @@
         
         <div id="agencyScreen" class="screen">
             <div class="screen-header">
-                <button class="btn-back" onclick="switchTab('lobbyScreen', document.getElementById('navLobby'))">🔙</button>
-                <h2 style="color: #00ffff; margin:0; font-size:16px;">АГЕНТСТВО (ТАЛАНТЫ)</h2>
+                <span class="screen-title">🏢 АГЕНТСТВО (ТАЛАНТЫ)</span>
+                <button class="btn-back" onclick="switchTab('lobbyScreen', document.getElementById('navLobby'))">↩ Назад</button>
             </div>
             <div style="max-width: 450px; margin: 0 auto; width: 100%;">
-                <div style="color: #aaa; font-size: 10px; text-align: center; margin-bottom: 10px;">Прокачивайте постоянные пассивные бонусы для всех вылазок!</div>
+                <div style="color: #888; font-size: 10px; text-align: center; margin-bottom: 10px;">Инвестируйте детали в постоянные пассивные протоколы выживания!</div>
                 <div id="talentsContainer" style="display:flex; flex-direction:column; gap:8px;"></div>
             </div>
         </div>
         
         <div id="questsScreen" class="screen">
             <div class="screen-header">
-                <button class="btn-back" onclick="switchTab('lobbyScreen', document.getElementById('navLobby'))">🔙</button>
-                <h2 style="color: #ffea00; margin:0; font-size:16px;">СЕЗОН 9: ПРОПУСК</h2>
+                <span class="screen-title">📋 БОЕВОЙ ПРОПУСК: СЕЗОН</span>
+                <button class="btn-back" onclick="switchTab('lobbyScreen', document.getElementById('navLobby'))">↩ Назад</button>
             </div>
             <div style="max-width: 450px; margin: 0 auto; width: 100%;">
-                <div style="background: #1e1e2c; border: 1px solid #ffd700; border-radius: 8px; padding: 10px; margin-bottom: 10px; text-align: center;">
-                    <div style="color: #ffd700; font-weight: bold; font-size: 13px;">Уровень сезона: <span id="seasonLevelDisplay">1</span></div>
-                    <div style="color: #aaa; font-size: 10px; margin: 4px 0;">Уничтожайте врагов в боях, чтобы повышать уровень пропуска!</div>
-                    <div style="background: #333; border-radius: 4px; height: 10px; width: 100%; overflow: hidden; margin-top: 6px;">
-                        <div id="seasonXpBar" style="background: linear-gradient(90deg, #ffd700, #ff8c00); width: 0%; height: 100%;"></div>
+                <div style="background: #181820; border: 1px solid #ffaa00; border-radius: 8px; padding: 10px; margin-bottom: 10px; text-align: center;">
+                    <div style="color: #ffaa00; font-weight: bold; font-size: 13px;">Уровень сезона: <span id="seasonLevelDisplay">1</span></div>
+                    <div style="color: #888; font-size: 10px; margin: 4px 0;">Уничтожайте врагов в вылазках, чтобы повышать допуск!</div>
+                    <div style="background: #222; border-radius: 4px; height: 10px; width: 100%; overflow: hidden; margin-top: 6px; border: 1px solid #444;">
+                        <div id="seasonXpBar" style="background: linear-gradient(90deg, #ffaa00, #ff5500); width: 0%; height: 100%;"></div>
                     </div>
                 </div>
                 <div id="seasonRewardsContainer" style="display:flex; flex-direction:column; gap:8px;"></div>
@@ -290,13 +315,13 @@
         </div>
 
         <!-- НИЖНЯЯ ПАНЕЛЬ НАВИГАЦИИ -->
-        <div id="navBar" style="position: absolute; bottom: 0; left: 0; width: 100%; height: 50px; background: #161622; border-top: 1px solid #333; display: flex; justify-content: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box;">
+        <div id="navBar" style="position: absolute; bottom: 0; left: 0; width: 100%; height: 50px; background: #0e0e13; border-top: 1px solid #333; display: flex; justify-content: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box;">
             <div style="display: flex; width: 100%; max-width: 450px;">
-                <button class="navBtn" onclick="switchTab('shopScreen', this)"><span style="font-size:16px; margin-bottom:1px;">🛒</span> Магазин</button>
-                <button class="navBtn" onclick="switchTab('equipmentScreen', this)"><span style="font-size:16px; margin-bottom:1px;">🎒</span> Экипировка</button>
-                <button id="navLobby" class="navBtn active" onclick="switchTab('lobbyScreen', this)"><span style="font-size:16px; margin-bottom:1px;">⚔️</span> Лобби</button>
+                <button class="navBtn" onclick="switchTab('shopScreen', this)"><span style="font-size:16px; margin-bottom:1px;">🛒</span> Рынок</button>
+                <button class="navBtn" onclick="switchTab('equipmentScreen', this)"><span style="font-size:16px; margin-bottom:1px;">🎒</span> Снаряжение</button>
+                <button id="navLobby" class="navBtn active" onclick="switchTab('lobbyScreen', this)"><span style="font-size:16px; margin-bottom:1px;">⚔️</span> Убежище</button>
                 <button class="navBtn" onclick="switchTab('skillsScreen', this)"><span style="font-size:16px; margin-bottom:1px;">🔥</span> Навыки</button>
-                <button class="navBtn" onclick="switchTab('cityScreen', this)"><span style="font-size:16px; margin-bottom:1px;">🏙️</span> Город</button>
+                <button class="navBtn" onclick="switchTab('cityScreen', this)"><span style="font-size:16px; margin-bottom:1px;">🏙️</span> Хаб</button>
             </div>
         </div>
     </div>
@@ -317,4 +342,4 @@
     </script>
     <script src="data.js"></script>
     <script src="game.js"></script>
-</body></html>ы
+</body></html>
