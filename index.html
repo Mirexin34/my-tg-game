@@ -3,53 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Spekter Agency</title>
+    <title>Spekter Agency: MMO</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { margin: 0; padding: 0; background: #050508; font-family: sans-serif; overflow: hidden; user-select: none; width: 100vw; height: 100vh; }
         #appContainer { width: 100%; height: 100%; position: relative; background: #1a1a24; overflow: hidden; }
-        .screen { display: none; width: 100%; height: 100%; flex-direction: column; overflow-y: auto; padding: calc(75px + env(safe-area-inset-top)) 15px calc(90px + env(safe-area-inset-bottom)); box-sizing: border-box; position: absolute; top: 0; left: 0; background: #1a1a24; }
+        
+        /* Экраны меню адаптированы под горизонтальный формат с прокруткой */
+        .screen { display: none; width: 100%; height: 100%; flex-direction: column; overflow-y: auto; padding: calc(60px + env(safe-area-inset-top)) 20px calc(80px + env(safe-area-inset-bottom)); box-sizing: border-box; position: absolute; top: 0; left: 0; background: #1a1a24; }
+        
         .navBtn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: none; border: none; font-size: 11px; font-weight: bold; cursor: pointer; color: #777; transition: 0.2s; }
         .navBtn.active { color: #ffd700; transform: scale(1.1); }
-        .eq-slot { width: 65px; height: 65px; background: #2a2a35; border: 2px solid #555; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 28px; position: relative; cursor: pointer; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
-        .inv-item { width: 100%; aspect-ratio: 1; background: #333; border: 2px solid #555; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; position: relative; }
+        
+        .eq-slot { width: 60px; height: 60px; background: #2a2a35; border: 2px solid #555; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 26px; position: relative; cursor: pointer; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+        .inv-item { width: 100%; aspect-ratio: 1; background: #333; border: 2px solid #555; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; position: relative; }
+        
         .rarity-bg-normal { background: linear-gradient(135deg, #444, #222); border-color: #aaa; }
         .rarity-bg-rare { background: linear-gradient(135deg, #4169e1, #00008b); border-color: #00bfff; }
         .rarity-bg-epic { background: linear-gradient(135deg, #9370db, #4b0082); border-color: #da70d6; }
         .rarity-bg-legendary { background: linear-gradient(135deg, #ffd700, #ff8c00); border-color: #ffff00; }
-        .stat-badge { position: absolute; bottom: 2px; right: 4px; font-size: 10px; font-weight: bold; color: white; background: rgba(0,0,0,0.7); padding: 2px 5px; border-radius: 4px; }
+        
+        .stat-badge { position: absolute; bottom: 2px; right: 4px; font-size: 9px; font-weight: bold; color: white; background: rgba(0,0,0,0.7); padding: 2px 4px; border-radius: 4px; }
+        
         .modal-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; }
-        .modal-content { background: #2a2a35; border: 2px solid #ffea00; border-radius: 20px; padding: 20px; width: 90%; max-width: 500px; max-height: 80%; overflow-y: auto; text-align: center; color: white; position: relative; }
-        .event-btn { background: linear-gradient(135deg, #ff00ff, #8a2be2); color: white; border: none; padding: 12px; border-radius: 12px; font-weight: bold; width: 100%; font-size: 16px; cursor: pointer; box-shadow: 0 4px 10px rgba(138,43,226,0.5); }
+        .modal-content { background: #2a2a35; border: 2px solid #ffea00; border-radius: 20px; padding: 20px; width: 85%; max-width: 450px; max-height: 85%; overflow-y: auto; text-align: center; color: white; position: relative; }
+        
+        .event-btn { background: linear-gradient(135deg, #ff00ff, #8a2be2); color: white; border: none; padding: 10px; border-radius: 12px; font-weight: bold; width: 100%; font-size: 15px; cursor: pointer; box-shadow: 0 4px 10px rgba(138,43,226,0.5); }
+        
         #joystickZone { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; touch-action: none; display: none; }
-        #joystickBase { position: absolute; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; transform: translate(-50%, -50%); display: none; pointer-events: none; }
-        #joystickStick { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; background: rgba(255,255,255,0.8); border-radius: 50%; transform: translate(-50%, -50%); }
-        #btnPause { position: absolute; top: calc(20px + env(safe-area-inset-top)); right: 20px; width: 40px; height: 40px; background: rgba(0,0,0,0.5); border: 2px solid #fff; border-radius: 10px; color: #fff; font-size: 20px; font-weight: bold; display: none; z-index: 150; cursor: pointer; align-items: center; justify-content: center; }
-        #roomCounterUI { position: absolute; top: calc(20px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); border: 1px solid #ffd700; color: #ffd700; padding: 5px 15px; border-radius: 15px; font-weight: bold; font-size: 14px; display: none; z-index: 150; }
-        #combatXpContainer { display: none; position: absolute; top: calc(25px + env(safe-area-inset-top)); left: 15%; width: 70%; max-width: 400px; background: rgba(0,0,0,0.6); border: 2px solid #555; border-radius: 10px; height: 18px; z-index: 150; }
+        #joystickBase { position: absolute; width: 90px; height: 90px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; transform: translate(-50%, -50%); display: none; pointer-events: none; }
+        #joystickStick { position: absolute; top: 50%; left: 50%; width: 35px; height: 35px; background: rgba(255,255,255,0.8); border-radius: 50%; transform: translate(-50%, -50%); }
+        
+        #btnPause { position: absolute; top: 15px; right: 20px; width: 38px; height: 38px; background: rgba(0,0,0,0.5); border: 2px solid #fff; border-radius: 10px; color: #fff; font-size: 18px; font-weight: bold; display: none; z-index: 150; cursor: pointer; align-items: center; justify-content: center; }
+        #roomCounterUI { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); border: 1px solid #ffd700; color: #ffd700; padding: 4px 14px; border-radius: 15px; font-weight: bold; font-size: 13px; display: none; z-index: 150; }
+        
+        #combatXpContainer { display: none; position: absolute; top: 18px; left: 20%; width: 60%; max-width: 350px; background: rgba(0,0,0,0.6); border: 2px solid #555; border-radius: 10px; height: 16px; z-index: 150; }
         #combatXpBar { width: 0%; height: 100%; background: linear-gradient(90deg, #00bfff, #00ffff); border-radius: 8px; transition: width 0.3s ease-out; }
-        #combatLevelText { position: absolute; top: -1px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 13px; font-weight: bold; text-shadow: 1px 1px 2px #000; }
-        .skill-card-btn { background: #2a2a35; border: 2px solid #555; border-radius: 10px; padding: 15px; display: flex; align-items: center; gap: 15px; cursor: pointer; text-align: left; transition: 0.2s; color: white; width: 100%; }
+        #combatLevelText { position: absolute; top: -2px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 12px; font-weight: bold; text-shadow: 1px 1px 2px #000; }
+        
+        .skill-card-btn { background: #2a2a35; border: 2px solid #555; border-radius: 10px; padding: 12px; display: flex; align-items: center; gap: 12px; cursor: pointer; text-align: left; transition: 0.2s; color: white; width: 100%; }
         .skill-card-btn:active { transform: scale(0.95); border-color: #ffd700; }
-        .craft-card { background: #1e1e2c; border: 1px solid #555; border-radius: 10px; padding: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; text-align: left; }
+        .craft-card { background: #1e1e2c; border: 1px solid #555; border-radius: 10px; padding: 8px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; text-align: left; }
     </style>
 </head>
 <body>
     <div id="appContainer">
         <div id="splashScreen" onclick="this.style.display='none'" style="position:absolute; top:0; left:0; width:100%; height:100%; background: #0f0f16; z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align: center;">
-            <h1 style="color:#00ffff; font-size:46px; text-shadow: 0 0 20px #00ffff, 0 0 40px #00bfff; margin-bottom: 10px; font-style: italic;">SPEKTER<br>AGENCY</h1>
-            <div style="color:#aaa; margin-bottom: 50px; font-size: 14px;">Инициализация агента...</div>
-            <div style="width: 60%; height: 8px; background: #333; border-radius: 4px; overflow: hidden;"><div id="splashProgress" style="width: 0%; height: 100%; background: #00ffff; box-shadow: 0 0 10px #00ffff; transition: 0.1s;"></div></div>
+            <h1 style="color:#00ffff; font-size:42px; text-shadow: 0 0 20px #00ffff; margin-bottom: 10px; font-style: italic;">SPEKTER<br>AGENCY</h1>
+            <div style="color:#aaa; margin-bottom: 30px; font-size: 13px;">Инициализация протокола выживания...</div>
+            <div style="width: 50%; height: 8px; background: #333; border-radius: 4px; overflow: hidden;"><div id="splashProgress" style="width: 0%; height: 100%; background: #00ffff; box-shadow: 0 0 10px #00ffff; transition: 0.1s;"></div></div>
         </div>
 
-        <div id="topBar" style="position: absolute; top: calc(15px + env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; z-index: 1000;">
+        <!-- ВЕРХНЯЯ ПАНЕЛЬ РЕСУРСОВ -->
+        <div id="topBar" style="position: absolute; top: 10px; left: 15px; right: 15px; display: flex; justify-content: space-between; align-items: center; z-index: 1000;">
             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; pointer-events: none;">
-                <div style="background: rgba(0,0,0,0.8); padding: 4px 10px; border-radius: 20px; color: #00ff00; font-weight: bold; border: 1px solid #32cd32; font-size: 12px; pointer-events: auto; cursor: pointer; display: flex; align-items: center; gap: 5px;" onclick="openEnergyShop()">
-                    ⚡ <span id="energyDisplay">30</span>/30 <span id="energyTimer" style="color: #aaa; font-size: 10px;">(00:00)</span>
+                <div style="background: rgba(0,0,0,0.8); padding: 3px 8px; border-radius: 20px; color: #00ff00; font-weight: bold; border: 1px solid #32cd32; font-size: 11px; pointer-events: auto; cursor: pointer; display: flex; align-items: center; gap: 4px;" onclick="openEnergyShop()">
+                    ⚡ <span id="energyDisplay">30</span>/30 <span id="energyTimer" style="color: #aaa; font-size: 9px;">(00:00)</span>
                 </div>
-                <div style="background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; color: #ffd700; font-weight: bold; border: 1px solid #ffd700; font-size: 12px;">💰 <span id="goldDisplay">0</span></div>
-                <div style="background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; color: #00ffff; font-weight: bold; border: 1px solid #00ffff; font-size: 12px;">💎 <span id="gemDisplay">0</span></div>
-                <div style="background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; color: #da70d6; font-weight: bold; border: 1px solid #da70d6; font-size: 12px;">⚙️ <span id="partsDisplay">0</span></div>
+                <div style="background: rgba(0,0,0,0.6); padding: 3px 8px; border-radius: 20px; color: #ffd700; font-weight: bold; border: 1px solid #ffd700; font-size: 11px;">💰 <span id="goldDisplay">0</span></div>
+                <div style="background: rgba(0,0,0,0.6); padding: 3px 8px; border-radius: 20px; color: #00ffff; font-weight: bold; border: 1px solid #00ffff; font-size: 11px;">💎 <span id="gemDisplay">0</span></div>
+                <div style="background: rgba(0,0,0,0.6); padding: 3px 8px; border-radius: 20px; color: #da70d6; font-weight: bold; border: 1px solid #da70d6; font-size: 11px;">⚙️ <span id="partsDisplay">0</span></div>
             </div>
         </div>
 
@@ -63,70 +76,66 @@
         
         <div id="pauseModal" class="modal-overlay">
             <div class="modal-content" style="border-color: #00ffff;">
-                <h2 style="color: #00ffff;">ПАУЗА</h2>
-                <button onclick="togglePause()" style="background: #28a745; color: #fff; border: none; padding: 15px; border-radius: 10px; font-weight: bold; width: 100%; margin-bottom: 10px; font-size: 16px; cursor: pointer;">ПРОДОЛЖИТЬ</button>
-                <button onclick="fleeBattle()" style="background: #dc3545; color: #fff; border: none; padding: 15px; border-radius: 10px; font-weight: bold; width: 100%; font-size: 16px; cursor: pointer;">ПОКИНУТЬ БОЙ</button>
+                <h2 style="color: #00ffff; margin-top:0;">ПАУЗА</h2>
+                <button onclick="togglePause()" style="background: #28a745; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold; width: 100%; margin-bottom: 10px; font-size: 15px; cursor: pointer;">ПРОДОЛЖИТЬ</button>
+                <button onclick="fleeBattle()" style="background: #dc3545; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold; width: 100%; font-size: 15px; cursor: pointer;">ПОКИНУТЬ БОЙ</button>
             </div>
         </div>
 
         <div id="reviveModal" class="modal-overlay">
             <div class="modal-content" style="border-color: #ff4a4a;">
-                <div style="font-size: 50px; margin-bottom: 10px;">💀</div>
+                <div style="font-size: 40px; margin-bottom: 5px;">💀</div>
                 <h2 style="color: #ff4a4a; margin-top: 0;">АГЕНТ ПОВЕРЖЕН</h2>
-                <button onclick="acceptRevive()" style="background: #28a745; color: #fff; border: none; padding: 15px; border-radius: 10px; font-weight: bold; width: 100%; margin-bottom: 10px; font-size: 16px; cursor: pointer;">ВОСКРЕСНУТЬ (<span id="reviveCost">10</span> 💎)</button>
-                <button onclick="declineRevive()" style="background: #555; color: #fff; border: none; padding: 15px; border-radius: 10px; font-weight: bold; width: 100%; font-size: 16px; cursor: pointer;">СДАТЬСЯ</button>
+                <button onclick="acceptRevive()" style="background: #28a745; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold; width: 100%; margin-bottom: 10px; font-size: 15px; cursor: pointer;">ВОСКРЕСНУТЬ (<span id="reviveCost">10</span> 💎)</button>
+                <button onclick="declineRevive()" style="background: #555; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold; width: 100%; font-size: 15px; cursor: pointer;">СДАТЬСЯ</button>
             </div>
         </div>
 
         <div id="levelUpModal" class="modal-overlay">
             <div class="modal-content" style="border-color: #ffd700;">
-                <h2 style="color: #ffd700; margin-top: 0; font-size: 26px; text-shadow: 0 0 10px #ffd700;">НОВЫЙ УРОВЕНЬ!</h2>
-                <p style="color: #aaa; font-size: 14px; margin-bottom: 20px;">Выберите улучшение на этот забег:</p>
-                <div id="skillCardsContainer" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                <h2 style="color: #ffd700; margin-top: 0; font-size: 22px; text-shadow: 0 0 10px #ffd700;">НОВЫЙ УРОВЕНЬ!</h2>
+                <p style="color: #aaa; font-size: 13px; margin-bottom: 15px;">Выберите улучшение на этот забег:</p>
+                <div id="skillCardsContainer" style="display: flex; flex-direction: column; gap: 8px;"></div>
             </div>
         </div>
 
-        <!-- ЛОББИ И ДРУГИЕ ЭКРАНЫ -->
+        <!-- ЛОББИ (ГЛАВНЫЙ ЭКРАН) -->
         <div id="lobbyScreen" class="screen" style="display: flex; background: url('https://img.freepik.com/free-vector/dark-hexagonal-background-with-gradient-color_79603-1409.jpg') center/cover;">
-            <div style="display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.7); padding: 8px 12px; border-radius: 12px; border: 1px solid #444; width: fit-content; margin: 0 auto; margin-top: 10px;">
-                <div style="width: 40px; height: 40px; background: #555; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px;">🐱</div>
+            <div style="display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.7); padding: 6px 12px; border-radius: 12px; border: 1px solid #444; width: fit-content; margin: 0 auto; margin-top: 5px;">
+                <div style="width: 35px; height: 35px; background: #555; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px;">🐱</div>
                 <div>
-                    <div style="color: #fff; font-size: 13px; font-weight: bold;">Агент (ур. <span id="accountLevelDisplay">1</span>)</div>
-                    <div style="color: #00ff00; font-size: 11px;">⚔️ БМ: <span id="bmDisplay">100</span></div>
+                    <div style="color: #fff; font-size: 12px; font-weight: bold;">Агент (ур. <span id="accountLevelDisplay">1</span>)</div>
+                    <div style="color: #00ff00; font-size: 10px;">⚔️ БМ: <span id="bmDisplay">100</span></div>
                 </div>
             </div>
-            <div style="display: flex; justify-content: center; gap: 10px; margin-top: 15px; padding: 0 15px; max-width: 500px; margin-left: auto; margin-right: auto; width: 100%;">
-                <button onclick="switchTab('agencyScreen', null)" style="background: rgba(0,0,0,0.7); color: #00ffff; border: 1px solid #00bcd4; border-radius: 10px; padding: 8px; flex: 1; font-weight: bold;">🏢 Агентство</button>
-                <button onclick="switchTab('questsScreen', null)" style="background: rgba(0,0,0,0.7); color: #ffea00; border: 1px solid #ffd700; border-radius: 10px; padding: 8px; flex: 1; font-weight: bold;">📋 Сезон</button>
+            
+            <div style="display: flex; justify-content: center; gap: 10px; margin-top: 10px; padding: 0 15px; max-width: 500px; margin-left: auto; margin-right: auto; width: 100%;">
+                <button onclick="switchTab('agencyScreen', null)" style="background: rgba(0,0,0,0.7); color: #00ffff; border: 1px solid #00bcd4; border-radius: 10px; padding: 6px 12px; flex: 1; font-weight: bold; font-size: 12px;">🏢 Агентство</button>
+                <button onclick="switchTab('questsScreen', null)" style="background: rgba(0,0,0,0.7); color: #ffea00; border: 1px solid #ffd700; border-radius: 10px; padding: 6px 12px; flex: 1; font-weight: bold; font-size: 12px;">📋 Сезон</button>
             </div>
-            <div style="padding: 0 15px; margin-top: 10px; max-width: 500px; margin-left: auto; margin-right: auto; width: 100%;">
-                <button class="event-btn" onclick="openEventsModal()">🎁 СОБЫТИЯ И ПАКЕТЫ</button>
-            </div>
-            <div style="margin: auto; text-align: center; width: 100%; max-width: 500px;">
-                <div id="stageTitle" style="font-size: 18px; color: #ffea00; font-weight: bold; margin-bottom: 15px;">ЭТАП <span id="stageDisplay">1</span></div>
-                <button onclick="startBattle()" style="background: linear-gradient(135deg, #ffd700, #ff8c00); color: #000; border: none; padding: 15px 50px; border-radius: 30px; font-size: 22px; font-weight: bold; cursor: pointer; box-shadow: 0 5px 15px rgba(255,140,0,0.4);">В БОЙ ⚔️</button>
-                <div style="margin-top: 10px; color: #aaa; font-size: 12px; margin-bottom: 30px;">Стоимость: 5 ⚡ (5 Комнат)</div>
-                <div id="btnSweep" style="background: rgba(0,0,0,0.7); border: 2px solid #ffd700; border-radius: 15px; padding: 15px; margin: 0 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+            
+            <div style="margin: auto; text-align: center; width: 100%; max-width: 500px; padding: 15px 0;">
+                <div id="stageTitle" style="font-size: 16px; color: #ffea00; font-weight: bold; margin-bottom: 10px;">ЭТАП <span id="stageDisplay">1</span></div>
+                <button onclick="startBattle()" style="background: linear-gradient(135deg, #ffd700, #ff8c00); color: #000; border: none; padding: 12px 40px; border-radius: 25px; font-size: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255,140,0,0.4);">В БОЙ ⚔️</button>
+                <div style="margin-top: 6px; color: #aaa; font-size: 11px; margin-bottom: 15px;">Стоимость: 5 ⚡ (Арена на 5 Комнат)</div>
+                <div id="btnSweep" style="background: rgba(0,0,0,0.7); border: 2px solid #ffd700; border-radius: 12px; padding: 10px 15px; margin: 0 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
                     <div style="text-align: left;">
-                        <div style="color: #ffea00; font-weight: bold; font-size: 16px;">Патруль (АФК)</div>
-                        <div style="color: #aaa; font-size: 12px;">Накоплено: <span id="sweepTimeDisplay" style="color:#00ff00;">00:00:00</span></div>
+                        <div style="color: #ffea00; font-weight: bold; font-size: 14px;">Патруль (АФК)</div>
+                        <div style="color: #aaa; font-size: 11px;">Накоплено: <span id="sweepTimeDisplay" style="color:#00ff00;">00:00:00</span></div>
                     </div>
-                    <div style="font-size: 30px;">🎁</div>
+                    <div style="font-size: 26px;">🎁</div>
                 </div>
             </div>
         </div>
 
         <div id="eventsModal" class="modal-overlay">
             <div class="modal-content" style="border-color: #ff00ff;">
-                <button onclick="document.getElementById('eventsModal').style.display='none'" style="position:absolute; top:10px; right:10px; background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:5px; font-weight:bold;">X</button>
-                <h3 style="color:#00ffff; margin-top:0;">ПРОГРЕСС СЕРВЕРА</h3>
+                <button onclick="document.getElementById('eventsModal').style.display='none'" style="position:absolute; top:10px; right:10px; background:#dc3545; color:white; border:none; padding:4px 8px; border-radius:5px; font-weight:bold;">X</button>
+                <h3 style="color:#00ffff; margin-top:0;">СОБЫТИЯ</h3>
                 <div style="background: #1e1e2c; border: 1px solid #00ffff; border-radius: 10px; padding: 10px; text-align: left;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">
-                        <span style="color:#fff; font-weight:bold;">Этап 2</span>
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <span style="color:#00ffff; font-size:12px;">💎 x120</span>
-                            <button id="btnProg2" onclick="claimProgress(2, 120)" style="background:#28a745; color:#fff; border:none; padding:5px 10px; border-radius:5px; font-weight:bold; font-size:10px;">Забрать</button>
-                        </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="color:#fff; font-size:13px; font-weight:bold;">Этап 2</span>
+                        <button onclick="claimProgress(2, 120)" style="background:#28a745; color:#fff; border:none; padding:4px 8px; border-radius:5px; font-weight:bold; font-size:10px;">Забрать 120 💎</button>
                     </div>
                 </div>
             </div>
@@ -134,130 +143,75 @@
 
         <div id="sweepModal" class="modal-overlay">
             <div class="modal-content">
-                <h3 style="color:#ffea00; margin-top:0;">СБОР НАГРАД</h3>
-                <div style="display:flex; justify-content:center; gap:15px; margin-bottom:20px;">
-                    <div style="background:#1a1a24; padding:10px; border-radius:10px; border:1px solid #555;"><div style="font-size:24px; margin-bottom:5px;">💰</div><div style="color:#ffd700; font-weight:bold;">+<span id="sweepGoldResult">0</span></div></div>
-                    <div style="background:#1a1a24; padding:10px; border-radius:10px; border:1px solid #555;"><div style="font-size:24px; margin-bottom:5px;">⚙️</div><div style="color:#da70d6; font-weight:bold;">+<span id="sweepPartsResult">0</span></div></div>
+                <h3 style="color:#ffea00; margin-top:0; font-size:18px;">СБОР АФК НАГРАД</h3>
+                <div style="display:flex; justify-content:center; gap:15px; margin-bottom:15px;">
+                    <div style="background:#1a1a24; padding:10px; border-radius:10px; border:1px solid #555;"><div style="font-size:20px;">💰</div><div style="color:#ffd700; font-weight:bold;">+<span id="sweepGoldResult">0</span></div></div>
+                    <div style="background:#1a1a24; padding:10px; border-radius:10px; border:1px solid #555;"><div style="font-size:20px;">⚙️</div><div style="color:#da70d6; font-weight:bold;">+<span id="sweepPartsResult">0</span></div></div>
                 </div>
-                <button id="btnClaimSweep" style="background:#28a745; color:#fff; border:none; padding:12px 30px; border-radius:10px; font-weight:bold; width:100%; cursor:pointer;">ЗАБРАТЬ</button>
+                <button id="btnClaimSweep" style="background:#28a745; color:#fff; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; width:100%; cursor:pointer;">ЗАБРАТЬ</button>
             </div>
         </div>
 
         <div id="shopScreen" class="screen">
-            <div style="max-width: 600px; margin: 0 auto; width: 100%;">
-                <h3 style="color: #00ffff; text-align: center; margin-top: 0; margin-bottom: 10px;">КАРТЫ ЛЬГОТ</h3>
-                <div style="background: linear-gradient(135deg, #4169e1, #00008b); border: 2px solid #00bfff; border-radius: 14px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="max-width: 500px; margin: 0 auto; width: 100%;">
+                <h3 style="color: #00ffff; text-align: center; margin-top: 0; font-size: 16px;">МАГАЗИН И СУНДУКИ</h3>
+                <div style="background: linear-gradient(135deg, #4169e1, #00008b); border: 2px solid #00bfff; border-radius: 12px; padding: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                     <div style="text-align: left;">
-                        <div style="font-weight: bold; font-size: 16px; color: #fff; margin-bottom: 5px;">Серебряная карта</div>
-                        <div style="font-size: 11px; color: #00ffff;">Ежедневно +50 💎</div>
-                        <button id="btnClaimVip" onclick="claimVipDaily()" style="display:none; background: #28a745; color:#fff; border:none; padding:5px 10px; border-radius:5px; font-weight:bold; margin-top:5px; font-size: 10px;">Собрать 💎</button>
+                        <div style="font-weight: bold; font-size: 14px; color: #fff;">VIP Карта (+50 💎 / день)</div>
+                        <button id="btnClaimVip" onclick="claimVipDaily()" style="display:none; background: #28a745; color:#fff; border:none; padding:4px 8px; border-radius:5px; font-weight:bold; margin-top:4px; font-size: 10px;">Собрать</button>
                     </div>
-                    <button id="btnBuyVip" onclick="buyVip()" style="background: #ffd700; color:#000; border:none; padding:10px 15px; border-radius:8px; font-weight:bold; font-size: 14px;">Купить</button>
+                    <button id="btnBuyVip" onclick="buyVip()" style="background: #ffd700; color:#000; border:none; padding:8px 12px; border-radius:8px; font-weight:bold; font-size: 12px;">Купить</button>
                 </div>
-                <h3 style="color: #ffd700; text-align: center; margin-bottom: 10px;">ЕЖЕДНЕВНЫЙ МАГАЗИН</h3>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px;">
-                    <div style="background: #2a2a35; border: 1px solid #444; border-radius: 10px; padding: 10px; text-align: center;">
-                        <div style="font-size: 24px; margin-bottom: 5px;">🪖</div>
-                        <button onclick="buyDailyItem('h3', 1000)" style="width:100%; background: #00bcd4; color:#fff; border:none; padding:5px; border-radius:5px; font-weight:bold; font-size: 11px;">💎 1000</button>
-                    </div>
-                    <div style="background: #2a2a35; border: 1px solid #444; border-radius: 10px; padding: 10px; text-align: center;">
-                        <div style="font-size: 24px; margin-bottom: 5px;">🛡️</div>
-                        <button onclick="buyDailySkill('sk_shield', 800)" style="width:100%; background: #00bcd4; color:#fff; border:none; padding:5px; border-radius:5px; font-weight:bold; font-size: 11px;">💎 800</button>
-                    </div>
-                    <div style="background: #2a2a35; border: 1px solid #444; border-radius: 10px; padding: 10px; text-align: center;">
-                        <div style="font-size: 24px; margin-bottom: 5px;">⚙️</div>
-                        <button onclick="buyResource('parts', 50, 5000)" style="width:100%; background: #ffea00; color:#000; border:none; padding:5px; border-radius:5px; font-weight:bold; font-size: 11px;">💰 5000</button>
-                    </div>
-                </div>
-                <h3 style="color: #ff00ff; text-align: center; margin-bottom: 10px;">СУНДУКИ</h3>
-                <div style="background: linear-gradient(180deg, #d76d77, #3a1c71); border: 2px solid #ff8c00; border-radius: 14px; padding: 15px; margin-bottom: 15px; text-align: center;">
-                    <div style="font-weight: bold; font-size: 16px; color: #fff; margin-bottom: 10px;">Сундук S-Gear</div>
-                    <div style="display: flex; gap: 10px; justify-content: center;">
-                        <button onclick="openChest('sgear', 1)" style="flex:1; background: #28a745; color:#fff; border:none; padding:8px; border-radius:8px; font-weight:bold;">💎 400</button>
-                        <button onclick="openChest('sgear', 10)" style="flex:1; background: #28a745; color:#fff; border:none; padding:8px; border-radius:8px; font-weight:bold;">💎 4000</button>
-                    </div>
-                </div>
+                <button onclick="openChest('sgear', 1)" style="background: #28a745; color:#fff; border:none; padding:12px; border-radius:10px; font-weight:bold; width:100%; cursor:pointer;">Открыть Сундук S-Gear (💎 400)</button>
             </div>
         </div>
 
         <div id="gachaResult" class="modal-overlay">
             <div class="modal-content" style="border-color: #00ff00;">
                 <h3 style="color:#00ff00; margin-top:0;">ПОЛУЧЕНО!</h3>
-                <div id="gachaItemsList" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:20px;"></div>
-                <button onclick="document.getElementById('gachaResult').style.display='none'" style="background:#dc3545; color:#fff; border:none; padding:10px 30px; border-radius:10px; font-weight:bold; width:100%;">ЗАКРЫТЬ</button>
+                <div id="gachaItemsList" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:15px;"></div>
+                <button onclick="document.getElementById('gachaResult').style.display='none'" style="background:#dc3545; color:#fff; border:none; padding:8px 20px; border-radius:8px; font-weight:bold; width:100%;">ЗАКРЫТЬ</button>
             </div>
         </div>
 
         <div id="equipmentScreen" class="screen">
-            <div style="max-width: 600px; margin: 0 auto; width: 100%;">
-                <div style="background: linear-gradient(180deg, #3a1c71, #1a1a24); border-radius: 20px; padding: 20px; text-align: center; margin-bottom: 15px; position: relative; border: 1px solid #555;">
-                    <h3 style="color:#fff; margin:0 0 20px 0;">ПРОФИЛЬ АГЕНТА</h3>
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 10px; position: relative;">
-                        <div style="display: flex; flex-direction: column; gap: 15px;">
-                            <div id="slot-helmet" class="eq-slot" onclick="unequip('helmet')"></div>
-                            <div id="slot-armor" class="eq-slot" onclick="unequip('armor')"></div>
-                            <div id="slot-ring" class="eq-slot" onclick="unequip('ring')"></div>
-                        </div>
-                        <div style="width: 130px; height: 180px; background: url('https://cdn3d.iconscout.com/3d/premium/thumb/ninja-5353597-4468694.png') center/contain no-repeat; filter: drop-shadow(0 0 10px rgba(0,255,255,0.5));"></div>
-                        <div style="display: flex; flex-direction: column; gap: 15px;">
-                            <div id="slot-weapon" class="eq-slot" onclick="unequip('weapon')"></div>
-                            <div id="slot-boots" class="eq-slot" onclick="unequip('boots')"></div>
-                            <div id="slot-drone" class="eq-slot" onclick="unequip('drone')"></div>
-                        </div>
+            <div style="max-width: 500px; margin: 0 auto; width: 100%;">
+                <h3 style="color:#fff; margin:0 0 10px 0; font-size:16px; text-align:center;">ЭКИПИРОВКА И ПРОФИЛЬ</h3>
+                <div style="display: flex; justify-content: space-around; margin-bottom: 15px;">
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div id="slot-helmet" class="eq-slot" onclick="unequip('helmet')"></div>
+                        <div id="slot-armor" class="eq-slot" onclick="unequip('armor')"></div>
+                        <div id="slot-ring" class="eq-slot" onclick="unequip('ring')"></div>
                     </div>
-                    <div style="display: flex; justify-content: space-around; margin-top: 25px; background: rgba(0,0,0,0.6); padding: 12px; border-radius: 15px; border: 1px solid #444;">
-                        <div style="color: #fff; font-size: 16px;">⚔️ Атака: <br><span id="statAtk" style="font-weight:bold; color:#00ff00; font-size: 20px;">100</span></div>
-                        <div style="color: #fff; font-size: 16px;">❤️ Здоровье: <br><span id="statHp" style="font-weight:bold; color:#ff4a4a; font-size: 20px;">500</span></div>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div id="slot-weapon" class="eq-slot" onclick="unequip('weapon')"></div>
+                        <div id="slot-boots" class="eq-slot" onclick="unequip('boots')"></div>
+                        <div id="slot-drone" class="eq-slot" onclick="unequip('drone')"></div>
                     </div>
                 </div>
-                <div style="background: #1e1e2c; padding: 15px; border-radius: 20px; flex-grow: 1;">
-                    <div style="color: #aaa; font-size: 12px; margin-bottom: 10px; text-align: center; text-transform: uppercase;">Склад экипировки</div>
-                    <div id="inventoryGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;"></div>
+                <div style="background: #1e1e2c; padding: 12px; border-radius: 12px;">
+                    <div style="color: #aaa; font-size: 11px; margin-bottom: 8px; text-align: center;">СКЛАД ИНВЕНТАРЯ</div>
+                    <div id="inventoryGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;"></div>
                 </div>
             </div>
         </div>
 
         <div id="skillsScreen" class="screen">
-            <div style="max-width: 600px; margin: 0 auto; width: 100%;">
-                <div style="background: linear-gradient(180deg, #8b0000, #1a1a24); border-radius: 20px; padding: 20px; text-align: center; margin-bottom: 15px;">
-                    <h3 style="color:#fff; margin:0 0 15px 0;">АКТИВНЫЕ НАВЫКИ</h3>
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 10px;">
-                        <div style="display: flex; flex-direction: column; gap: 10px;">
-                            <div id="skill-slot-0" class="eq-slot" onclick="unequipSkill(0)" style="border-color: #ff8c00;"></div>
-                            <div id="skill-slot-1" class="eq-slot" onclick="unequipSkill(1)" style="border-color: #ff8c00;"></div>
-                            <div id="skill-slot-2" class="eq-slot" onclick="unequipSkill(2)" style="border-color: #ff8c00;"></div>
-                        </div>
-                        <div style="width: 100px; height: 140px; background: url('https://cdn3d.iconscout.com/3d/premium/thumb/ninja-5353597-4468694.png') center/contain no-repeat;"></div>
-                        <div style="display: flex; flex-direction: column; gap: 10px;">
-                            <div id="skill-slot-3" class="eq-slot" onclick="unequipSkill(3)" style="border-color: #ff8c00;"></div>
-                            <div id="skill-slot-4" class="eq-slot" onclick="unequipSkill(4)" style="border-color: #ff8c00;"></div>
-                            <div id="skill-slot-5" class="eq-slot" onclick="unequipSkill(5)" style="border-color: #ff8c00;"></div>
-                        </div>
-                    </div>
-                </div>
-                <div style="background: #1e1e2c; padding: 15px; border-radius: 20px; flex-grow: 1;">
-                    <div id="skillsGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;"></div>
-                </div>
+            <div style="max-width: 500px; margin: 0 auto; width: 100%;">
+                <h3 style="color:#fff; margin:0 0 10px 0; font-size:16px; text-align:center;">АКТИВНЫЕ НАВЫКИ</h3>
+                <div id="skillsGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;"></div>
             </div>
         </div>
 
         <div id="cityScreen" class="screen">
-            <div style="max-width: 600px; margin: 0 auto; width: 100%;">
-                <h2 style="color: #00ffff; text-align: center;">ГОРОД</h2>
-                <div style="background: linear-gradient(180deg, #ffcc00, #ff6600); border-radius: 20px; padding: 15px; margin-bottom: 20px; text-align: center;">
-                    <h3 style="color: #fff; margin: 0 0 5px 0;">🎰 ЗОЛОТОЙ СЛОТ</h3>
-                    <button onclick="spinGoldenSlot()" style="width: 100%; background: #fff; color: #ff6600; border: none; padding: 12px; border-radius: 10px; font-weight: bold;">Вращать (50 💎)</button>
+            <div style="max-width: 500px; margin: 0 auto; width: 100%;">
+                <h2 style="color: #00ffff; text-align: center; margin-top:0; font-size:18px;">ГОРОД</h2>
+                <div style="background: linear-gradient(135deg, #1f4068, #162447); border: 2px solid #00ffff; border-radius: 12px; padding: 12px; text-align: center; margin-bottom: 12px;">
+                    <h3 style="color: #00ffff; margin: 0 0 4px 0; font-size:15px;">🏪 РЫНОК СЛИТКОВ</h3>
+                    <button onclick="openAuctionModal()" style="width: 100%; background: #00bcd4; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size:13px;">ОТКРЫТЬ РЫНОК</button>
                 </div>
-                
-                <div style="background: linear-gradient(135deg, #1f4068, #162447); border: 2px solid #00ffff; border-radius: 15px; padding: 15px; text-align: center; margin-bottom: 20px;">
-                    <h3 style="color: #00ffff; margin: 0 0 5px 0;">🏪 РЫНОК И АУКЦИОН</h3>
-                    <p style="color: #aaa; font-size: 12px; margin-bottom: 10px;">Ежедневные лимиты слитков за алмазы (💎).</p>
-                    <button onclick="openAuctionModal()" style="width: 100%; background: #00bcd4; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer;">ОТКРЫТЬ РЫНОК</button>
-                </div>
-
-                <div style="background: #2a2a35; border: 2px solid #00bcd4; border-radius: 15px; padding: 15px; text-align: center; margin-bottom: 20px;">
-                    <h3 style="color: #00bcd4; margin: 0 0 10px 0;">🛠️ Оружейная (Крафт)</h3>
-                    <p style="color: #aaa; font-size: 12px; margin-bottom: 10px;">Создавайте оружие. Чертежи падают с Боссов!</p>
+                <div style="background: #2a2a35; border: 2px solid #00bcd4; border-radius: 12px; padding: 12px; text-align: center;">
+                    <h3 style="color: #00bcd4; margin: 0 0 8px 0; font-size:15px;">🛠️ Оружейная (Крафт)</h3>
                     <div id="craftingList"></div>
                 </div>
             </div>
@@ -265,47 +219,42 @@
         
         <!-- МОДАЛКА РЫНКА -->
         <div id="auctionModal" class="modal-overlay">
-            <div class="modal-content" style="border-color: #00ffff; max-width: 550px;">
-                <button onclick="document.getElementById('auctionModal').style.display='none'" style="position:absolute; top:10px; right:10px; background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:5px; font-weight:bold; cursor:pointer;">X</button>
-                <h3 style="color: #00ffff; margin-top:0;">🏪 МЕЖДУНАРОДНЫЙ РЫНОК</h3>
-                <p style="color: #aaa; font-size: 13px; margin-bottom: 15px;">Ежедневные поставки слитков за алмазы (💎). Лимиты обновляются каждые 24 часа.</p>
-                <div id="marketItemsContainer" style="max-height: 350px; overflow-y: auto; margin-bottom: 15px;"></div>
-                <button onclick="document.getElementById('auctionModal').style.display='none'" style="background: #28a745; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer;">ЗАКРЫТЬ</button>
+            <div class="modal-content" style="border-color: #00ffff; max-width: 480px;">
+                <button onclick="document.getElementById('auctionModal').style.display='none'" style="position:absolute; top:8px; right:8px; background:#dc3545; color:white; border:none; padding:4px 8px; border-radius:5px; font-weight:bold; cursor:pointer;">X</button>
+                <h3 style="color: #00ffff; margin-top:0; font-size:17px;">🏪 РЫНОК СЛИТКОВ</h3>
+                <p style="color: #aaa; font-size: 11px; margin-bottom: 10px;">Лимиты поставок обновляются каждые 24 часа.</p>
+                <div id="marketItemsContainer" style="max-height: 280px; overflow-y: auto; margin-bottom: 10px;"></div>
+                <button onclick="document.getElementById('auctionModal').style.display='none'" style="background: #28a745; color: #fff; border: none; padding: 8px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; font-size:13px;">ЗАКРЫТЬ</button>
             </div>
         </div>
         
         <div id="agencyScreen" class="screen">
-            <div style="max-width: 600px; margin: 0 auto; width: 100%;">
-                <button onclick="switchTab('lobbyScreen', document.getElementById('navLobby'))" style="background:#dc3545; color:#fff; border:none; padding:8px 15px; border-radius:8px; font-weight:bold; margin-bottom:15px;">⬅ Назад</button>
-                <h2 style="color: #00ffff; text-align: center; margin-bottom: 15px;">АГЕНТСТВО</h2>
-                <div style="background: #2a2a35; border: 2px solid #00ffff; border-radius: 14px; padding: 15px; color: #fff;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 15px;"><span>⚔️ Бонус к Атаке (+%)</span><strong style="color: #00ff00;">+<span id="agencyAtkBonus">0</span>%</strong></div>
-                    <button onclick="upgradeAgency()" style="background: #00bcd4; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold; width: 100%;">ОБНОВИТЬ (<span id="agencyCostDisplay">5</span> ⚙️)</button>
-                </div>
+            <div style="max-width: 500px; margin: 0 auto; width: 100%;">
+                <button onclick="switchTab('lobbyScreen', document.getElementById('navLobby'))" style="background:#dc3545; color:#fff; border:none; padding:6px 12px; border-radius:8px; font-weight:bold; margin-bottom:10px; font-size:12px;">⬅ Назад</button>
+                <h2 style="color: #00ffff; text-align: center; margin-top:0; font-size:18px;">АГЕНТСТВО</h2>
+                <button onclick="upgradeAgency()" style="background: #00bcd4; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; width: 100%; font-size:13px;">Улучшить Агентство (<span id="agencyCostDisplay">5</span> ⚙️)</button>
             </div>
         </div>
         
         <div id="questsScreen" class="screen">
-            <div style="max-width: 600px; margin: 0 auto; width: 100%;">
-                <button onclick="switchTab('lobbyScreen', document.getElementById('navLobby'))" style="background:#dc3545; color:#fff; border:none; padding:8px 15px; border-radius:8px; font-weight:bold; margin-bottom:15px;">⬅ Назад</button>
-                <h2 style="color: #ffea00; text-align: center;">СЕЗОН 9</h2>
-                <div style="background: #2a2a35; border: 1px solid #444; border-radius: 12px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <div style="color: #fff; font-weight: bold; margin-bottom: 5px;">Убить 15 врагов</div>
-                        <div style="color: #aaa; font-size: 12px;">Прогресс: <span id="missionKills">0</span> / 15</div>
-                    </div>
-                    <button id="btnClaimKillQuest" onclick="claimMission('kills')" style="background: #ffea00; color: #000; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold;">+50 XP</button>
+            <div style="max-width: 500px; margin: 0 auto; width: 100%;">
+                <button onclick="switchTab('lobbyScreen', document.getElementById('navLobby'))" style="background:#dc3545; color:#fff; border:none; padding:6px 12px; border-radius:8px; font-weight:bold; margin-bottom:10px; font-size:12px;">⬅ Назад</button>
+                <h2 style="color: #ffea00; text-align: center; margin-top:0; font-size:18px;">СЕЗОН 9</h2>
+                <div style="background: #2a2a35; border: 1px solid #444; border-radius: 10px; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="font-size:12px; color:#fff;">Убить 15 врагов (<span id="missionKills">0</span>/15)</div>
+                    <button onclick="claimMission('kills')" style="background: #ffea00; color: #000; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size:11px;">+50 XP</button>
                 </div>
             </div>
         </div>
 
-        <div id="navBar" style="position: absolute; bottom: 0; left: 0; width: 100%; height: calc(70px + env(safe-area-inset-bottom)); background: #161622; border-top: 1px solid #333; display: flex; justify-content: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box;">
-            <div style="display: flex; width: 100%; max-width: 600px;">
-                <button class="navBtn" onclick="switchTab('shopScreen', this)"><span style="font-size:24px; margin-bottom:4px;">🛒</span> Магазин</button>
-                <button class="navBtn" onclick="switchTab('equipmentScreen', this)"><span style="font-size:24px; margin-bottom:4px;">🎒</span> Экипировка</button>
-                <button id="navLobby" class="navBtn active" onclick="switchTab('lobbyScreen', this)"><span style="font-size:24px; margin-bottom:4px;">⚔️</span> Лобби</button>
-                <button class="navBtn" onclick="switchTab('skillsScreen', this)"><span style="font-size:24px; margin-bottom:4px;">🔥</span> Навыки</button>
-                <button class="navBtn" onclick="switchTab('cityScreen', this)"><span style="font-size:24px; margin-bottom:4px;">🏙️</span> Город</button>
+        <!-- НИЖНЯЯ ПАНЕЛЬ НАВИГАЦИИ -->
+        <div id="navBar" style="position: absolute; bottom: 0; left: 0; width: 100%; height: 55px; background: #161622; border-top: 1px solid #333; display: flex; justify-content: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box;">
+            <div style="display: flex; width: 100%; max-width: 500px;">
+                <button class="navBtn" onclick="switchTab('shopScreen', this)"><span style="font-size:18px; margin-bottom:2px;">🛒</span> Магазин</button>
+                <button class="navBtn" onclick="switchTab('equipmentScreen', this)"><span style="font-size:18px; margin-bottom:2px;">🎒</span> Экипировка</button>
+                <button id="navLobby" class="navBtn active" onclick="switchTab('lobbyScreen', this)"><span style="font-size:18px; margin-bottom:2px;">⚔️</span> Лобби</button>
+                <button class="navBtn" onclick="switchTab('skillsScreen', this)"><span style="font-size:18px; margin-bottom:2px;">🔥</span> Навыки</button>
+                <button class="navBtn" onclick="switchTab('cityScreen', this)"><span style="font-size:18px; margin-bottom:2px;">🏙️</span> Город</button>
             </div>
         </div>
     </div>

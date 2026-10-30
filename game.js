@@ -6,9 +6,7 @@ const tg = window.Telegram?.WebApp;
 if (tg) {
     try { 
         tg.requestFullscreen(); 
-        if (tg.lockOrientation) {
-            tg.lockOrientation('landscape');
-        }
+        if (tg.lockOrientation) tg.lockOrientation('landscape');
     } catch(e) { tg.expand(); }
     try { tg.disableVerticalSwipes(); tg.setHeaderColor('#1a1a24'); tg.setBackgroundColor('#1a1a24'); } catch(e) {}
 }
@@ -172,7 +170,7 @@ window.renderCrafting = function() {
         let hasBp = !recipe.reqBp || (savedData.blueprints[recipe.reqBp] || 0) > 0; 
         let canCraft = savedData.stage >= recipe.reqStage && savedData.gold >= recipe.costGold && savedData.parts >= recipe.costParts && hasBp; 
         let bpText = recipe.reqBp ? `<br><span style="color:${hasBp?'#00ff00':'#ff4a4a'}">📜 Чертеж '${recipe.bpName}': ${(savedData.blueprints[recipe.reqBp]||0)}/1</span>` : ''; 
-        list.innerHTML += `<div class="craft-card"><div><div style="font-size: 24px; float: left; margin-right: 10px;">${recipe.icon}</div><div style="font-weight: bold; color: #fff; font-size: 14px;">${recipe.name}</div><div style="color: #aaa; font-size: 11px;">Этап: ${recipe.reqStage}+ | 💰 ${recipe.costGold} | ⚙️ ${recipe.costParts} ${bpText}</div></div><button onclick="craftWeapon('${recipe.id}')" ${canCraft ? '' : 'disabled'} style="background: ${canCraft ? '#28a745' : '#555'}; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; cursor:pointer;">Создать</button></div>`; 
+        list.innerHTML += `<div class="craft-card"><div><div style="font-size: 22px; float: left; margin-right: 8px;">${recipe.icon}</div><div style="font-weight: bold; color: #fff; font-size: 13px;">${recipe.name}</div><div style="color: #aaa; font-size: 10px;">Этап: ${recipe.reqStage}+ | 💰 ${recipe.costGold} | ⚙️ ${recipe.costParts} ${bpText}</div></div><button onclick="craftWeapon('${recipe.id}')" ${canCraft ? '' : 'disabled'} style="background: ${canCraft ? '#28a745' : '#555'}; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-weight: bold; cursor:pointer; font-size:11px;">Создать</button></div>`; 
     }); 
 };
 
@@ -217,9 +215,6 @@ window.renderInventory = function() {
         div.onclick = () => { window.equipItem(invItem.uid, data.type); }; 
         grid.appendChild(div); 
     }); 
-    let stats = getCalculatedStats(); 
-    document.getElementById('statAtk').innerText = stats.atk; 
-    document.getElementById('statHp').innerText = stats.hp; 
 };
 
 window.equipItem = function(uid, type) { 
@@ -244,46 +239,14 @@ window.unequip = function(type) {
 window.renderSkills = function() { 
     const grid = document.getElementById('skillsGrid'); 
     grid.innerHTML = ''; 
-    for (let i = 0; i < 6; i++) { 
-        const slot = document.getElementById(`skill-slot-${i}`); 
-        if (savedData.equippedSkills[i]) { 
-            let data = skillDatabase.find(s => s.id === savedData.equippedSkills[i]); 
-            slot.className = `eq-slot rarity-bg-${data.rarity}`; 
-            slot.innerHTML = `${data.icon}`; 
-        } else { 
-            slot.className = 'eq-slot'; 
-            slot.innerHTML = `<span style="color:#555;">➕</span>`; 
-        } 
-    } 
     savedData.skillsInventory.forEach(invItem => { 
         let data = skillDatabase.find(s => s.id === invItem.id); 
         if(!data) return; 
         let div = document.createElement('div'); 
         div.className = `inv-item rarity-bg-${data.rarity}`; 
         div.innerHTML = `${data.icon}`; 
-        div.onclick = () => { window.equipSkill(invItem.uid); }; 
         grid.appendChild(div); 
     }); 
-};
-
-window.equipSkill = function(uid) { 
-    let index = savedData.skillsInventory.findIndex(i => i.uid === uid); 
-    if (index === -1) return; 
-    let emptySlot = savedData.equippedSkills.findIndex(s => s === null); 
-    if (emptySlot === -1) { showAlert("Все слоты заняты!"); return; } 
-    savedData.equippedSkills[emptySlot] = savedData.skillsInventory[index].id; 
-    savedData.skillsInventory.splice(index, 1); 
-    saveData(); 
-    renderSkills(); 
-};
-
-window.unequipSkill = function(slotIndex) { 
-    if (savedData.equippedSkills[slotIndex]) { 
-        savedData.skillsInventory.push({ uid: getUid(), id: savedData.equippedSkills[slotIndex] }); 
-        savedData.equippedSkills[slotIndex] = null; 
-        saveData(); 
-        renderSkills(); 
-    } 
 };
 
 window.upgradeAgency = function() { 
@@ -292,7 +255,6 @@ window.upgradeAgency = function() {
         savedData.parts -= cost; 
         savedData.agencyLevel++; 
         saveData(); 
-        document.getElementById('agencyAtkBonus').innerText = savedData.agencyLevel * 2; 
         document.getElementById('agencyCostDisplay').innerText = (savedData.agencyLevel + 1) * 5; 
         showAlert("Агентство успешно улучшено!"); 
     } else { 
@@ -300,64 +262,18 @@ window.upgradeAgency = function() {
     } 
 };
 
-window.buyDailyItem = function(itemId, cost) { 
-    if (savedData.gems >= cost) { 
-        savedData.gems -= cost; 
-        savedData.inventory.push({ uid: getUid(), id: itemId }); 
-        saveData(); 
-        showAlert("Предмет куплен!"); 
-    } else { 
-        showAlert("Недостаточно алмазов!"); 
-    } 
-};
-
-window.buyDailySkill = function(skillId, cost) { 
-    if (savedData.gems >= cost) { 
-        savedData.gems -= cost; 
-        savedData.skillsInventory.push({ uid: getUid(), id: skillId }); 
-        saveData(); 
-        showAlert("Навык куплен!"); 
-    } else { 
-        showAlert("Недостаточно алмазов!"); 
-    } 
-};
-
-window.buyResource = function(type, amount, cost) { 
-    if (savedData.gold >= cost) { 
-        savedData.gold -= cost; 
-        savedData.parts += amount; 
-        saveData(); 
-        showAlert(`Куплено ${amount} деталей!`); 
-    } else { 
-        showAlert("Недостаточно золота!"); 
-    } 
-};
-
 window.openChest = function(chestType, amount) { 
-    let cost = (chestType === 'gold' ? 300 : (chestType === 'skills' ? 200 : 400)) * amount; 
+    let cost = 400 * amount; 
     if (savedData.gems < cost) { showAlert("Недостаточно алмазов!"); return; } 
     savedData.gems -= cost; 
     let pulled = []; 
     for (let i = 0; i < amount; i++) { 
         let r = Math.random(), tr = r < 0.1 ? 'epic' : (r < 0.4 ? 'rare' : 'normal'); 
-        if (chestType === 'skills') { 
-            let pool = skillDatabase.filter(x => x.rarity === tr); 
-            if(!pool.length) pool = skillDatabase; 
-            let item = pool[Math.floor(Math.random()*pool.length)]; 
-            savedData.skillsInventory.push({uid: getUid(), id: item.id}); 
-            pulled.push(item); 
-        } else { 
-            if (chestType === 'sgear') { 
-                if (savedData.pityCounter >= 9) tr = 'epic'; 
-                if (tr === 'epic') savedData.pityCounter = 0; 
-                else savedData.pityCounter++; 
-            } 
-            let pool = itemDatabase.filter(x => x.rarity === tr); 
-            if(!pool.length) pool = itemDatabase; 
-            let item = pool[Math.floor(Math.random()*pool.length)]; 
-            savedData.inventory.push({uid: getUid(), id: item.id}); 
-            pulled.push(item); 
-        } 
+        let pool = itemDatabase.filter(x => x.rarity === tr); 
+        if(!pool.length) pool = itemDatabase; 
+        let item = pool[Math.floor(Math.random()*pool.length)]; 
+        savedData.inventory.push({uid: getUid(), id: item.id}); 
+        pulled.push(item); 
     } 
     saveData(); 
     const container = document.getElementById('gachaItemsList'); 
@@ -365,9 +281,9 @@ window.openChest = function(chestType, amount) {
     pulled.forEach(item => { 
         let div = document.createElement('div'); 
         div.className = `inv-item rarity-bg-${item.rarity}`; 
-        div.style.width = '60px'; 
-        div.style.height = '60px'; 
-        div.style.fontSize = '30px'; 
+        div.style.width = '55px'; 
+        div.style.height = '55px'; 
+        div.style.fontSize = '26px'; 
         div.innerHTML = item.icon; 
         container.appendChild(div); 
     }); 
@@ -403,58 +319,34 @@ window.spinGoldenSlot = function() {
     if(savedData.gems >= 50) { 
         savedData.gems -= 50; 
         let r = Math.random(); 
-        if(r < 0.05) { 
-            savedData.gems += 500; 
-            showAlert("ДЖЕКПОТ! +500 💎"); 
-        } else if(r < 0.4) { 
-            savedData.gold += 8000; 
-            showAlert("Успех! +8000 💰"); 
-        } else { 
-            savedData.parts += 20; 
-            showAlert("Бонус! +20 ⚙️"); 
-        } 
+        if(r < 0.05) { savedData.gems += 500; showAlert("ДЖЕКПОТ! +500 💎"); } 
+        else if(r < 0.4) { savedData.gold += 8000; showAlert("Успех! +8000 💰"); } 
+        else { savedData.parts += 20; showAlert("Бонус! +20 ⚙️"); } 
         saveData(); 
-    } else { 
-        showAlert("Недостаточно алмазов!"); 
-    } 
+    } else { showAlert("Недостаточно алмазов!"); } 
 }; 
 
-window.openEventsModal = function() { 
-    document.getElementById('eventsModal').style.display = 'flex'; 
-};
+window.openEventsModal = function() { document.getElementById('eventsModal').style.display = 'flex'; };
 
 window.claimProgress = function(stageRequired, rewardGems) { 
-    if (savedData.stage > stageRequired) { 
-        if (!savedData.serverProgressClaimed.includes(stageRequired)) { 
-            savedData.gems += rewardGems; 
-            savedData.serverProgressClaimed.push(stageRequired); 
-            saveData(); 
-            showAlert(`🎉 Вы забрали: +${rewardGems} 💎!`); 
-        } else { 
-            showAlert("Уже собрано."); 
-        } 
-    } else { 
-        showAlert(`❌ Достигните Этапа ${stageRequired}!`); 
-    } 
+    if (savedData.stage > stageRequired && !savedData.serverProgressClaimed.includes(stageRequired)) { 
+        savedData.gems += rewardGems; 
+        savedData.serverProgressClaimed.push(stageRequired); 
+        saveData(); 
+        showAlert(`🎉 +${rewardGems} 💎!`); 
+    } else { showAlert("Уже собрано или недоступно."); } 
 };
 
 window.claimMission = function(type) { 
     if(type==='kills' && savedData.dailyKills >= 15 && !savedData.missionKillsClaimed) { 
         savedData.missionKillsClaimed = true; 
         savedData.seasonXp += 50; 
-        if(savedData.seasonXp >= 100) { 
-            savedData.seasonXp -= 100; 
-            savedData.seasonLevel++; 
-        } 
         saveData(); 
         showAlert("Миссия выполнена! +50 XP"); 
-        document.getElementById('missionKills').innerText = "15"; 
-    } else { 
-        showAlert("Миссия еще не выполнена или уже собрана!"); 
-    } 
+    } else { showAlert("Миссия не выполнена или уже собрана!"); } 
 };
 
-// ----------------- ЛОГИКА РЫНКА И АУКЦИОНА -----------------
+// ----------------- ЛОГИКА РЫНКА СЛИТКОВ -----------------
 window.openAuctionModal = function() {
     checkMarketDailyReset();
     renderMarketUI();
@@ -471,15 +363,15 @@ window.renderMarketUI = function() {
         let leftToday = Math.max(0, item.maxDaily - boughtToday);
 
         container.innerHTML += `
-            <div style="background: #1e1e2c; border: 1px solid #444; border-radius: 12px; padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="background: #1e1e2c; border: 1px solid #444; border-radius: 10px; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
                 <div style="text-align: left;">
-                    <div style="font-size: 18px;">${item.icon} <strong style="color:#fff; font-size:14px;">${item.name}</strong></div>
-                    <div style="color: #aaa; font-size: 11px; margin-top: 3px;">Доступно сегодня: <span style="color:${leftToday > 0 ? '#00ff00' : '#ff4a4a'}; font-weight:bold;">${leftToday}/${item.maxDaily}</span></div>
-                    <div style="color: #00ffff; font-size: 11px;">Цена: ${item.pricePerUnitGem} 💎 / шт.</div>
+                    <div style="font-size: 15px;">${item.icon} <strong style="color:#fff; font-size:13px;">${item.name}</strong></div>
+                    <div style="color: #aaa; font-size: 10px; margin-top: 2px;">Лимит на сегодня: <span style="color:${leftToday > 0 ? '#00ff00' : '#ff4a4a'}; font-weight:bold;">${leftToday}/${item.maxDaily}</span></div>
+                    <div style="color: #00ffff; font-size: 10px;">Цена: ${item.pricePerUnitGem} 💎 / шт.</div>
                 </div>
-                <div style="display: flex; gap: 5px; align-items: center;">
-                    <button onclick="buyMarketItem('${item.id}', 1)" ${leftToday <= 0 ? 'disabled' : ''} style="background: ${leftToday > 0 ? '#28a745' : '#555'}; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer;">Купить 1</button>
-                    <button onclick="buyMarketItemMax('${item.id}')" ${leftToday <= 0 ? 'disabled' : ''} style="background: ${leftToday > 0 ? '#00bcd4' : '#555'}; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer;">Макс</button>
+                <div style="display: flex; gap: 4px; align-items: center;">
+                    <button onclick="buyMarketItem('${item.id}', 1)" ${leftToday <= 0 ? 'disabled' : ''} style="background: ${leftToday > 0 ? '#28a745' : '#555'}; color: white; border: none; padding: 5px 8px; border-radius: 5px; font-weight: bold; font-size: 10px; cursor: pointer;">Купить 1</button>
+                    <button onclick="buyMarketItemMax('${item.id}')" ${leftToday <= 0 ? 'disabled' : ''} style="background: ${leftToday > 0 ? '#00bcd4' : '#555'}; color: white; border: none; padding: 5px 8px; border-radius: 5px; font-weight: bold; font-size: 10px; cursor: pointer;">Макс</button>
                 </div>
             </div>
         `;
@@ -495,23 +387,17 @@ window.buyMarketItem = function(itemId, qty) {
     let leftToday = Math.max(0, cfg.maxDaily - boughtToday);
     let amountToBuy = Math.min(qty, leftToday);
 
-    if (amountToBuy <= 0) {
-        showAlert("Лимит покупок на сегодня исчерпан!");
-        return;
-    }
+    if (amountToBuy <= 0) { showAlert("Лимит исчерпан!"); return; }
 
     let cost = amountToBuy * cfg.pricePerUnitGem;
-    if (savedData.gems < cost) {
-        showAlert("Недостаточно алмазов (💎)!");
-        return;
-    }
+    if (savedData.gems < cost) { showAlert("Недостаточно алмазов (💎)!"); return; }
 
     savedData.gems -= cost;
     savedData.marketLimits[itemId] = boughtToday + amountToBuy;
     savedData.parts += amountToBuy * 10; 
     saveData();
     renderMarketUI();
-    showAlert(`Успешно куплено: ${amountToBuy} шт. (${cfg.name})!`);
+    showAlert(`Куплено: ${amountToBuy} шт.!`);
 };
 
 window.buyMarketItemMax = function(itemId) {
@@ -521,18 +407,11 @@ window.buyMarketItemMax = function(itemId) {
 
     let boughtToday = savedData.marketLimits[itemId] || 0;
     let leftToday = Math.max(0, cfg.maxDaily - boughtToday);
-    if (leftToday <= 0) {
-        showAlert("Лимит покупок на сегодня исчерпан!");
-        return;
-    }
+    if (leftToday <= 0) { showAlert("Лимит исчерпан!"); return; }
 
     let affordableQty = Math.floor(savedData.gems / cfg.pricePerUnitGem);
     let finalQty = Math.min(leftToday, affordableQty);
-
-    if (finalQty <= 0) {
-        showAlert("Недостаточно алмазов для покупки даже 1 шт.!");
-        return;
-    }
+    if (finalQty <= 0) { showAlert("Недостаточно алмазов!"); return; }
 
     buyMarketItem(itemId, finalQty);
 };
@@ -585,8 +464,7 @@ function resize() {
 window.addEventListener('resize', resize); 
 resize();
 
-// Арена целиком помещается на экран устройства
-let world = { width: 0, height: 0 }; 
+const world = { width: 0, height: 0 }; 
 const input = { x: 0, y: 0, isMoving: false, usingKeyboard: false }; 
 let joystickCenter = { x: 0, y: 0 }; 
 const MAX_JOYSTICK_RADIUS = 50; 
@@ -758,7 +636,6 @@ window.startBattle = function() {
 };
 
 function startRoom() { 
-    // Игрок всегда появляется на левой стороне экрана (на своей базе)
     player.x = 100; 
     player.y = screenH / 2; 
     enemies = []; 
@@ -774,7 +651,6 @@ function startRoom() {
     if (isBossStage) {
         spawnBoss();
     } else {
-        // Спавним волну врагов сразу на правой стороне экрана, чтобы игрок их видел!
         let count = 4 + savedData.stage;
         for (let i = 0; i < count; i++) {
             spawnSpecificWaveEnemy();
@@ -795,7 +671,6 @@ function spawnSpecificWaveEnemy() {
     let mobAtk = 10 + (savedData.stage * 4); 
     let mobSpeed = (70 + (savedData.stage * 2)) * cfg.speedMultiplier; 
 
-    // Враги появляются справа на экране (в поле зрения игрока)
     let startX = screenW - 100 + (Math.random() * 60 - 30);
     let startY = 80 + Math.random() * (screenH - 160);
 
@@ -816,7 +691,6 @@ function spawnSpecificWaveEnemy() {
 }
 
 function spawnBoss() { 
-    // Босс появляется на правом краю экрана, игрок видит его сразу
     let bossHp = (100 + (savedData.stage * 50)) * 15; 
     let bossAtk = 25 + (savedData.stage * 8); 
     bossEntity = { 
@@ -856,9 +730,7 @@ window.acceptRevive = function() {
         gameState = 'playing'; 
         lastTime = performance.now(); 
         requestAnimationFrame(gameLoop); 
-    } else { 
-        showAlert("Недостаточно алмазов!"); 
-    } 
+    } else { showAlert("Недостаточно алмазов!"); } 
 };
 
 window.declineRevive = function() { 
@@ -885,7 +757,7 @@ function showBattleResult(isWin, isFlee = false) {
         for(let bp in runLoot.blueprints) { 
             let name = bp === 'bp_w2' ? 'Плазмо-винтовка' : 'Рельсотрон'; 
             savedData.blueprints[bp] = (savedData.blueprints[bp] || 0) + runLoot.blueprints[bp]; 
-            bpText += `<div style="color:#00ffff; font-size:14px; margin-top:5px; text-transform: uppercase;">📜 ЧЕРТЕЖ: ${name} (x${runLoot.blueprints[bp]})</div>`; 
+            bpText += `<div style="color:#00ffff; font-size:13px; margin-top:4px; text-transform: uppercase;">📜 ЧЕРТЕЖ: ${name} (x${runLoot.blueprints[bp]})</div>`; 
         } 
     }
     
@@ -894,7 +766,7 @@ function showBattleResult(isWin, isFlee = false) {
     let titleColor = isWin ? '#00ff00' : '#ff4a4a'; 
     let titleText = isWin ? 'ЭТАП ПРОЙДЕН!' : (isFlee ? 'ОТСТУПЛЕНИЕ' : 'АГЕНТ ПАЛ'); 
     modalContent.style.borderColor = titleColor; 
-    modalContent.innerHTML = `<h2 style="color: ${titleColor}; margin-top: 0; font-size: 28px; font-style: italic;">${titleText}</h2><div style="background: #1e1e2c; padding: 15px; border-radius: 10px; margin-bottom: 20px;"><p style="color: #aaa; margin: 5px 0;">Уничтожено врагов: <strong style="color:#fff;">${totalKillsInRun}</strong></p><div style="display: flex; justify-content: center; gap: 20px; margin-top: 15px;"><div><span style="font-size:24px;">💰</span><br><strong style="color:#ffd700;">+${goldReward}</strong></div><div><span style="font-size:24px;">⚙️</span><br><strong style="color:#da70d6;">+${partsReward}</strong></div></div>${bpText}</div><button onclick="closeBattleResult()" style="background: ${titleColor}; color: #000; border: none; padding: 15px; border-radius: 10px; font-weight: bold; width: 100%; font-size: 18px; cursor: pointer;">ВЕРНУТЬСЯ В ЛОББИ</button>`; 
+    modalContent.innerHTML = `<h2 style="color: ${titleColor}; margin-top: 0; font-size: 24px; font-style: italic;">${titleText}</h2><div style="background: #1e1e2c; padding: 12px; border-radius: 10px; margin-bottom: 15px;"><p style="color: #aaa; margin: 4px 0; font-size:13px;">Уничтожено врагов: <strong style="color:#fff;">${totalKillsInRun}</strong></p><div style="display: flex; justify-content: center; gap: 15px; margin-top: 10px;"><div><span style="font-size:20px;">💰</span><br><strong style="color:#ffd700; font-size:13px;">+${goldReward}</strong></div><div><span style="font-size:20px;">⚙️</span><br><strong style="color:#da70d6; font-size:13px;">+${partsReward}</strong></div></div>${bpText}</div><button onclick="closeBattleResult()" style="background: ${titleColor}; color: #000; border: none; padding: 12px; border-radius: 10px; font-weight: bold; width: 100%; font-size: 15px; cursor: pointer;">ВЕРНУТЬСЯ В ЛОББИ</button>`; 
     document.getElementById('battleResultModal').style.display = 'flex'; 
 }
 
@@ -935,7 +807,7 @@ function renderLevelUpMenu() {
     choices.forEach(skill => { 
         let btn = document.createElement('button'); 
         btn.className = "skill-card-btn"; 
-        btn.innerHTML = `<div style="font-size: 32px;">${skill.icon}</div><div><div style="font-weight: bold; font-size: 16px; color: #ffd700;">${skill.name}</div><div style="font-size: 12px; color: #aaa; margin-top: 2px;">${skill.desc}</div></div>`; 
+        btn.innerHTML = `<div style="font-size: 26px;">${skill.icon}</div><div><div style="font-weight: bold; font-size: 14px; color: #ffd700;">${skill.name}</div><div style="font-size: 11px; color: #aaa; margin-top: 2px;">${skill.desc}</div></div>`; 
         btn.onclick = () => selectRunSkill(skill.id); 
         container.appendChild(btn); 
     }); 
@@ -983,8 +855,7 @@ function gameLoop(timestamp) {
         }
         if (isBossStage) { 
             if (!bossEntity && enemies.length === 0) spawnBoss(); 
-        } else {
-            // Если врагов осталось мало в комнате, подкидываем новых на правый край экрана
+        } else { 
             if (enemies.length < 3 + savedData.stage && killsInRoom + enemies.length < 12 && Math.random() < 1.0 * dt) {
                 spawnSpecificWaveEnemy();
             }
@@ -1010,7 +881,6 @@ function gameLoop(timestamp) {
     if (input.isMoving && (input.x !== 0 || input.y !== 0)) { 
         player.x += input.x * player.speed * dt; 
         player.y += input.y * player.speed * dt; 
-        // Не даем игроку выходить за границы видимого экрана
         player.x = Math.max(player.radius, Math.min(screenW - player.radius, player.x)); 
         player.y = Math.max(player.radius, Math.min(screenH - player.radius, player.y)); 
         if(timestamp - player.lastAttackTime > 500) { 
@@ -1042,7 +912,7 @@ function gameLoop(timestamp) {
     
     for (let i = floatingTexts.length - 1; i >= 0; i--) { 
         floatingTexts[i].life -= dt; 
-        floatingTexts[i].y -= 30 * dt; 
+        floatingTexts[i].y -= 25 * dt; 
         if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1); 
     }
     
@@ -1070,11 +940,7 @@ function gameLoop(timestamp) {
         e.angle = Math.atan2(dy, dx);
         
         if (e.type === 'shooter' && !e.isBoss) {
-            // Плюющиеся мутанты останавливаются на дистанции, если она позволяет стрелять
-            if (dist > 220) { 
-                e.x += (dx / dist) * e.speed * dt; 
-                e.y += (dy / dist) * e.speed * dt; 
-            }
+            if (dist > 220) { e.x += (dx / dist) * e.speed * dt; e.y += (dy / dist) * e.speed * dt; }
             if (dist < 350 && timestamp - e.lastAttack > 2200) { 
                 projectiles.push({ x: e.x, y: e.y, vx: Math.cos(e.angle)*250, vy: Math.sin(e.angle)*250, radius: 5, damage: e.atk, isEnemy: true, angle: e.angle }); 
                 e.lastAttack = timestamp; 
@@ -1090,7 +956,6 @@ function gameLoop(timestamp) {
                 if (player.hp <= 0) { triggerDeath(); return; } 
             }
         } else {
-            // Зомби и собаки идут на игрока
             e.x += (dx / dist) * e.speed * dt; 
             e.y += (dy / dist) * e.speed * dt;
             if (e.isBoss && (timestamp - e.lastAttack) > 2000) { 
@@ -1100,7 +965,7 @@ function gameLoop(timestamp) {
                 e.lastAttack = timestamp; 
             }
             if (dist < player.radius + e.radius) { 
-                player.hp -= e.atk * dt * 2; // Урон в секунду при контакте
+                player.hp -= e.atk * dt * 2; 
                 if (player.hp <= 0) { triggerDeath(); return; } 
             }
         }
@@ -1137,11 +1002,9 @@ function gameLoop(timestamp) {
         }
     }
 
-    // Отрисовка арены на весь экран
     ctx.fillStyle = '#0a0a10'; 
     ctx.fillRect(0, 0, screenW, screenH); 
     
-    // Сетка арены
     ctx.strokeStyle = 'rgba(0, 255, 255, 0.1)'; 
     ctx.lineWidth = 1; 
     ctx.beginPath(); 
@@ -1149,7 +1012,6 @@ function gameLoop(timestamp) {
     for (let i = 0; i <= screenH; i += 50) { ctx.moveTo(0, i); ctx.lineTo(screenW, i); } 
     ctx.stroke();
 
-    // Границы арены
     ctx.strokeStyle = '#00ffff'; 
     ctx.lineWidth = 3; 
     ctx.strokeRect(0, 0, screenW, screenH);
@@ -1260,7 +1122,7 @@ function gameLoop(timestamp) {
     for (let ft of floatingTexts) { 
         ctx.globalAlpha = ft.life; 
         ctx.fillStyle = ft.color; 
-        ctx.font = 'bold 22px sans-serif'; 
+        ctx.font = 'bold 20px sans-serif'; 
         ctx.textAlign = 'center'; 
         ctx.strokeStyle = '#000'; 
         ctx.lineWidth = 3; 
