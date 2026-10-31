@@ -1,5 +1,5 @@
 // ==========================================================================
-// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - FULL BUNDLE v2)
+// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - FULL BUNDLE v4)
 // ==========================================================================
 
 const tg = window.Telegram?.WebApp;
@@ -10,7 +10,6 @@ if (tg) {
 
 const appContainer = document.getElementById('appContainer');
 
-// Генерация звуков через Web Audio API
 let audioCtx = null;
 function playSound(type) {
     try {
@@ -56,33 +55,30 @@ window.showAlert = function(msg) {
 let uidCounter = 0; 
 const getUid = () => Date.now().toString(36) + '_' + (uidCounter++);
 
-// Структура аккаунта с поддержкой до 2 персонажей и раздельным VIP
 const defaultAccount = {
-    characters: [], // До 2 персонажей
-    activeCharacterId: null,
-    globalGems: 1500 // Общая валюта аккаунта
+    characters: [],
+    activeCharacterId: null
 };
 
-// Структура персонажа
 function createNewCharacterObject(name, classKey, gender) {
     let cls = characterClassesConfig[classKey] || characterClassesConfig.assault;
     return {
         id: getUid(),
         name: name || 'Бродяга',
         classKey: classKey,
-        gender: gender, // 'male' or 'female'
+        gender: gender,
         icon: cls.icon,
-        gold: 5000,
-        gems: 300,
+        gold: 3000,
+        gems: 250,
         energy: 30,
         accountLevel: 1,
         accountXp: 0,
         stage: 1,
-        parts: 0,
+        parts: 10,
         equippedTitle: 't_rookie',
         unlockedTitles: ['t_rookie'],
         inventory: [{ uid: getUid(), id: 'w1' }],
-        equipped: { helmet: null, armor: null, ring: null, boots: null, weapon: 'w1', drone: 'd1', mount: 'm1' },
+        equipped: { helmet: null, armor: null, ring: null, boots: null, weapon: 'w1', drone: null, mount: 'm0' },
         skillsInventory: [],
         equippedSkills: [null, null, null, null, null, null],
         blueprints: {},
@@ -92,13 +88,17 @@ function createNewCharacterObject(name, classKey, gender) {
         seasonLevel: 1,
         seasonXp: 0,
         seasonClaimed: {},
-        playerGems: { ruby: { level: 1, count: 4 }, emerald: { level: 1, count: 4 }, sapphire: { level: 1, count: 4 } },
+        playerGems: { ruby: { level: 1, count: 2 }, emerald: { level: 1, count: 2 }, sapphire: { level: 1, count: 2 } },
         socketedGems: { weapon: null, armor: null, helmet: null },
         profilePrivacy: { publicGear: true },
         totalKillsAllTime: 0,
         maxStageReached: 1,
-        vipActive: false, // Привязано строго к этому персонажу!
-        lastAFKTime: Date.now()
+        vipActive: false,
+        lastAFKTime: Date.now(),
+        petsUnlocked: [],
+        unlockedMounts: ['m0'],
+        guildInfo: { name: 'Стальные Тени', level: 1, sectorScore: 100, tokens: 20 },
+        baseData: { level: 1, vaultGold: 500, vaultsProtected: 200, turretsCount: 1, lastRepairTime: Date.now() }
     };
 }
 
@@ -106,17 +106,15 @@ let accountData = JSON.parse(JSON.stringify(defaultAccount));
 let activeChar = null;
 
 try {
-    let loaded = JSON.parse(localStorage.getItem('spekterAccountSaveV2') || 'null');
-    if (loaded && loaded.characters) {
-        accountData = loaded;
-    }
+    let loaded = JSON.parse(localStorage.getItem('spekterAccountSaveV4') || 'null');
+    if (loaded && loaded.characters) accountData = loaded;
 } catch(e) {}
 
 document.addEventListener('DOMContentLoaded', () => {
     let progress = 0; 
     const bar = document.getElementById('splashProgress');
     const interval = setInterval(() => { 
-        progress += 20; 
+        progress += 25; 
         if(bar) bar.style.width = progress + '%'; 
         if (progress >= 100) { 
             clearInterval(interval); 
@@ -137,18 +135,15 @@ function saveAccount() {
         let idx = accountData.characters.findIndex(c => c.id === activeChar.id);
         if (idx !== -1) accountData.characters[idx] = activeChar;
     }
-    localStorage.setItem('spekterAccountSaveV2', JSON.stringify(accountData));
+    localStorage.setItem('spekterAccountSaveV4', JSON.stringify(accountData));
     updateTopBar();
 }
 
 function initGameSession() {
     if (!accountData.characters || accountData.characters.length === 0) {
-        // Создаем первого персонажа автоматически или открываем модалку создания
         openCharacterSelectModal(true);
     } else {
-        if (!accountData.activeCharacterId) {
-            accountData.activeCharacterId = accountData.characters[0].id;
-        }
+        if (!accountData.activeCharacterId) accountData.activeCharacterId = accountData.characters[0].id;
         activeChar = accountData.characters.find(c => c.id === accountData.activeCharacterId) || accountData.characters[0];
         openCharacterSelectModal(false);
     }
@@ -161,22 +156,21 @@ window.openCharacterSelectModal = function(forceCreate = false) {
     if (!modal || !container) return;
 
     container.innerHTML = '';
-    accountData.characters.forEach((char, idx) => {
+    accountData.characters.forEach((char) => {
         let cls = characterClassesConfig[char.classKey] || characterClassesConfig.assault;
         let isActive = activeChar && activeChar.id === char.id;
         container.innerHTML += `
             <div style="background: ${isActive ? '#253530' : '#16161d'}; border: 2px solid ${isActive ? '#00ffcc' : '#444'}; border-radius: 10px; padding: 10px; width: 140px; text-align: center; cursor: pointer;" onclick="selectCharacter('${char.id}')">
                 <div style="font-size: 28px;">${char.icon}</div>
                 <div style="color: #ffaa00; font-weight: bold; font-size: 11px; margin-top: 4px;">${char.name}</div>
-                <div style="color: #00ffcc; font-size: 9px;">${cls.name} (${char.gender === 'female' ? 'Жен' : 'Муж'})</div>
+                <div style="color: #00ffcc; font-size: 9px;">${cls.name}</div>
                 <div style="color: #aaa; font-size: 9px; margin-top: 2px;">Ур. ${char.accountLevel} | Глава ${char.stage}</div>
-                ${char.vipActive ? '<div style="color: #ffd700; font-size: 8px; margin-top:2px;">👑 VIP АКТИВЕН</div>' : ''}
+                ${char.vipActive ? '<div style="color: #ffd700; font-size: 8px; margin-top:2px;">👑 VIP</div>' : ''}
                 <button onclick="event.stopPropagation(); deleteCharacter('${char.id}')" style="background: #dc3545; color: white; border: none; padding: 2px 6px; border-radius: 4px; font-size: 8px; margin-top: 6px; cursor: pointer;">Удалить</button>
             </div>
         `;
     });
 
-    // Кнопка создания нового, если меньше 2 персонажей
     if (accountData.characters.length < 2) {
         if (forceCreate || accountData.characters.length === 0) {
             createSec.style.display = 'block';
@@ -185,7 +179,7 @@ window.openCharacterSelectModal = function(forceCreate = false) {
             container.innerHTML += `
                 <div style="background: #16161d; border: 2px dashed #ffaa00; border-radius: 10px; padding: 10px; width: 140px; text-align: center; cursor: pointer; display: flex; flex-direction: column; justify-content: center; align-items: center;" onclick="document.getElementById('createCharacterSection').style.display='block'; renderClassSelector();">
                     <div style="font-size: 24px; color: #ffaa00;">➕</div>
-                    <div style="color: #ffaa00; font-weight: bold; font-size: 10px; margin-top: 4px;">Создать слот 2</div>
+                    <div style="color: #ffaa00; font-weight: bold; font-size: 10px; margin-top: 4px;">Слот 2</div>
                 </div>
             `;
             createSec.style.display = 'none';
@@ -224,7 +218,7 @@ window.selectCharacter = function(charId) {
 };
 
 window.deleteCharacter = function(charId) {
-    if (confirm("Вы уверены, что хотите безвозвратно удалить этого персонажа?")) {
+    if (confirm("Удалить персонажа безвозвратно?")) {
         accountData.characters = accountData.characters.filter(c => c.id !== charId);
         if (activeChar && activeChar.id === charId) {
             activeChar = accountData.characters[0] || null;
@@ -237,7 +231,7 @@ window.deleteCharacter = function(charId) {
 
 window.confirmCreateCharacter = function() {
     let nameInput = document.getElementById('newCharName');
-    let name = nameInput ? nameInput.value.trim() : 'Сталкер';
+    let name = nameInput ? nameInput.value.trim() : 'Бродяга';
     let classRadio = document.querySelector('input[name="charClass"]:checked');
     let classKey = classRadio ? classRadio.value : 'assault';
     let genderRadio = document.querySelector('input[name="charGender"]:checked');
@@ -255,9 +249,7 @@ function checkLoginStreakOnStart() {
     let lastDate = activeChar.lastLoginDate || 0;
 
     if (now - lastDate > oneDay) {
-        if (now - lastDate > oneDay * 2) {
-            activeChar.loginStreakDay = 1;
-        }
+        if (now - lastDate > oneDay * 2) activeChar.loginStreakDay = 1;
         activeChar.loginClaimedToday = false;
         openLoginStreakModal();
     }
@@ -286,11 +278,9 @@ function openLoginStreakModal() {
     if (btn) {
         btn.disabled = activeChar.loginClaimedToday;
         btn.style.background = activeChar.loginClaimedToday ? '#555' : '#28a745';
-        btn.innerText = activeChar.loginClaimedToday ? 'Уже получено сегодня' : 'ЗАБРАТЬ НАГРАДУ СЕГОДНЯ';
+        btn.innerText = activeChar.loginClaimedToday ? 'Получено' : 'ЗАБРАТЬ СЕГОДНЯ';
     }
-
-    let m = document.getElementById('dailyLoginModal');
-    if(m) m.style.display = 'flex';
+    document.getElementById('dailyLoginModal').style.display = 'flex';
 }
 
 window.claimDailyLogin = function() {
@@ -301,16 +291,12 @@ window.claimDailyLogin = function() {
     activeChar.gems += reward.gems;
     activeChar.loginClaimedToday = true;
     activeChar.lastLoginDate = Date.now();
-    if (activeChar.loginStreakDay < 7) {
-        activeChar.loginStreakDay++;
-    } else {
-        activeChar.loginStreakDay = 1;
-    }
+    if (activeChar.loginStreakDay < 7) activeChar.loginStreakDay++;
+    else activeChar.loginStreakDay = 1;
     saveAccount();
 
-    let m = document.getElementById('dailyLoginModal');
-    if(m) m.style.display = 'none';
-    showBmPopup(`Награда за день получена! +${reward.gems} 💎`);
+    document.getElementById('dailyLoginModal').style.display = 'none';
+    showBmPopup(`Награда получена! +${reward.gems} 💎`);
 };
 
 function checkEnergyRegen() { 
@@ -344,7 +330,7 @@ function updateEnergyTimerUI() {
 
 window.openEnergyShop = function() { 
     if (!activeChar) return;
-    if (activeChar.energy >= 30) { showAlert("У вас уже максимум энергии!"); return; } 
+    if (activeChar.energy >= 30) { showAlert("Энергия полная!"); return; } 
     if (confirm("Купить 10 Энергии за 50 💎?")) { 
         if (activeChar.gems >= 50) { 
             activeChar.gems -= 50; 
@@ -396,10 +382,7 @@ function updateTopBar() {
     let bmd = document.getElementById('bmDisplay'); 
     
     if(bmd) {
-        if (currentBm > previousBm && previousBm > 0) {
-            let diff = currentBm - previousBm;
-            showBmPopup(`+${diff} БМ ⚔️`);
-        }
+        if (currentBm > previousBm && previousBm > 0) showBmPopup(`+${currentBm - previousBm} БМ ⚔️`);
         bmd.innerText = currentBm;
         previousBm = currentBm;
     }
@@ -426,7 +409,7 @@ window.switchTab = function(screenId, btnElement) {
     let target = document.getElementById(screenId);
     if(target) target.style.display = 'flex'; 
     if(btnElement) { 
-        document.querySelectorAll('.navBtn').forEach(b => { b.classList.remove('active'); }); 
+        document.querySelectorAll('.navBtn').forEach(b => b.classList.remove('active')); 
         btnElement.classList.add('active'); 
     } 
     if(screenId === 'equipmentScreen') renderInventory(); 
@@ -441,21 +424,30 @@ function getItemData(itemId) { return itemDatabase.find(i => i.id === itemId) ||
 function getCalculatedStats() { 
     if (!activeChar) return { atk: 100, hp: 500 };
     let cls = characterClassesConfig[activeChar.classKey] || characterClassesConfig.assault;
-    let baseAtk = cls.baseAtk + (activeChar.accountLevel * 12); 
-    let baseHp = cls.baseHp + (activeChar.accountLevel * 70); 
+    let baseAtk = cls.baseAtk + (activeChar.accountLevel * 8); 
+    let baseHp = cls.baseHp + (activeChar.accountLevel * 45); 
     let flatAtk = 0; let flatHp = 0; 
 
     Object.values(activeChar.equipped).forEach(itemId => { 
         if (itemId) { let data = getItemData(itemId); flatAtk += data.atk; flatHp += data.hp; } 
     }); 
     
+    // Бонусы от маунта
+    if (activeChar.equipped.mount) {
+        let mount = mountsDatabase.find(m => m.id === activeChar.equipped.mount);
+        if (mount) {
+            flatAtk += mount.atkBonus;
+            flatHp += mount.hpBonus;
+        }
+    }
+
     if (activeChar.socketedGems) {
         Object.keys(activeChar.socketedGems).forEach(slotKey => {
             let socket = activeChar.socketedGems[slotKey];
             if (socket) {
                 let cfg = gemsConfig.find(x => x.id === socket.gemId);
                 if (cfg) {
-                    let val = cfg.baseVal * (1 + (socket.level - 1) * 0.25);
+                    let val = cfg.baseVal * (1 + (socket.level - 1) * 0.2);
                     if (cfg.stat === 'atk') flatAtk += val;
                     if (cfg.stat === 'hp') flatHp += val;
                 }
@@ -464,105 +456,17 @@ function getCalculatedStats() {
     }
 
     let currentTitle = titlesConfig.find(t => t.id === activeChar.equippedTitle);
-    if (currentTitle) {
-        flatAtk += currentTitle.bonusAtk;
-        flatHp += currentTitle.bonusHp;
-    }
+    if (currentTitle) { flatAtk += currentTitle.bonusAtk; flatHp += currentTitle.bonusHp; }
 
-    let percentBonus = (activeChar.agencyLevel * 2) / 100; 
     let tAtkLvl = activeChar.talentsLevels['t_atk'] || 0;
     let tHpLvl = activeChar.talentsLevels['t_hp'] || 0;
-    percentBonus += (tAtkLvl * 0.10);
+    let percentAtk = tAtkLvl * 0.03;
+    let percentHp = tHpLvl * 0.03;
     
-    let finalAtk = Math.floor((baseAtk + flatAtk) * (1 + percentBonus)); 
-    let finalHp = Math.floor((baseHp + flatHp) * (1 + percentBonus + (tHpLvl * 0.10))); 
+    let finalAtk = Math.floor((baseAtk + flatAtk) * (1 + percentAtk)); 
+    let finalHp = Math.floor((baseHp + flatHp) * (1 + percentHp)); 
     return { atk: finalAtk, hp: finalHp }; 
 }
-
-window.openTitlesModal = function() {
-    if (!activeChar) return;
-    let container = document.getElementById('titlesListContainer');
-    if(!container) return;
-    container.innerHTML = '';
-
-    titlesConfig.forEach(t => {
-        let isUnlocked = activeChar.unlockedTitles.includes(t.id);
-        let isEquipped = activeChar.equippedTitle === t.id;
-
-        container.innerHTML += `
-            <div style="background: #181820; border: 1px solid ${isEquipped ? '#ffaa00' : '#444'}; border-radius: 8px; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-                <div style="text-align: left;">
-                    <div style="color: ${isUnlocked ? '#ffaa00' : '#777'}; font-weight: bold; font-size: 12px;">[${t.name}]</div>
-                    <div style="color: #888; font-size: 9px; margin-top: 2px;">Бонусы: +${t.bonusAtk} АТК, +${t.bonusHp} HP</div>
-                    <div style="color: #555; font-size: 9px;">Требуется ур. Сталкера: ${t.reqLevel}</div>
-                </div>
-                <button onclick="equipTitle('${t.id}')" ${!isUnlocked || isEquipped ? 'disabled' : ''} style="background: ${isEquipped ? '#28a745' : (isUnlocked ? '#ffaa00' : '#444')}; color: ${isUnlocked ? '#000' : '#fff'}; border: none; padding: 5px 10px; border-radius: 6px; font-weight: bold; font-size: 10px; cursor: pointer;">
-                    ${isEquipped ? 'Надето' : (isUnlocked ? 'Надеть' : 'Заблокировано')}
-                </button>
-            </div>
-        `;
-    });
-
-    let m = document.getElementById('titlesModal');
-    if(m) m.style.display = 'flex';
-};
-
-window.openProfileModal = function() {
-    if (!activeChar) return;
-    let pName = document.getElementById('profName');
-    let pClass = document.getElementById('profClass');
-    let pTitle = document.getElementById('profTitle');
-    let pLevel = document.getElementById('profLevel');
-    let pKills = document.getElementById('profKills');
-    let pGear = document.getElementById('profGearList');
-    let chk = document.getElementById('chkPublicGear');
-
-    let cls = characterClassesConfig[activeChar.classKey] || characterClassesConfig.assault;
-    if(pName) pName.innerText = activeChar.name;
-    if(pClass) pClass.innerText = cls.name;
-    let curTitleObj = titlesConfig.find(t => t.id === activeChar.equippedTitle) || titlesConfig[0];
-    if(pTitle) pTitle.innerText = curTitleObj.name;
-    if(pLevel) pLevel.innerText = activeChar.accountLevel;
-    if(pKills) pKills.innerText = activeChar.totalKillsAllTime || 0;
-    if(chk) chk.checked = activeChar.profilePrivacy.publicGear;
-
-    if(pGear) {
-        if (!activeChar.profilePrivacy.publicGear) {
-            pGear.innerText = 'Снаряжение скрыто настройками приватности.';
-        } else {
-            let gearStr = [];
-            ['helmet', 'armor', 'ring', 'weapon', 'boots', 'drone', 'mount'].forEach(slot => {
-                if (activeChar.equipped[slot]) {
-                    let d = getItemData(activeChar.equipped[slot]);
-                    gearStr.push(`${d.icon} ${d.id.toUpperCase()}`);
-                }
-            });
-            pGear.innerText = gearStr.length > 0 ? gearStr.join(' | ') : 'Нет надетой экипировки.';
-        }
-    }
-
-    let m = document.getElementById('profileModal');
-    if(m) m.style.display = 'flex';
-};
-
-window.toggleProfilePrivacy = function() {
-    if (!activeChar) return;
-    let chk = document.getElementById('chkPublicGear');
-    if(chk) {
-        activeChar.profilePrivacy.publicGear = chk.checked;
-        saveAccount();
-        openProfileModal();
-    }
-};
-
-window.equipTitle = function(titleId) {
-    if (!activeChar || !activeChar.unlockedTitles.includes(titleId)) return;
-    activeChar.equippedTitle = titleId;
-    saveAccount();
-    openTitlesModal();
-    updateTopBar();
-    showBmPopup("Титул успешно изменен!");
-};
 
 window.openHubModal = function() {
     let m = document.getElementById('hubModal');
@@ -571,6 +475,7 @@ window.openHubModal = function() {
     if(firstBtn) switchHubTab('raid', firstBtn);
 };
 
+// ХАБ И СЕТЕВЫЕ АКТИВНОСТИ (С учетом пожеланий по гильдиям, бункеру и питомцам)
 window.switchHubTab = function(tabName, btnEl) {
     document.querySelectorAll('.hub-tab-btn').forEach(b => b.classList.remove('active'));
     if(btnEl) btnEl.classList.add('active');
@@ -579,30 +484,29 @@ window.switchHubTab = function(tabName, btnEl) {
     if(!content || !activeChar) return;
 
     if (tabName === 'raid') {
-        let basesHTML = '';
-        enemyBasesConfig.forEach(b => {
-            let bpLabel = 'Плазма';
-            basesHTML += `
-                <div style="background: #1e1e2c; border: 1px solid #e43f5a; border-radius: 8px; padding: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <div style="color: #fff; font-weight: bold; font-size: 11px;">🏰 ${b.owner}</div>
-                        <div style="color: #00ff00; font-size: 9px;">Защита БМ: ${b.defenseBm} | Турелей: ${b.towersCount}</div>
-                        <div style="color: #ffd700; font-size: 9px;">💰 ${b.lootGold} | ⚙️ ${b.lootParts} | 📜 ${bpLabel}</div>
-                    </div>
-                    <button onclick="startBaseRaid('${b.id}')" style="background: #e43f5a; color: white; border: none; padding: 5px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Штурм</button>
-                </div>
-            `;
-        });
         content.innerHTML = `
-            <div style="font-weight: bold; font-size: 11px; color: #ffea00; margin-bottom: 4px;">🎯 Доступные базы рейдов:</div>
-            ${basesHTML}
+            <div style="background: #1e1e2c; border: 1px solid #e43f5a; border-radius: 8px; padding: 10px; margin-bottom: 8px;">
+                <div style="color: #fff; font-weight: bold; font-size: 11px;">🏰 Штурм Аванпоста Рейдеров</div>
+                <div style="color: #00ff00; font-size: 9px; margin: 2px 0;">Награда: 800 💰 | 25 ⚙️</div>
+                <button onclick="startBaseRaid('b_1')" style="background: #e43f5a; color: white; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer; width:100%;">Начать штурм</button>
+            </div>
+            <div style="background: #1e1e2c; border: 1px solid #ff4a4a; border-radius: 8px; padding: 10px;">
+                <div style="color: #fff; font-weight: bold; font-size: 11px;">👹 Рейд-босс Сектора: ${guildRaidBoss.name}</div>
+                <div style="color: #ffd700; font-size: 9px; margin: 2px 0;">HP: ${guildRaidBoss.hp} | Награда: 250 Жетонов</div>
+                <button onclick="startGuildRaidBattle()" style="background: #ff4a4a; color: white; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer; width:100%;">Атаковать босса</button>
+            </div>
         `;
     } else if (tabName === 'guild') {
+        let g = activeChar.guildInfo;
         content.innerHTML = `
-            <div style="background: #1e1e2c; border: 1px solid #da70d6; border-radius: 8px; padding: 8px; text-align: center; margin-bottom: 8px;">
-                <div style="color: #da70d6; font-weight: bold; font-size: 12px;">🛡️ Секторный Рейд Босса</div>
-                <div style="color: #ff4a4a; font-size: 10px; margin-top: 2px;">${guildRaidBoss.name}</div>
-                <button onclick="startGuildRaidBattle()" style="background: #ff4a4a; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 10px; cursor: pointer; margin-top: 8px;">Атаковать рейд-босса</button>
+            <div style="background: #1e1e2c; border: 1px solid #da70d6; border-radius: 8px; padding: 10px; text-align: center;">
+                <div style="color: #da70d6; font-weight: bold; font-size: 12px;">🛡️ Гильдия: ${g.name} (Ур. ${g.level})</div>
+                <div style="color: #00ff00; font-size: 10px; margin-top: 4px;">🏆 Очки сектора: ${g.sectorScore}</div>
+                <div style="color: #ffd700; font-size: 10px; margin-top: 2px;">🪙 Жетоны гильдии: ${g.tokens}</div>
+                <div style="display:flex; gap:6px; margin-top:8px;">
+                    <button onclick="donateToGuildResources('parts', 10)" style="background: #28a745; color: white; border: none; padding: 5px; border-radius: 4px; font-size: 9px; flex:1; cursor:pointer;">Внести 10 ⚙️ (+50 XP)</button>
+                    <button onclick="participateGuildWar()" style="background: #da70d6; color: white; border: none; padding: 5px; border-radius: 4px; font-size: 9px; flex:1; cursor:pointer;">Захват сектора</button>
+                </div>
             </div>
         `;
     } else if (tabName === 'arena') {
@@ -614,11 +518,11 @@ window.switchHubTab = function(tabName, btnEl) {
                         <div style="color: #fff; font-weight: bold; font-size: 11px;">${bot.icon} ${bot.name}</div>
                         <div style="color: #00ff00; font-size: 9px;">⚔️ БМ: ${bot.bm} | ❤️ HP: ${bot.hp}</div>
                     </div>
-                    <button onclick="startArenaBattle('${bot.name}')" style="background: #ff4a4a; color: white; border: none; padding: 5px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Бой</button>
+                    <button onclick="startArenaBattle('${bot.name}')" style="background: #ff4a4a; color: white; border: none; padding: 5px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Дуэль</button>
                 </div>
             `;
         });
-        content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #ffea00; margin-bottom: 4px;">⚔️ Противники на арене:</div>${arenaHTML}`;
+        content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #ffea00; margin-bottom: 4px;">⚔️ Дуэли сталкеров:</div>${arenaHTML}`;
     } else if (tabName === 'market') {
         let marketHTML = '';
         marketSystemConfig.forEach(item => {
@@ -632,82 +536,91 @@ window.switchHubTab = function(tabName, btnEl) {
                 </div>
             `;
         });
-        content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #00ffff; margin-bottom: 4px;">🏪 Рынок слитков:</div>${marketHTML}`;
+        content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #00ffff; margin-bottom: 4px;">🏪 Черный рынок:</div>${marketHTML}`;
     } else if (tabName === 'leaderboard') {
-        let stats = getCalculatedStats();
-        let myBm = Math.floor(stats.atk * 2 + stats.hp / 10);
-        let curTitleObj = titlesConfig.find(t => t.id === activeChar.equippedTitle) || titlesConfig[0];
-
-        let allRivals = [...leaderboardRivals, { name: activeChar.name, bm: myBm, level: activeChar.accountLevel, title: curTitleObj.name, isMe: true }];
-        allRivals.sort((a, b) => b.bm - a.bm);
-
-        let listHtml = '';
-        allRivals.forEach((r, idx) => {
-            let rank = idx + 1;
-            listHtml += `
-                <div style="background: ${r.isMe ? '#252535' : '#1e1e2c'}; border: 1px solid ${r.isMe ? '#ffaa00' : '#444'}; border-radius: 8px; padding: 7px 10px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="color: #ffd700; font-weight: bold; font-size: 13px; width: 18px;">#${rank}</span>
-                        <div>
-                            <div style="color: ${r.isMe ? '#ffaa00' : '#fff'}; font-weight: bold; font-size: 11px;">${r.name}</div>
-                            <div style="color: #aaa; font-size: 9px;">[${r.title}] • Ур. ${r.level}</div>
-                        </div>
-                    </div>
-                    <div style="color: #00ff66; font-weight: bold; font-size: 11px;">⚔️ ${r.bm} БМ</div>
-                </div>
-            `;
-        });
-        content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #ffaa00; margin-bottom: 4px;">🏆 Таблица лидеров Сектора:</div>${listHtml}`;
+        content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #ffaa00; margin-bottom: 4px;">🏆 Топ Сектора:</div>
+            <div style="background: #1e1e2c; padding: 8px; border-radius: 6px; margin-bottom: 5px;"><span style="color:#ffd700;">#1 Apex_Viper</span> — 1850 БМ</div>
+            <div style="background: #1e1e2c; padding: 8px; border-radius: 6px;"><span style="color:#c0c0c0;">#2 AtomKing</span> — 1400 БМ</div>`;
     } else if (tabName === 'gems') {
-        let gemsHtml = '';
-        gemsConfig.forEach(g => {
-            let gData = activeChar.playerGems[g.id] || { level: 1, count: 0 };
-            gemsHtml += `
-                <div style="background: #1e1e2c; border: 1px solid #444; border-radius: 8px; padding: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <div style="color: #fff; font-weight: bold; font-size: 11px;">${g.icon} ${g.name} (Ур. ${g.level})</div>
-                        <div style="color: #aaa; font-size: 9px; margin: 2px 0;">В наличии: ${gData.count} шт.</div>
-                    </div>
-                    <div style="display:flex; gap:3px;">
-                        <button onclick="upgradeGem('${g.id}', 1)" style="background: #28a745; color: white; border: none; padding: 4px 6px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer;">Синтез</button>
-                        <button onclick="socketGem('${g.id}', 'weapon')" style="background: #00aaff; color: white; border: none; padding: 4px 6px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer;">В пушку</button>
-                    </div>
+        let mountsHtml = '<div style="font-size:11px; color:#ffaa00; font-weight:bold; margin-bottom:6px;">🚜 Маунты и транспорт:</div>';
+        mountsDatabase.forEach(m => {
+            let isOwned = activeChar.unlockedMounts.includes(m.id);
+            let isEquipped = activeChar.equipped.mount === m.id;
+            mountsHtml += `
+                <div style="background: #1e1e2c; border: 1px solid #444; border-radius: 6px; padding: 6px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; font-size:10px;">
+                    <div>${m.icon} <b>${m.name}</b> (+${m.atkBonus} АТК, +${m.hpBonus} HP)</div>
+                    <button onclick="equipMount('${m.id}')" ${!isOwned || isEquipped ? 'disabled' : ''} style="background:${isEquipped?'#28a745':(isOwned?'#ffaa00':'#555')}; color:#fff; border:none; padding:3px 8px; border-radius:4px; font-weight:bold; cursor:pointer;">${isEquipped?'Надето':(isOwned?'Надеть':m.costGems+' 💎')}</button>
                 </div>
             `;
         });
-        content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #00ffcc; margin-bottom: 4px;">💎 Руны:</div>${gemsHtml} <div id="gemLog" style="color:#aaa; font-size:9px; margin-top:6px;"></div>`;
+        content.innerHTML = mountsHtml;
+    } else if (tabName === 'pets') {
+        content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #ffaa00; margin-bottom: 4px;">🐾 Дроны и питомцы:</div><p style="font-size:10px; color:#aaa;">Открываются в эндгейме на высоких главах.</p>`;
+    } else if (tabName === 'base') {
+        let b = activeChar.baseData;
+        content.innerHTML = `
+            <div style="background: #1e1e2c; border: 1px solid #00ffcc; border-radius: 8px; padding: 10px; text-align: center;">
+                <div style="color: #00ffcc; font-weight: bold; font-size: 12px;">🏡 Ваш Бункер (Ур. ${b.level})</div>
+                <div style="color: #00ff66; font-size: 10px; margin-top: 4px;">💰 Защищенный тайник: ${b.vaultsProtected} золота</div>
+                <div style="color: #ffaa00; font-size: 10px; margin-top: 2px;">🗼 Турелей обороны: ${b.turretsCount}</div>
+                <button onclick="upgradePlayerBase()" style="background: #28a745; color: white; border: none; padding: 6px; border-radius: 6px; font-weight: bold; width: 100%; font-size: 10px; cursor: pointer; margin-top: 8px;">Улучшить бункер (1000 💰, 50 ⚙️)</button>
+            </div>
+        `;
     }
 };
 
-window.socketGem = function(gId, targetSlot) {
+window.donateToGuildResources = function(resType, amount) {
     if (!activeChar) return;
-    let gData = activeChar.playerGems[gId];
-    if (!gData || gData.count <= 0) { showAlert("У вас нет таких рун!"); return; }
-    activeChar.socketedGems[targetSlot] = { gemId: gId, level: gData.level };
+    if (activeChar.parts < amount) { showAlert("Недостаточно деталей (⚙️)!"); return; }
+    activeChar.parts -= amount;
+    activeChar.guildInfo.tokens += 10;
     saveAccount();
-    switchHubTab('gems', document.querySelectorAll('.hub-tab-btn')[5]);
-    renderInventory();
-    showBmPopup("Руна вставлена в оружие! ⚔️");
+    switchHubTab('guild', document.querySelectorAll('.hub-tab-btn')[1]);
+    showBmPopup("Ресурсы внесены в казну гильдии!");
 };
 
-window.upgradeGem = function(gId, mode) {
+window.participateGuildWar = function() {
     if (!activeChar) return;
-    let gData = activeChar.playerGems[gId];
-    let logEl = document.getElementById('gemLog');
-    if (!gData || gData.count < 3) { showAlert("Нужно минимум 3 руны для синтеза!"); return; }
+    activeChar.guildInfo.sectorScore += 50;
+    saveAccount();
+    switchHubTab('guild', document.querySelectorAll('.hub-tab-btn')[1]);
+    showBmPopup("Сектор успешно защищен! +50 очков");
+};
 
-    gData.count -= 3;
-    let successChance = Math.max(30, 90 - (gData.level * 2));
-    if (Math.random() * 100 < successChance) {
-        gData.level++;
-        if(logEl) logEl.innerHTML = `✨ Успешный синтез до ур. ${gData.level}!`;
-        showBmPopup("Руна улучшена!");
-    } else {
-        if(logEl) logEl.innerHTML = `💥 Руны сгорели при синтезе!`;
-        showBmPopup("Синтез не удался.");
+window.upgradePlayerBase = function() {
+    if (!activeChar) return;
+    let b = activeChar.baseData;
+    if (activeChar.gold < 1000 || activeChar.parts < 50) { showAlert("Нужно 1000 золота и 50 деталей!"); return; }
+    activeChar.gold -= 1000;
+    activeChar.parts -= 50;
+    b.level++;
+    b.vaultsProtected += 300;
+    b.turretsCount++;
+    saveAccount();
+    switchHubTab('base', document.querySelectorAll('.hub-tab-btn')[7]);
+    showBmPopup("Бункер улучшен!");
+};
+
+window.equipMount = function(mId) {
+    if (!activeChar) return;
+    let mount = mountsDatabase.find(m => m.id === mId);
+    if (!mount) return;
+    if (mount.isVip && !activeChar.vipActive) { showAlert("Этот маунт доступен только по VIP-карте!"); return; }
+    
+    if (!activeChar.unlockedMounts.includes(mId)) {
+        if (activeChar.gems >= mount.costGems) {
+            activeChar.gems -= mount.costGems;
+            activeChar.unlockedMounts.push(mId);
+        } else {
+            showAlert("Недостаточно алмазов!");
+            return;
+        }
     }
+    activeChar.equipped.mount = mId;
     saveAccount();
     switchHubTab('gems', document.querySelectorAll('.hub-tab-btn')[5]);
+    updateTopBar();
+    showBmPopup("Маунт успешно сменен!");
 };
 
 window.buyMarketItem = function(itemId, qty) {
@@ -718,7 +631,7 @@ window.buyMarketItem = function(itemId, qty) {
     if (activeChar.gems < totalCost) { showAlert("Недостаточно алмазов!"); return; }
 
     activeChar.gems -= totalCost;
-    activeChar.parts += 10 * qty; 
+    activeChar.parts += 5 * qty; 
     saveAccount(); 
     switchHubTab('market', document.querySelectorAll('.hub-tab-btn')[3]);
     showBmPopup(`Успешно куплено!`);
@@ -730,8 +643,7 @@ window.renderCrafting = function() {
     if(!list) return;
     list.innerHTML = ''; 
     craftingRecipes.forEach(recipe => { 
-        let hasBp = !recipe.reqBp || (activeChar.blueprints[recipe.reqBp] || 0) > 0; 
-        let canCraft = activeChar.stage >= recipe.reqStage && activeChar.gold >= recipe.costGold && activeChar.parts >= recipe.costParts && hasBp; 
+        let canCraft = activeChar.stage >= recipe.reqStage && activeChar.gold >= recipe.costGold && activeChar.parts >= recipe.costParts; 
         list.innerHTML += `<div class="craft-card"><div><div style="font-size: 18px; float: left; margin-right: 6px;">${recipe.icon}</div><div style="font-weight: bold; color: #fff; font-size: 11px;">${recipe.name}</div><div style="color: #aaa; font-size: 9px;">💰 ${recipe.costGold} | ⚙️ ${recipe.costParts}</div></div><button onclick="craftWeapon('${recipe.id}')" ${canCraft ? '' : 'disabled'} style="background: ${canCraft ? '#28a745' : '#555'}; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; cursor:pointer; font-size:10px;">Создать</button></div>`; 
     }); 
 };
@@ -747,7 +659,7 @@ window.craftWeapon = function(recipeId) {
         saveAccount(); 
         renderCrafting(); 
         showBmPopup(`СОЗДАНО: ${recipe.name}!`); 
-    } else { showAlert("Не хватает ресурсов или главы!"); } 
+    } else { showAlert("Не хватает ресурсов!"); } 
 };
 
 window.renderTalentsUI = function() {
@@ -836,7 +748,6 @@ window.openDropRatesModal = function() {
     let m = document.getElementById('dropRatesModal'); if(m) m.style.display = 'flex';
 };
 
-// Анимированное открытие сундука
 window.openChest = function(chestType, amount) { 
     if (!activeChar) return;
     let cost = 400 * amount; 
@@ -884,13 +795,13 @@ window.renderInventory = function() {
     const grid = document.getElementById('inventoryGrid'); 
     if(!grid) return;
     grid.innerHTML = ''; 
-    const slotIcons = { helmet: '🧢', armor: '👕', ring: '💍', boots: '👞', weapon: '🔫', drone: '🛸', mount: '🦾' }; 
+    const slotIcons = { helmet: '🧢', armor: '👕', ring: '💍', boots: '👞', weapon: '🔫', drone: '🛸', mount: '🚙' }; 
     
-    ['helmet', 'armor', 'ring', 'weapon', 'boots', 'drone', 'mount'].forEach(type => { 
+    ['helmet', 'armor', 'ring', 'boots', 'weapon', 'drone', 'mount'].forEach(type => { 
         const slot = document.getElementById(`slot-${type}`); 
         if (slot && activeChar.equipped[type]) { 
-            let data = getItemData(activeChar.equipped[type]); 
-            slot.className = `eq-slot rarity-bg-${data.rarity}`; 
+            let data = type === 'mount' ? mountsDatabase.find(m => m.id === activeChar.equipped.mount) : getItemData(activeChar.equipped[type]); 
+            slot.className = `eq-slot rarity-bg-rare`; 
             slot.innerHTML = `${data.icon}`; 
             slot.onmouseenter = (e) => showGearTooltip(e, data);
             slot.onmouseleave = hideGearTooltip;
@@ -924,15 +835,14 @@ window.renderInventory = function() {
     }); 
 };
 
-// Тултип снаряжения при наведении мыши (ПК) или клике
 function showGearTooltip(e, data) {
     let tooltip = document.getElementById('gearTooltip');
     if (!tooltip) return;
     tooltip.innerHTML = `
-        <div style="font-weight: bold; color: #ffaa00; margin-bottom: 3px;">${data.icon} ${data.id.toUpperCase()}</div>
+        <div style="font-weight: bold; color: #ffaa00; margin-bottom: 3px;">${data.icon} ${data.name || data.id.toUpperCase()}</div>
         <div style="color: #aaa; margin-bottom: 4px; font-size: 10px;">${data.desc || ''}</div>
-        <div style="color: #00ff66;">Урон: +${data.atk || 0}</div>
-        <div style="color: #00ffcc;">Здоровье: +${data.hp || 0}</div>
+        <div style="color: #00ff66;">Урон: +${data.atk || data.atkBonus || 0}</div>
+        <div style="color: #00ffcc;">Здоровье: +${data.hp || data.hpBonus || 0}</div>
     `;
     tooltip.style.display = 'block';
     tooltip.style.left = (e.pageX + 10) + 'px';
@@ -984,11 +894,11 @@ let pendingGold = 0, pendingParts = 0;
 setInterval(() => { 
     updateEnergyTimerUI(); 
     if (!activeChar) return;
-    let afkMult = 1.0 + ((activeChar.talentsLevels['t_afk'] || 0) * 0.15);
+    let afkMult = 1.0 + ((activeChar.talentsLevels['t_afk'] || 0) * 0.10);
     let diff = Math.min(Date.now() - activeChar.lastAFKTime, 86400000); 
     let minutesPassed = Math.floor(diff / 60000); 
-    pendingGold = Math.floor(minutesPassed * 25 * afkMult * activeChar.stage); 
-    pendingParts = Math.floor(minutesPassed * 0.12 * afkMult * activeChar.stage); 
+    pendingGold = Math.floor(minutesPassed * 20 * afkMult * activeChar.stage); 
+    pendingParts = Math.floor(minutesPassed * 0.08 * afkMult * activeChar.stage); 
     let totalSeconds = Math.floor(diff / 1000); 
     let std = document.getElementById('sweepTimeDisplay');
     if(std) std.innerText = `${Math.floor(totalSeconds / 3600).toString().padStart(2, '0')}:${Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0')}:${(totalSeconds % 60).toString().padStart(2, '0')}`; 
@@ -1016,7 +926,7 @@ if(bcs) bcs.addEventListener('click', () => {
 
 
 // ==========================================================================
-// БОЕВОЙ ДВИЖОК CANVAS (С УМНЫМ AI И СБАЛАНСИРОВАННОЙ МАТЕМАТИКОЙ)
+// БОЕВОЙ ДВИЖОК CANVAS (ДУЭЛИ, РЕЙДЫ И ИНТЕЛЛЕКТУАЛЬНЫЙ AI)
 // ==========================================================================
 
 const canvas = document.getElementById('gameCanvas'); 
@@ -1040,11 +950,10 @@ const input = { x: 0, y: 0, isMoving: false, usingKeyboard: false };
 let joystickCenter = { x: 0, y: 0 }; 
 const MAX_JOYSTICK_RADIUS = 50; 
 
-let player = { x: 100, y: 200, radius: 15, speed: 220, hp: 1000, maxHp: 1000, atk: 120, attackRate: 1.3, aimingAngle: 0, lastAttackTime: 0 };
+let player = { x: 100, y: 200, radius: 15, speed: 210, hp: 500, maxHp: 500, atk: 90, attackRate: 1.2, aimingAngle: 0, lastAttackTime: 0 };
 let enemies = [];
 let projectiles = [];
 let floatingTexts = [];
-let allyUnits = [];
 let obstacles = [];
 let roomState = 'fighting';
 let currentRoom = 1;
@@ -1057,7 +966,6 @@ let revivesUsed = 0;
 let currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0, isRocket: false };
 let runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 };
 let portal = null;
-let activePet = null;
 let backgroundParticles = [];
 
 function initLocationParticles() {
@@ -1083,20 +991,17 @@ function prepareBattleUI(titleText) {
     let rcu = document.getElementById('roomCounterUI'); if(rcu) { rcu.style.display = 'block'; rcu.innerText = titleText; }
 
     resize(); 
-    world.width = screenW; 
-    world.height = screenH;
+    world.width = screenW; world.height = screenH;
 
     let finalStats = getCalculatedStats(); 
-    player.maxHp = finalStats.hp; 
-    player.hp = finalStats.hp; 
-    player.atk = finalStats.atk; 
+    player.maxHp = finalStats.hp; player.hp = finalStats.hp; player.atk = finalStats.atk; 
     player.x = 80; player.y = screenH / 2;
 
     let cls = characterClassesConfig[activeChar.classKey] || characterClassesConfig.assault;
     let baseSpeed = cls.speed;
     if (activeChar.equipped.mount) {
-        let mountData = getItemData(activeChar.equipped.mount);
-        if (mountData && mountData.speedBonus) baseSpeed *= mountData.speedBonus;
+        let mount = mountsDatabase.find(m => m.id === activeChar.equipped.mount);
+        if (mount) baseSpeed *= mount.speedBonus;
     }
     player.speed = baseSpeed;
 
@@ -1108,11 +1013,7 @@ function prepareBattleUI(titleText) {
     } 
     
     runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
-    enemies = []; projectiles = []; floatingTexts = []; allyUnits = []; obstacles = []; portal = null;
-
-    activePet = {
-        x: player.x - 40, y: player.y, radius: 10, speed: 240, atk: 50, lastAttack: 0, icon: '🛸'
-    };
+    enemies = []; projectiles = []; floatingTexts = []; obstacles = []; portal = null;
 
     initLocationParticles();
 }
@@ -1195,7 +1096,7 @@ window.startBaseRaid = function(baseId) {
     for(let i=0; i<2; i++) {
         enemies.push({
             x: screenW * 0.7, y: 150 + i * 200,
-            radius: 18, hp: 500, maxHp: 500, atk: 25, speed: 0,
+            radius: 18, hp: 400, maxHp: 400, atk: 20, speed: 0,
             isBoss: false, isBot: false, isTower: true, type: 'tower', icon: '🗼', angle: 0, lastAttack: 0
         });
     }
@@ -1217,31 +1118,27 @@ function startRoom() {
     let rcu = document.getElementById('roomCounterUI');
     if(rcu) rcu.innerText = isBossStage ? `БОСС (Глава ${activeChar.stage}, Комната ${currentRoom}/5)` : `Глава ${activeChar.stage} (Комната ${currentRoom}/5)`;
 
-    const layouts = [
-        [
-            { x: screenW * 0.35, y: screenH * 0.25, w: 50, h: 80 },
-            { x: screenW * 0.65, y: screenH * 0.55, w: 80, h: 50 }
-        ]
+    obstacles = [
+        { x: screenW * 0.4, y: screenH * 0.3, w: 45, h: 70 }
     ];
-    obstacles = layouts[(currentRoom - 1) % layouts.length];
     player.x = 80; player.y = screenH / 2;
 
     if (!isBossStage) {
-        let count = 3 + currentRoom + (activeChar.stage * 2);
+        let count = 3 + currentRoom + activeChar.stage;
         let keys = Object.keys(enemyTypesConfig);
         for(let i=0; i<count; i++) {
             let tKey = keys[Math.floor(Math.random() * keys.length)];
             let cfg = enemyTypesConfig[tKey];
-            let stageMul = 1.0 + (activeChar.stage * 0.35);
+            let stageMul = 1.0 + (activeChar.stage * 0.25);
 
             enemies.push({
                 x: screenW * 0.6 + Math.random() * (screenW * 0.35),
                 y: 80 + Math.random() * (screenH - 160),
                 radius: cfg.radius,
-                hp: Math.floor(180 * cfg.hpMultiplier * stageMul),
-                maxHp: Math.floor(180 * cfg.hpMultiplier * stageMul),
-                atk: Math.floor(20 * stageMul),
-                speed: Math.floor(110 * cfg.speedMultiplier),
+                hp: Math.floor(120 * cfg.hpMultiplier * stageMul),
+                maxHp: Math.floor(120 * cfg.hpMultiplier * stageMul),
+                atk: Math.floor(15 * stageMul),
+                speed: Math.floor(100 * cfg.speedMultiplier),
                 type: tKey,
                 isBoss: false, isBot: false, isTower: false,
                 angle: 0, lastAttack: 0
@@ -1253,14 +1150,14 @@ function startRoom() {
 }
 
 function spawnBoss() {
-    let stageMul = 1.0 + (activeChar.stage * 0.8);
+    let stageMul = 1.0 + (activeChar.stage * 0.5);
     bossEntity = {
         x: screenW * 0.8, y: screenH / 2,
-        radius: 40,
-        hp: Math.floor(3500 * stageMul),
-        maxHp: Math.floor(3500 * stageMul),
-        atk: Math.floor(65 * stageMul),
-        speed: 80,
+        radius: 38,
+        hp: Math.floor(2500 * stageMul),
+        maxHp: Math.floor(2500 * stageMul),
+        atk: Math.floor(45 * stageMul),
+        speed: 75,
         isBoss: true, isBot: false, isTower: false, type: 'boss',
         angle: 0, lastAttack: 0, patternTimer: 0
     };
@@ -1271,15 +1168,15 @@ function spawnSpecificWaveEnemy() {
     let keys = Object.keys(enemyTypesConfig);
     let tKey = keys[Math.floor(Math.random() * keys.length)];
     let cfg = enemyTypesConfig[tKey];
-    let stageMul = 1.0 + (activeChar.stage * 0.35);
+    let stageMul = 1.0 + (activeChar.stage * 0.25);
     enemies.push({
         x: screenW * 0.75 + Math.random() * (screenW * 0.2),
         y: 80 + Math.random() * (screenH - 160),
         radius: cfg.radius,
-        hp: Math.floor(150 * cfg.hpMultiplier * stageMul),
-        maxHp: Math.floor(150 * cfg.hpMultiplier * stageMul),
-        atk: Math.floor(18 * stageMul),
-        speed: Math.floor(100 * cfg.speedMultiplier),
+        hp: Math.floor(100 * cfg.hpMultiplier * stageMul),
+        maxHp: Math.floor(100 * cfg.hpMultiplier * stageMul),
+        atk: Math.floor(12 * stageMul),
+        speed: Math.floor(90 * cfg.speedMultiplier),
         type: tKey,
         isBoss: false, isBot: false, isTower: false,
         angle: 0, lastAttack: 0
@@ -1408,22 +1305,20 @@ function gameLoop(timestamp) {
     let isBaseRaid = (roomState === 'base_raid_fighting');
 
     if (!isPvp && !isRaid && !isBaseRaid && roomState === 'fighting') {
-        if (runMods.regen > 0 && player.hp < player.maxHp) { 
-            player.hp = Math.min(player.maxHp, player.hp + (runMods.regen * dt)); 
-        }
+        if (runMods.regen > 0 && player.hp < player.maxHp) player.hp = Math.min(player.maxHp, player.hp + (runMods.regen * dt));
         if (isBossStage) { 
             if (!bossEntity && enemies.length === 0) spawnBoss(); 
         } else { 
-            let maxEnemiesOnScreen = 4 + activeChar.stage;
-            let totalEnemiesToKill = 8 + (activeChar.stage * 2);
-            let spawnChance = (0.4 + (activeChar.stage * 0.08)) * dt;
+            let maxEnemiesOnScreen = 3 + activeChar.stage;
+            let totalEnemiesToKill = 6 + (activeChar.stage * 2);
+            let spawnChance = (0.3 + (activeChar.stage * 0.05)) * dt;
             
             if (enemies.length < maxEnemiesOnScreen && killsInRoom + enemies.length < totalEnemiesToKill && Math.random() < spawnChance) {
                 spawnSpecificWaveEnemy();
             }
         }
         
-        let targetKills = isBossStage ? 1 : (8 + (activeChar.stage * 2));
+        let targetKills = isBossStage ? 1 : (6 + (activeChar.stage * 2));
         if (enemies.length === 0 && (isBossStage ? bossEntity && bossEntity.isDead : killsInRoom >= targetKills)) { 
             roomState = 'cleared'; 
             portal = { x: screenW - 100, y: screenH / 2, radius: 40 }; 
@@ -1484,18 +1379,12 @@ function gameLoop(timestamp) {
         } 
     }
 
-    // Умный AI врагов с продвинутым обходом препятствий (Slide/Raycast simulation)
     for (let i = enemies.length - 1; i >= 0; i--) {
         let e = enemies[i]; 
         if (e.isDead) { 
-            if (isPvp || isRaid || isBaseRaid) {
-                showBattleResult(true);
-                return;
-            }
+            if (isPvp || isRaid || isBaseRaid) { showBattleResult(true); return; }
             enemies.splice(i, 1); 
-            killsInRoom++; 
-            totalKillsInRun++; 
-            runXp += 20; 
+            killsInRoom++; totalKillsInRun++; runXp += 15; 
             activeChar.totalKillsAllTime = (activeChar.totalKillsAllTime || 0) + 1;
             if (runMods.vamp > 0) player.hp = Math.min(player.maxHp, player.hp + runMods.vamp);
             checkLevelUp(); 
@@ -1507,9 +1396,9 @@ function gameLoop(timestamp) {
         
         if (e.isBoss) {
             e.patternTimer += dt;
-            if (e.patternTimer > 2.5) {
+            if (e.patternTimer > 3.0) {
                 for (let a = 0; a < Math.PI * 2; a += Math.PI / 3) {
-                    projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a) * 280, vy: Math.sin(a) * 280, radius: 6, damage: e.atk * 0.7, isEnemy: true, angle: a });
+                    projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a) * 250, vy: Math.sin(a) * 250, radius: 6, damage: e.atk * 0.6, isEnemy: true, angle: a });
                 }
                 e.patternTimer = 0;
             }
@@ -1521,24 +1410,16 @@ function gameLoop(timestamp) {
             let nextX = e.x + moveX;
             let nextY = e.y + moveY;
 
-            // Умный скользящий обход препятствий
             if (checkObstacleCollision(nextX, nextY, e.radius)) {
-                if (!checkObstacleCollision(e.x + moveX, e.y, e.radius)) {
-                    e.x += moveX;
-                } else if (!checkObstacleCollision(e.x, e.y + moveY, e.radius)) {
-                    e.y += moveY;
-                } else {
-                    // Обходной маневр по перпендикуляру
-                    e.x -= moveY * 0.5;
-                    e.y += moveX * 0.5;
-                }
+                if (!checkObstacleCollision(e.x + moveX, e.y, e.radius)) e.x += moveX;
+                else if (!checkObstacleCollision(e.x, e.y + moveY, e.radius)) e.y += moveY;
+                else { e.x -= moveY * 0.5; e.y += moveX * 0.5; }
             } else {
-                e.x = nextX;
-                e.y = nextY;
+                e.x = nextX; e.y = nextY;
             }
 
             if (dist < player.radius + e.radius) { 
-                player.hp -= e.atk * dt * 1.5; 
+                player.hp -= e.atk * dt * 1.2; 
                 if (player.hp <= 0) { triggerDeath(); return; } 
             }
         }
@@ -1548,8 +1429,7 @@ function gameLoop(timestamp) {
     
     for (let i = projectiles.length - 1; i >= 0; i--) {
         let p = projectiles[i]; 
-        p.x += p.vx * dt; 
-        p.y += p.vy * dt; 
+        p.x += p.vx * dt; p.y += p.vy * dt; 
         if (p.x < 0 || p.x > screenW || p.y < 0 || p.y > screenH) { projectiles.splice(i, 1); continue; }
 
         if (checkObstacleCollision(p.x, p.y, p.radius)) {
@@ -1704,12 +1584,12 @@ function triggerLevelUpChoice() {
 }
 
 function applyRunSkill(id) {
-    if (id === 'atk_up') runMods.atkMult += 0.15;
-    if (id === 'spd_up') player.speed *= 1.1;
-    if (id === 'vamp') runMods.vamp += 2;
-    if (id === 'regen') runMods.regen += 2;
-    if (id === 'max_hp') { player.maxHp *= 1.2; player.hp = player.maxHp; }
-    if (id === 'heal') player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.5);
+    if (id === 'atk_up') runMods.atkMult += 0.10;
+    if (id === 'spd_up') player.speed *= 1.08;
+    if (id === 'vamp') runMods.vamp += 1;
+    if (id === 'regen') runMods.regen += 1;
+    if (id === 'max_hp') { player.maxHp *= 1.15; player.hp = player.maxHp; }
+    if (id === 'heal') player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.4);
     showBmPopup("МОДИФИКАТОР АКТИВИРОВАН! 🌟");
 }
 
@@ -1757,15 +1637,15 @@ window.showBattleResult = function(isWin, isFlee = false) {
     let nb = document.getElementById('navBar'); if(nb) nb.style.display = 'flex';
     let lobby = document.getElementById('lobbyScreen'); if(lobby) lobby.style.display = 'flex';
 
-    let goldReward = isWin ? activeChar.stage * 300 : 50;
-    let partsReward = isWin ? activeChar.stage * 25 : 5;
-    let accountXpReward = isWin ? activeChar.stage * 150 : activeChar.stage * 50;
+    let goldReward = isWin ? activeChar.stage * 200 : 30;
+    let partsReward = isWin ? activeChar.stage * 15 : 3;
+    let accountXpReward = isWin ? activeChar.stage * 100 : activeChar.stage * 30;
     
     activeChar.accountXp += accountXpReward;
     let levelUpMessage = "";
     let maxXp = activeChar.accountLevel * 500;
     while (activeChar.accountXp >= maxXp) {
-        activeChar.accountXp -= maxXp;
+        activeChar.activeXp -= maxXp;
         activeChar.accountLevel++;
         maxXp = activeChar.accountLevel * 500;
         levelUpMessage = `<div style="color:#00ffcc; font-weight:bold; margin-top:8px;">УРОВЕНЬ СТАЛКЕРА ПОВЫШЕН! (Ур. ${activeChar.accountLevel})</div>`;
@@ -1774,7 +1654,7 @@ window.showBattleResult = function(isWin, isFlee = false) {
     if (isWin) {
         activeChar.gold += goldReward;
         activeChar.parts += partsReward;
-        activeChar.seasonXp += 40;
+        activeChar.seasonXp += 30;
         if (activeChar.seasonXp >= activeChar.seasonLevel * 100) {
             activeChar.seasonXp -= activeChar.seasonLevel * 100;
             activeChar.seasonLevel++;
