@@ -1,5 +1,5 @@
 // ==========================================================================
-// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - SOCKETS & GEMS)
+// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - LOGIN STREAK)
 // ==========================================================================
 
 const tg = window.Telegram?.WebApp;
@@ -27,7 +27,10 @@ document.addEventListener('DOMContentLoaded', () => {
             let splash = document.getElementById('splashScreen');
             if(splash) { 
                 splash.style.opacity = '0'; 
-                setTimeout(() => { splash.style.display = 'none'; }, 400); 
+                setTimeout(() => { 
+                    splash.style.display = 'none'; 
+                    checkLoginStreakOnStart();
+                }, 400); 
             }
         } 
     }, 30);
@@ -57,14 +60,15 @@ const defaultSave = {
     baseDefense: { towers: 2, guards: 3 },
     talentsLevels: {}, seasonClaimed: {},
     playerGems: { ruby: { level: 1, count: 6 }, emerald: { level: 1, count: 6 }, sapphire: { level: 1, count: 6 } },
-    socketedGems: { weapon: null, armor: null, helmet: null }, // Сюда вставляются руны
+    socketedGems: { weapon: null, armor: null, helmet: null },
     profilePrivacy: { publicGear: true },
-    totalKillsAllTime: 0, maxStageReached: 1
+    totalKillsAllTime: 0, maxStageReached: 1,
+    loginStreakDay: 1, lastLoginDate: 0, loginClaimedToday: false
 };
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try { 
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal40') || 'null'); 
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal42') || 'null'); 
     if (loaded) Object.assign(savedData, loaded); 
 } catch(e) {}
 
@@ -74,11 +78,78 @@ if (!savedData.equipped.mount) savedData.equipped.mount = 'm1';
 if (!savedData.playerGems) savedData.playerGems = { ruby: { level: 1, count: 6 }, emerald: { level: 1, count: 6 }, sapphire: { level: 1, count: 6 } };
 if (!savedData.socketedGems) savedData.socketedGems = { weapon: null, armor: null, helmet: null };
 if (!savedData.profilePrivacy) savedData.profilePrivacy = { publicGear: true };
+if (savedData.loginStreakDay === undefined) { savedData.loginStreakDay = 1; savedData.lastLoginDate = 0; savedData.loginClaimedToday = false; }
 
 function saveData() { 
-    localStorage.setItem('spekterSaveFinal40', JSON.stringify(savedData)); 
+    localStorage.setItem('spekterSaveFinal42', JSON.stringify(savedData)); 
     updateTopBar(); 
 }
+
+function checkLoginStreakOnStart() {
+    let now = Date.now();
+    let oneDay = 86400000;
+    let lastDate = savedData.lastLoginDate || 0;
+
+    // Если прошел день с последнего захода
+    if (now - lastDate > oneDay) {
+        if (now - lastDate > oneDay * 2) {
+            // Если пропустил больше дня, сброс стрика
+            savedData.loginStreakDay = 1;
+        }
+        savedData.loginClaimedToday = false;
+        openLoginStreakModal();
+    }
+}
+
+function openLoginStreakModal() {
+    let grid = document.getElementById('loginStreakGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    dailyLoginRewards.forEach(r => {
+        let isPassed = r.day < savedData.loginStreakDay || (r.day === savedData.loginStreakDay && savedData.loginClaimedToday);
+        let isCurrent = r.day === savedData.loginStreakDay && !savedData.loginClaimedToday;
+
+        grid.innerHTML += `
+            <div style="background: ${isCurrent ? '#252535' : '#16161d'}; border: 2px solid ${isCurrent ? '#00ff66' : (isPassed ? '#555' : '#444')}; border-radius: 8px; padding: 6px; text-align: center;">
+                <div style="font-size: 16px;">${r.icon}</div>
+                <div style="color: #ffaa00; font-weight: bold; font-size: 9px; margin-top:2px;">День ${r.day}</div>
+                <div style="color: #00ff66; font-size: 8px; margin-top:2px;">+${r.gems} 💎</div>
+                <div style="color: #ffd700; font-size: 8px;">+${r.gold} 💰</div>
+            </div>
+        `;
+    });
+
+    let btn = document.getElementById('btnClaimLogin');
+    if (btn) {
+        btn.disabled = savedData.loginClaimedToday;
+        btn.style.background = savedData.loginClaimedToday ? '#555' : '#28a745';
+        btn.innerText = savedData.loginClaimedToday ? 'Уже получено сегодня' : 'ЗАБРАТЬ НАГРАДУ СЕГОДНЯ';
+    }
+
+    let m = document.getElementById('dailyLoginModal');
+    if(m) m.style.display = 'flex';
+}
+
+window.claimDailyLogin = function() {
+    if (savedData.loginClaimedToday) return;
+    let reward = dailyLoginRewards.find(x => x.day === savedData.loginStreakDay) || dailyLoginRewards[0];
+
+    savedData.gold += reward.gold;
+    savedData.gems += reward.gems;
+    savedData.loginClaimedToday = true;
+    savedData.lastLoginDate = Date.now();
+    if (savedData.loginStreakDay < 7) {
+        savedData.loginStreakDay++;
+    } else {
+        savedData.loginStreakDay = 1; // Цикл стрика
+    }
+    saveData();
+
+    let m = document.getElementById('dailyLoginModal');
+    if(m) m.style.display = 'none';
+    showBmPopup(`Награда Дня забрать! +${reward.gems} 💎`);
+};
 
 function checkEnergyRegen() { 
     let diff = Date.now() - savedData.lastEnergyTime; 
@@ -204,7 +275,6 @@ function getCalculatedStats() {
         if (itemId) { let data = getItemData(itemId); flatAtk += data.atk; flatHp += data.hp; } 
     }); 
     
-    // Бонусы от вставленных в слоты рун
     if (savedData.socketedGems) {
         Object.keys(savedData.socketedGems).forEach(slotKey => {
             let socket = savedData.socketedGems[slotKey];
@@ -715,7 +785,6 @@ window.renderInventory = function() {
         } 
     }); 
 
-    // Рендер вставленных рун в окне снаряжения
     let gemsCont = document.getElementById('equippedGemsContainer');
     if (gemsCont) {
         gemsCont.innerHTML = '';

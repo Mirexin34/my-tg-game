@@ -1,5 +1,5 @@
 // ==========================================================================
-// БАЗЫ ДАННЫХ ИГРЫ (SPEKTER AGENCY: DATA - GEMS SOCKETS)
+// БАЗЫ ДАННЫХ ИГРЫ (SPEKTER AGENCY: DATA - LOGIN STREAK)
 // ==========================================================================
 
 const itemDatabase = [
@@ -12,7 +12,7 @@ const itemDatabase = [
     { id: 'b1', type: 'boots', rarity: 'normal', icon: '👞', hp: 50, atk: 0 },
     { id: 'b3', type: 'boots', rarity: 'epic', icon: '🥾', hp: 400, atk: 60 },
     { id: 'w1', type: 'weapon', rarity: 'normal', icon: '🔫', hp: 0, atk: 150, fireRate: 1.0, bullets: 1, projSpeed: 600, spread: 0 },
-    { id: 'w2', type: 'weapon', rarity: 'rare', icon: '⚡', hp: 0, atk: 250, fireRate: 2.5, bullets: 1, projSpeed: 800, spread: 0.1 },
+    { id: 'w2', type: 'weapon', rarity: 'rare', icon: '⚡', hp: 0, atk: 250, fireRate: 2.5, bullets: 1, projSpeed: 900, spread: 0.05 },
     { id: 'w3', type: 'weapon', rarity: 'epic', icon: '☄️', hp: 0, atk: 200, fireRate: 0.8, bullets: 3, projSpeed: 650, spread: 0.25 },
     { id: 'w4', type: 'weapon', rarity: 'legendary', icon: '🚀', hp: 0, atk: 450, fireRate: 0.6, bullets: 1, projSpeed: 450, spread: 0, isRocket: true },
     { id: 'd1', type: 'drone', rarity: 'rare', icon: '🛸', hp: 200, atk: 100 },
@@ -125,4 +125,14 @@ const gemsConfig = [
     { id: 'ruby', name: 'Рубин Атаки', icon: '🔴', stat: 'atk', baseVal: 15, color: '#ff4a4a' },
     { id: 'emerald', name: 'Изумруд Здоровья', icon: '🟢', stat: 'hp', baseVal: 80, color: '#00ff66' },
     { id: 'sapphire', name: 'Сапфир Защиты', icon: '🔵', stat: 'def', baseVal: 10, color: '#00aaff' }
+];
+
+const dailyLoginRewards = [
+    { day: 1, gold: 2000, gems: 50, icon: '💰' },
+    { day: 2, gold: 4000, gems: 100, icon: '🪙' },
+    { day: 3, gold: 8000, gems: 150, icon: '💎' },
+    { day: 4, gold: 12000, gems: 200, icon: '🎁' },
+    { day: 5, gold: 18000, gems: 300, icon: '🔥' },
+    { day: 6, gold: 25000, gems: 400, icon: '⚡' },
+    { day: 7, gold: 50000, gems: 1000, icon: '👑' }
 ];
