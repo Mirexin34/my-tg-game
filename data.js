@@ -1,39 +1,78 @@
 // ==========================================================================
-// БАЗЫ ДАННЫХ ИГРЫ (SPEKTER AGENCY: DATA - FULL BUNDLE)
+// БАЗЫ ДАННЫХ ИГРЫ (SPEKTER AGENCY: DATA - FULL BUNDLE v2)
 // ==========================================================================
 
+const characterClassesConfig = {
+    assault: { 
+        id: 'assault', 
+        name: 'Штурмовик', 
+        desc: 'Сбалансированный боец с повышенным уроном и прочностью.', 
+        icon: '🪖', 
+        baseHp: 600, 
+        baseAtk: 120, 
+        speed: 220 
+    },
+    sniper: { 
+        id: 'sniper', 
+        name: 'Снайпер', 
+        desc: 'Смертоносный урон на дистанции, но меньше брони.', 
+        icon: '🎯', 
+        baseHp: 450, 
+        baseAtk: 180, 
+        speed: 230 
+    },
+    ninja: { 
+        id: 'ninja', 
+        name: 'Кибер-Ниндзя', 
+        desc: 'Высокая скорость и мобильность, смертоносные атаки.', 
+        icon: '🥷', 
+        baseHp: 500, 
+        baseAtk: 140, 
+        speed: 270 
+    },
+    juggernaut: { 
+        id: 'juggernaut', 
+        name: 'Джаггернаут', 
+        desc: 'Несокрушимый танк с колоссальным запасом здоровья.', 
+        icon: '🛡️', 
+        baseHp: 950, 
+        baseAtk: 100, 
+        speed: 190 
+    }
+};
+
 const itemDatabase = [
-    { id: 'h1', type: 'helmet', rarity: 'normal', icon: '🧢', hp: 100, atk: 0 },
-    { id: 'h3', type: 'helmet', rarity: 'epic', icon: '🪖', hp: 800, atk: 50 },
-    { id: 'a1', type: 'armor', rarity: 'normal', icon: '👕', hp: 200, atk: 0 },
-    { id: 'a3', type: 'armor', rarity: 'epic', icon: '🧥', hp: 1200, atk: 80 },
-    { id: 'r1', type: 'ring', rarity: 'normal', icon: '💍', hp: 0, atk: 50 },
-    { id: 'r3', type: 'ring', rarity: 'epic', icon: '💍', hp: 0, atk: 400 },
-    { id: 'b1', type: 'boots', rarity: 'normal', icon: '👞', hp: 50, atk: 0 },
-    { id: 'b3', type: 'boots', rarity: 'epic', icon: '🥾', hp: 400, atk: 60 },
-    { id: 'w1', type: 'weapon', rarity: 'normal', icon: '🔫', hp: 0, atk: 150, fireRate: 1.0, bullets: 1, projSpeed: 600, spread: 0 },
-    { id: 'w2', type: 'weapon', rarity: 'rare', icon: '⚡', hp: 0, atk: 250, fireRate: 2.5, bullets: 1, projSpeed: 900, spread: 0.05 },
-    { id: 'w3', type: 'weapon', rarity: 'epic', icon: '☄️', hp: 0, atk: 200, fireRate: 0.8, bullets: 3, projSpeed: 650, spread: 0.25 },
-    { id: 'w4', type: 'weapon', rarity: 'legendary', icon: '🚀', hp: 0, atk: 450, fireRate: 0.6, bullets: 1, projSpeed: 450, spread: 0, isRocket: true },
-    { id: 'd1', type: 'drone', rarity: 'rare', icon: '🛸', hp: 200, atk: 100 },
-    { id: 'm1', type: 'mount', rarity: 'rare', icon: '🦾', hp: 500, atk: 100, speedBonus: 1.15 },
-    { id: 'm2', type: 'mount', rarity: 'legendary', icon: '🚜', hp: 1500, atk: 350, speedBonus: 1.30 }
+    { id: 'h1', type: 'helmet', rarity: 'normal', icon: '🧢', hp: 80, atk: 0, desc: 'Потертая кепка выжившего.' },
+    { id: 'h3', type: 'helmet', rarity: 'epic', icon: '🪖', hp: 500, atk: 35, desc: 'Тактический шлем штурмовых отрядов.' },
+    { id: 'a1', type: 'armor', rarity: 'normal', icon: '👕', hp: 150, atk: 0, desc: 'Кожаная куртка с металлическими пластинами.' },
+    { id: 'a3', type: 'armor', rarity: 'epic', icon: '🧥', hp: 800, atk: 50, desc: 'Композитный экзобронежилет.' },
+    { id: 'r1', type: 'ring', rarity: 'normal', icon: '💍', hp: 0, atk: 30, desc: 'Медное кольцо с радиоактивным камнем.' },
+    { id: 'r3', type: 'ring', rarity: 'epic', icon: '💍', hp: 0, atk: 220, desc: 'Кольцо довоенных элитных инженеров.' },
+    { id: 'b1', type: 'boots', rarity: 'normal', icon: '👞', hp: 40, atk: 0, desc: 'Грубые армейские ботинки.' },
+    { id: 'b3', type: 'boots', rarity: 'epic', icon: '🥾', hp: 250, atk: 40, desc: 'Усиленные ботинки с амортизацией.' },
+    { id: 'w1', type: 'weapon', rarity: 'normal', icon: '🔫', hp: 0, atk: 110, fireRate: 1.0, bullets: 1, projSpeed: 600, spread: 0, desc: 'Ржавый обрез сталкера.' },
+    { id: 'w2', type: 'weapon', rarity: 'rare', icon: '⚡', hp: 0, atk: 180, fireRate: 2.0, bullets: 1, projSpeed: 850, spread: 0.05, desc: 'Экспериментальный плазмомет.' },
+    { id: 'w3', type: 'weapon', rarity: 'epic', icon: '☄️', hp: 0, atk: 150, fireRate: 0.8, bullets: 3, projSpeed: 600, spread: 0.2, desc: 'Веерный рельсотрон.' },
+    { id: 'w4', type: 'weapon', rarity: 'legendary', icon: '🚀', hp: 0, atk: 320, fireRate: 0.5, bullets: 1, projSpeed: 450, spread: 0, isRocket: true, desc: 'Тяжелая ракетница "Овердрайв" с АОЕ уроном.' },
+    { id: 'd1', type: 'drone', rarity: 'rare', icon: '🛸', hp: 150, atk: 70, desc: 'Боевой парящий дрон-разведчик.' },
+    { id: 'm1', type: 'mount', rarity: 'rare', icon: '🦾', hp: 350, atk: 80, speedBonus: 1.15, desc: 'Усилитель ног экзоскелета.' },
+    { id: 'm2', type: 'mount', rarity: 'legendary', icon: '🚜', hp: 1000, atk: 250, speedBonus: 1.25, desc: 'Боевой квадроцикл Пустоши.' }
 ];
 
 const titlesConfig = [
     { id: 't_rookie', name: 'Бродяга', reqLevel: 1, bonusAtk: 0, bonusHp: 0 },
-    { id: 't_stalker', name: 'Сталкер', reqLevel: 3, bonusAtk: 50, bonusHp: 200 },
-    { id: 't_veteran', name: 'Ветеран Пустоши', reqLevel: 6, bonusAtk: 150, bonusHp: 600 },
-    { id: 't_elite', name: 'Элита Сектора', reqLevel: 10, bonusAtk: 300, bonusHp: 1500 },
-    { id: 't_legend', name: 'Легенда Пустоши', reqLevel: 15, bonusAtk: 600, bonusHp: 3000 }
+    { id: 't_stalker', name: 'Сталкер', reqLevel: 3, bonusAtk: 40, bonusHp: 150 },
+    { id: 't_veteran', name: 'Ветеран Пустоши', reqLevel: 6, bonusAtk: 120, bonusHp: 400 },
+    { id: 't_elite', name: 'Элита Сектора', reqLevel: 10, bonusAtk: 240, bonusHp: 1000 },
+    { id: 't_legend', name: 'Легенда Пустоши', reqLevel: 15, bonusAtk: 500, bonusHp: 2200 }
 ];
 
 const locationsConfig = [
     { id: 1, name: 'Ржавые Пустоши', bgStyle: '#221e1e', wallColor: '#4d3e3e', particleColor: 'rgba(255, 140, 0, 0.25)', enemyMultiplier: 1.0, effect: 'dust' },
-    { id: 2, name: 'Заброшенный Бункер', bgStyle: '#161c24', wallColor: '#283545', particleColor: 'rgba(0, 170, 255, 0.2)', enemyMultiplier: 1.4, effect: 'sparks' },
-    { id: 3, name: 'Токсичный Город', bgStyle: '#16241a', wallColor: '#284d32', particleColor: 'rgba(0, 255, 100, 0.2)', enemyMultiplier: 1.8, effect: 'poison' },
-    { id: 4, name: 'Ядро Корпорации', bgStyle: '#241620', wallColor: '#4d283c', particleColor: 'rgba(255, 0, 150, 0.2)', enemyMultiplier: 2.3, effect: 'cyber' },
-    { id: 5, name: 'Цитадель Омега', bgStyle: '#1f160a', wallColor: '#4d3916', particleColor: 'rgba(255, 215, 0, 0.3)', enemyMultiplier: 3.0, effect: 'storm' }
+    { id: 2, name: 'Заброшенный Бункер', bgStyle: '#161c24', wallColor: '#283545', particleColor: 'rgba(0, 170, 255, 0.2)', enemyMultiplier: 1.3, effect: 'sparks' },
+    { id: 3, name: 'Токсичный Город', bgStyle: '#16241a', wallColor: '#284d32', particleColor: 'rgba(0, 255, 100, 0.2)', enemyMultiplier: 1.7, effect: 'poison' },
+    { id: 4, name: 'Ядро Корпорации', bgStyle: '#241620', wallColor: '#4d283c', particleColor: 'rgba(255, 0, 150, 0.2)', enemyMultiplier: 2.2, effect: 'cyber' },
+    { id: 5, name: 'Цитадель Омега', bgStyle: '#1f160a', wallColor: '#4d3916', particleColor: 'rgba(255, 215, 0, 0.3)', enemyMultiplier: 2.8, effect: 'storm' }
 ];
 
 const skillDatabase = [
@@ -43,10 +82,10 @@ const skillDatabase = [
 ];
 
 const craftingRecipes = [
-    { id: 'w1', name: 'Обрез Сталкера', costGold: 1000, costParts: 50, reqStage: 1, reqBp: null, icon: '🔫' },
-    { id: 'w2', name: 'Плазмо-винтовка', costGold: 5000, costParts: 250, reqStage: 2, reqBp: 'bp_w2', icon: '⚡', bpName: 'Чертеж: Плазма' },
-    { id: 'w3', name: 'Рельсотрон (Дробовик)', costGold: 15000, costParts: 800, reqStage: 3, reqBp: 'bp_w3', icon: '☄️', bpName: 'Чертеж: Рельсотрон' },
-    { id: 'w4', name: 'Ракетница "Овердрайв"', costGold: 45000, costParts: 2500, reqStage: 5, reqBp: 'bp_w4', icon: '🚀', bpName: 'Чертеж: Ракетница' }
+    { id: 'w1', name: 'Обрез Сталкера', costGold: 800, costParts: 30, reqStage: 1, reqBp: null, icon: '🔫' },
+    { id: 'w2', name: 'Плазмо-винтовка', costGold: 3500, costParts: 180, reqStage: 2, reqBp: 'bp_w2', icon: '⚡', bpName: 'Чертеж: Плазма' },
+    { id: 'w3', name: 'Рельсотрон (Дробовик)', costGold: 10000, costParts: 550, reqStage: 3, reqBp: 'bp_w3', icon: '☄️', bpName: 'Чертеж: Рельсотрон' },
+    { id: 'w4', name: 'Ракетница "Овердрайв"', costGold: 30000, costParts: 1800, reqStage: 5, reqBp: 'bp_w4', icon: '🚀', bpName: 'Чертеж: Ракетница' }
 ];
 
 const runSkillsPool = [
@@ -59,10 +98,10 @@ const runSkillsPool = [
 ];
 
 const enemyTypesConfig = {
-    zombie: { name: 'Зараженный', icon: '🧟', speedMultiplier: 0.8, hpMultiplier: 1.2, radius: 15, color: '#4e8d7c' },
-    dog: { name: 'Мутант-Пёс', icon: '🐕', speedMultiplier: 1.5, hpMultiplier: 0.6, radius: 11, color: '#e84545' },
-    shooter: { name: 'Кислотный плевун', icon: '🧪', speedMultiplier: 0.7, hpMultiplier: 1.0, radius: 14, color: '#33abc5' },
-    kamikaze: { name: 'Камикадзе', icon: '💣', speedMultiplier: 1.3, hpMultiplier: 0.5, radius: 13, color: '#ff8c00' }
+    zombie: { name: 'Зараженный', icon: '🧟', speedMultiplier: 0.85, hpMultiplier: 1.5, radius: 15, color: '#4e8d7c' },
+    dog: { name: 'Мутант-Пёс', icon: '🐕', speedMultiplier: 1.6, hpMultiplier: 0.8, radius: 12, color: '#e84545' },
+    shooter: { name: 'Кислотный плевун', icon: '🧪', speedMultiplier: 0.7, hpMultiplier: 1.3, radius: 14, color: '#33abc5' },
+    kamikaze: { name: 'Камикадзе', icon: '💣', speedMultiplier: 1.4, hpMultiplier: 0.6, radius: 13, color: '#ff8c00' }
 };
 
 const marketSystemConfig = [
@@ -72,33 +111,28 @@ const marketSystemConfig = [
 ];
 
 const simulationBots = [
-    { name: 'Шрам_99', bm: 120, hp: 600, atk: 45, speed: 190, icon: '🥷' },
-    { name: 'Ржавый_Лом', bm: 180, hp: 850, atk: 70, speed: 170, icon: '🤖' },
-    { name: 'Призрак', bm: 250, hp: 1200, atk: 110, speed: 210, icon: '💀' },
-    { name: 'Вантед', bm: 340, hp: 1600, atk: 150, speed: 230, icon: '⚡' },
-    { name: 'Громобой', bm: 500, hp: 2500, atk: 220, speed: 190, icon: '👹' }
+    { name: 'Шрам_99', bm: 120, hp: 500, atk: 40, speed: 180, icon: '🥷' },
+    { name: 'Ржавый_Лом', bm: 180, hp: 700, atk: 60, speed: 160, icon: '🤖' },
+    { name: 'Призрак', bm: 250, hp: 950, atk: 90, speed: 200, icon: '💀' }
 ];
 
 const sampleGuilds = [
     { id: 'g1', name: 'Стальные Тени', level: 3, members: 8, maxMembers: 15, leader: 'Apex_Viper' },
-    { id: 'g2', name: 'Атомный Легион', level: 5, members: 14, maxMembers: 20, leader: 'AtomKing' },
-    { id: 'g3', name: 'Дети Пустоши', level: 1, members: 3, maxMembers: 10, leader: 'ScrapLord' }
+    { id: 'g2', name: 'Атомный Легион', level: 5, members: 14, maxMembers: 20, leader: 'AtomKing' }
 ];
 
 const guildRaidBoss = {
     name: 'Альфа-Мутант "Разрушитель"',
     icon: '👹',
-    hp: 25000,
-    atk: 140,
-    speed: 55,
+    hp: 18000,
+    atk: 110,
+    speed: 60,
     radius: 45,
-    rewardTokens: 500
+    rewardTokens: 400
 };
 
 const enemyBasesConfig = [
-    { id: 'b_1', owner: 'Рейдер_Макс', lootGold: 1200, lootParts: 40, lootBp: 'bp_w2', defenseBm: 180, towersCount: 2, guardsCount: 3 },
-    { id: 'b_2', owner: 'Бункер_73', lootGold: 3500, lootParts: 120, lootBp: 'bp_w3', defenseBm: 320, towersCount: 4, guardsCount: 5 },
-    { id: 'b_3', owner: 'Цитадель_Зла', lootGold: 8000, lootParts: 300, lootBp: 'bp_w4', defenseBm: 550, towersCount: 6, guardsCount: 8 }
+    { id: 'b_1', owner: 'Рейдер_Макс', lootGold: 1000, lootParts: 35, lootBp: 'bp_w2', defenseBm: 150, towersCount: 2, guardsCount: 3 }
 ];
 
 const agencyTalentsConfig = [
@@ -117,11 +151,8 @@ const seasonPassRewardsConfig = [
 ];
 
 const leaderboardRivals = [
-    { name: 'Apex_Viper', bm: 2450, level: 18, title: 'Легенда Пустоши' },
-    { name: 'AtomKing', bm: 1980, level: 14, title: 'Элита Сектора' },
-    { name: 'ScrapLord', bm: 1420, level: 11, title: 'Элита Сектора' },
-    { name: 'Vortex', bm: 1150, level: 9, title: 'Ветеран Пустоши' },
-    { name: 'ShadowStalker', bm: 890, level: 7, title: 'Ветеран Пустоши' }
+    { name: 'Apex_Viper', bm: 2150, level: 16, title: 'Легенда Пустоши' },
+    { name: 'AtomKing', bm: 1800, level: 13, title: 'Элита Сектора' }
 ];
 
 const gemsConfig = [
@@ -131,11 +162,11 @@ const gemsConfig = [
 ];
 
 const dailyLoginRewards = [
-    { day: 1, gold: 2000, gems: 50, icon: '💰' },
-    { day: 2, gold: 4000, gems: 100, icon: '🪙' },
-    { day: 3, gold: 8000, gems: 150, icon: '💎' },
-    { day: 4, gold: 12000, gems: 200, icon: '🎁' },
-    { day: 5, gold: 18000, gems: 300, icon: '🔥' },
-    { day: 6, gold: 25000, gems: 400, icon: '⚡' },
-    { day: 7, gold: 50000, gems: 1000, icon: '👑' }
+    { day: 1, gold: 1500, gems: 40, icon: '💰' },
+    { day: 2, gold: 3000, gems: 80, icon: '🪙' },
+    { day: 3, gold: 6000, gems: 120, icon: '💎' },
+    { day: 4, gold: 10000, gems: 160, icon: '🎁' },
+    { day: 5, gold: 15000, gems: 250, icon: '🔥' },
+    { day: 6, gold: 20000, gems: 350, icon: '⚡' },
+    { day: 7, gold: 40000, gems: 800, icon: '👑' }
 ];

@@ -33,13 +33,14 @@
         .bm-popup { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); color: #00ff66; font-size: 18px; font-weight: bold; text-shadow: 0 0 10px #00ff66; pointer-events: none; animation: floatUpBm 1.2s ease-out forwards; z-index: 5000; text-align: center; }
 
         @keyframes chestShake {
-            0% { transform: rotate(0deg); }
-            25% { transform: rotate(-10deg) scale(1.1); }
-            50% { transform: rotate(10deg) scale(1.1); }
-            75% { transform: rotate(-10deg) scale(1.1); }
+            0% { transform: rotate(0deg) scale(1); }
+            15% { transform: rotate(-15deg) scale(1.15); filter: drop-shadow(0 0 15px #ffaa00); }
+            30% { transform: rotate(15deg) scale(1.15); filter: drop-shadow(0 0 25px #00ffcc); }
+            45% { transform: rotate(-10deg) scale(1.1); }
+            60% { transform: rotate(10deg) scale(1.1); }
             100% { transform: rotate(0deg) scale(1); }
         }
-        .chest-anim { animation: chestShake 0.6s ease-in-out; }
+        .chest-anim { animation: chestShake 0.8s ease-in-out; }
 
         .modal-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(3px); }
         .modal-content { background: #181820; border: 2px solid #ffaa00; border-radius: 15px; padding: 15px; width: 85%; max-width: 420px; max-height: 85%; overflow-y: auto; text-align: center; color: white; position: relative; box-shadow: 0 0 25px rgba(255,170,0,0.2); }
@@ -61,6 +62,9 @@
         .craft-card { background: #16161d; border: 1px solid #333; border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; text-align: left; }
         .hub-tab-btn { flex: 1; padding: 5px 1px; background: #16161d; border: 1px solid #333; color: #888; font-size: 8px; font-weight: bold; cursor: pointer; border-radius: 5px; transition: 0.2s; text-align: center; }
         .hub-tab-btn.active { background: #ffaa00; border-color: #ffaa00; color: #000; }
+
+        /* Tooltip для снаряжения */
+        #gearTooltip { display: none; position: absolute; background: #181822; border: 2px solid #00ffcc; border-radius: 8px; padding: 8px; z-index: 5000; font-size: 11px; color: #fff; pointer-events: none; width: 160px; box-shadow: 0 0 10px rgba(0,255,204,0.3); }
     </style></head><body>
     
     <div id="orientationWarning">
@@ -70,11 +74,41 @@
     </div>
 
     <div id="appContainer">
-        <div id="splashScreen" onclick="this.style.display='none'" style="position:absolute; top:0; left:0; width:100%; height:100%; background: #0c0c10; z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align: center;">
+        <div id="splashScreen" style="position:absolute; top:0; left:0; width:100%; height:100%; background: #0c0c10; z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align: center;">
             <h1 style="color:#ffaa00; font-size:38px; text-shadow: 0 0 20px rgba(255,170,0,0.4); margin-bottom: 8px; font-style: italic; letter-spacing: 2px;">SPEKTER<br><span style="color:#00ffcc; font-size:24px;">WASTELAND MMO</span></h1>
             <div style="color:#888; margin-bottom: 25px; font-size: 12px;">Инициализация нейросети убежища...</div>
             <div style="width: 45%; height: 6px; background: #222; border-radius: 3px; overflow: hidden; border: 1px solid #444;"><div id="splashProgress" style="width: 0%; height: 100%; background: #ffaa00; transition: 0.1s;"></div></div>
         </div>
+
+        <!-- МОДАЛКА ВЫБОРА / СОЗДАНИЯ ПЕРСОНАЖЕЙ -->
+        <div id="characterSelectModal" class="modal-overlay" style="z-index: 9000; display: flex;">
+            <div class="modal-content" style="max-width: 460px; border-color: #00ffcc;">
+                <h2 style="color: #00ffcc; margin-top:0; font-size:18px;">ВЫБОР ИЛИ СОЗДАНИЕ СТАЛКЕРА</h2>
+                <p style="color: #aaa; font-size: 11px; margin-bottom: 10px;">На аккаунте может быть до 2 персонажей (VIP купшки действуют только на выбранного!)</p>
+                <div id="characterSlotsContainer" style="display: flex; gap: 10px; justify-content: center; margin-bottom: 15px;"></div>
+                <div id="createCharacterSection" style="display: none; border-top: 1px solid #333; padding-top: 12px; text-align: left;">
+                    <h3 style="color: #ffaa00; margin: 0 0 8px 0; font-size: 13px;">Создание нового сталкера:</h3>
+                    <div style="margin-bottom: 8px;">
+                        <label style="font-size: 10px; color: #888;">Имя позывного:</label>
+                        <input type="text" id="newCharName" value="Бродяга" style="width: 100%; background: #121218; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 2px;">
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <label style="font-size: 10px; color: #888;">Класс / Специализация:</label>
+                        <div id="classSelectorGrid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-top: 3px;"></div>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <label style="font-size: 10px; color: #888;">Пол:</label>
+                        <div style="display: flex; gap: 10px; margin-top: 3px;">
+                            <label style="font-size: 11px; cursor: pointer;"><input type="radio" name="charGender" value="male" checked> Мужчина 👨</label>
+                            <label style="font-size: 11px; cursor: pointer;"><input type="radio" name="charGender" value="female"> Женщина 👩</label>
+                        </div>
+                    </div>
+                    <button onclick="confirmCreateCharacter()" style="background: #28a745; color: #fff; border: none; padding: 8px; border-radius: 6px; font-weight: bold; width: 100%; font-size: 11px; cursor: pointer;">ПОДТВЕРДИТЬ СОЗДАНИЕ</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="gearTooltip"></div>
 
         <div id="topBar" style="position: absolute; top: 8px; left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; z-index: 1000;">
             <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; pointer-events: none;">
@@ -134,17 +168,23 @@
         <!-- ЛОББИ -->
         <div id="lobbyScreen" class="screen" style="display: flex; background: url('https://img.freepik.com/free-vector/dark-hexagonal-background-with-gradient-color_79603-1409.jpg') center/cover;">
             <div style="display: flex; align-items: center; gap: 8px; background: rgba(14,14,19,0.85); padding: 6px 12px; border-radius: 10px; border: 1px solid #333; width: fit-content; margin: 0 auto; margin-top: 2px;">
-                <div style="width: 32px; height: 32px; background: #222; border-radius: 50%; border: 1px solid #ffaa00; display: flex; align-items: center; justify-content: center; font-size: 16px;">☣️</div>
-                <div style="width: 150px;">
-                    <div style="color: #ffaa00; font-size: 9px; cursor: pointer; text-decoration: underline;" onclick="openTitlesModal(); playSound('click');">[<span id="equippedTitleDisplay">Бродяга</span>]</div>
+                <div style="width: 32px; height: 32px; background: #222; border-radius: 50%; border: 1px solid #ffaa00; display: flex; align-items: center; justify-content: center; font-size: 16px;" id="charAvatarIcon">☣️</div>
+                <div style="width: 170px;">
+                    <div style="display:flex; justify-content: space-between; align-items:center;">
+                        <span style="color: #ffaa00; font-size: 9px; cursor: pointer; text-decoration: underline;" onclick="openTitlesModal(); playSound('click');">[<span id="equippedTitleDisplay">Бродяга</span>]</span>
+                        <span style="color: #00ffcc; font-size: 9px; font-weight:bold;" id="charClassName">Штурмовик</span>
+                    </div>
                     <div style="color: #fff; font-size: 11px; font-weight: bold; display: flex; justify-content: space-between;">
-                        <span>Сталкер</span>
+                        <span id="charNameDisplay">Сталкер</span>
                         <span style="color: #ffaa00;">Ур. <span id="accountLevelDisplay">1</span></span>
                     </div>
                     <div style="background: #222; border-radius: 3px; height: 5px; width: 100%; margin: 3px 0; border: 1px solid #444;">
                         <div id="accountXpBar" style="background: linear-gradient(90deg, #00ffcc, #ffaa00); height: 100%; width: 0%;"></div>
                     </div>
-                    <div style="color: #00ff66; font-size: 9px; font-weight: bold; cursor: pointer; text-decoration: underline;" onclick="openProfileModal(); playSound('click');">⚔️ БМ: <span id="bmDisplay">100</span> (Профиль)</div>
+                    <div style="display:flex; justify-content: space-between; font-size:9px;">
+                        <span style="color: #00ff66; font-weight: bold; cursor: pointer; text-decoration: underline;" onclick="openProfileModal(); playSound('click');">⚔️ БМ: <span id="bmDisplay">100</span></span>
+                        <span style="color: #da70d6; cursor: pointer; text-decoration: underline;" onclick="openCharacterSelectModal();">👥 Сменить</span>
+                    </div>
                 </div>
             </div>
             
@@ -181,11 +221,11 @@
                 <button onclick="document.getElementById('profileModal').style.display='none'; playSound('click');" style="position:absolute; top:6px; right:6px; background:#dc3545; color:white; border:none; padding:3px 7px; border-radius:4px; font-weight:bold; cursor:pointer;">X</button>
                 <h3 style="color: #00ffcc; margin-top:0; font-size:16px;">🪪 ПРОФИЛЬ СТАЛКЕРА</h3>
                 <div style="text-align: left; font-size: 11px; line-height: 1.6; margin-bottom: 12px; background: #121218; padding: 10px; border-radius: 8px;">
-                    <div>🆔 ID: <span id="profId" style="color:#ffaa00;">STK-9942</span></div>
+                    <div>🆔 Позывной: <span id="profName" style="color:#ffaa00;">Бродяга</span></div>
+                    <div>🧬 Класс: <span id="profClass" style="color:#00ffcc;">Штурмовик</span></div>
                     <div>🏆 Титул: <span id="profTitle" style="color:#ffaa00;">Бродяга</span></div>
                     <div>⭐ Уровень: <span id="profLevel" style="color:#00ffcc;">1</span></div>
                     <div>💀 Убито врагов: <span id="profKills" style="color:#ff4a4a;">0</span></div>
-                    <div>🗺️ Макс. Глава: <span id="profStage" style="color:#00ffcc;">1</span></div>
                 </div>
                 <div style="background: #121218; padding: 10px; border-radius: 8px; margin-bottom: 12px; text-align: left;">
                     <div style="color: #ffaa00; font-size: 11px; font-weight: bold; margin-bottom: 6px;">🔒 Приватность профиля:</div>
@@ -198,6 +238,16 @@
                     <div id="profGearList" style="color: #aaa; font-size: 10px;">Снаряжение скрыто или пусто.</div>
                 </div>
                 <button onclick="document.getElementById('profileModal').style.display='none'; playSound('click');" style="background:#555; color:#fff; border:none; padding:6px; border-radius:6px; font-weight:bold; width:100%; font-size:11px; cursor:pointer;">Закрыть</button>
+            </div>
+        </div>
+
+        <!-- МОДАЛКА ЕЖЕДНЕВНЫХ НАГРАД (LOGIN STREAK) -->
+        <div id="dailyLoginModal" class="modal-overlay">
+            <div class="modal-content" style="border-color: #00ff66; max-width: 380px;">
+                <h3 style="color: #00ff66; margin-top:0; font-size:16px;">🎁 НАГРАДЫ ЗА ВХОД</h3>
+                <p style="color: #aaa; font-size: 11px; margin-bottom: 12px;">Заходите каждый день и забирайте ценные припасы Пустоши!</p>
+                <div id="loginStreakGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px;"></div>
+                <button id="btnClaimLogin" onclick="claimDailyLogin(); playSound('click');" style="background: #28a745; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; width: 100%; font-size: 11px; cursor: pointer;">ЗАБРАТЬ НАГРАДУ СЕГОДНЯ</button>
             </div>
         </div>
 
@@ -242,8 +292,8 @@
 
         <div id="gachaResult" class="modal-overlay">
             <div class="modal-content" style="border-color: #00ff66;">
-                <h3 style="color:#00ff66; margin-top:0; font-size:16px;">✨ ДОБЫЧА ИЗ КОНТЕЙНЕРА!</h3>
-                <div id="gachaChestBox" style="font-size: 60px; margin: 10px 0;" class="chest-anim">🎁</div>
+                <h3 style="color:#00ff66; margin-top:0; font-size:16px;" id="gachaTitle">✨ ДОБЫЧА ИЗ КОНТЕЙНЕРА!</h3>
+                <div id="gachaChestBox" style="font-size: 70px; margin: 15px 0;" class="chest-anim">🎁</div>
                 <div id="gachaItemsList" style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-bottom:12px;"></div>
                 <button onclick="document.getElementById('gachaResult').style.display='none'; playSound('click');" style="background:#28a745; color:#fff; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; width:100%; cursor:pointer; font-size:12px;">ЗАБРАТЬ В ИНВЕНТАРЬ</button>
             </div>

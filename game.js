@@ -1,5 +1,5 @@
 // ==========================================================================
-// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - WEB AUDIO API)
+// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - FULL BUNDLE v2)
 // ==========================================================================
 
 const tg = window.Telegram?.WebApp;
@@ -14,17 +14,12 @@ const appContainer = document.getElementById('appContainer');
 let audioCtx = null;
 function playSound(type) {
     try {
-        if (!audioCtx) {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
         let osc = audioCtx.createOscillator();
         let gain = audioCtx.createGain();
         osc.connect(gain);
         gain.connect(audioCtx.destination);
-
         let now = audioCtx.currentTime;
 
         if (type === 'click') {
@@ -33,24 +28,21 @@ function playSound(type) {
             osc.frequency.exponentialRampToValueAtTime(300, now + 0.05);
             gain.gain.setValueAtTime(0.08, now);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
-            osc.start(now);
-            osc.stop(now + 0.05);
+            osc.start(now); osc.stop(now + 0.05);
         } else if (type === 'shoot') {
             osc.type = 'triangle';
             osc.frequency.setValueAtTime(450, now);
             osc.frequency.exponentialRampToValueAtTime(120, now + 0.08);
             gain.gain.setValueAtTime(0.1, now);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-            osc.start(now);
-            osc.stop(now + 0.08);
+            osc.start(now); osc.stop(now + 0.08);
         } else if (type === 'hit') {
             osc.type = 'square';
             osc.frequency.setValueAtTime(150, now);
             osc.frequency.linearRampToValueAtTime(60, now + 0.06);
             gain.gain.setValueAtTime(0.08, now);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-            osc.start(now);
-            osc.stop(now + 0.06);
+            osc.start(now); osc.stop(now + 0.06);
         }
     } catch(e) {}
 }
@@ -61,11 +53,70 @@ window.showAlert = function(msg) {
     } else { alert(msg); } 
 };
 
+let uidCounter = 0; 
+const getUid = () => Date.now().toString(36) + '_' + (uidCounter++);
+
+// Структура аккаунта с поддержкой до 2 персонажей и раздельным VIP
+const defaultAccount = {
+    characters: [], // До 2 персонажей
+    activeCharacterId: null,
+    globalGems: 1500 // Общая валюта аккаунта
+};
+
+// Структура персонажа
+function createNewCharacterObject(name, classKey, gender) {
+    let cls = characterClassesConfig[classKey] || characterClassesConfig.assault;
+    return {
+        id: getUid(),
+        name: name || 'Бродяга',
+        classKey: classKey,
+        gender: gender, // 'male' or 'female'
+        icon: cls.icon,
+        gold: 5000,
+        gems: 300,
+        energy: 30,
+        accountLevel: 1,
+        accountXp: 0,
+        stage: 1,
+        parts: 0,
+        equippedTitle: 't_rookie',
+        unlockedTitles: ['t_rookie'],
+        inventory: [{ uid: getUid(), id: 'w1' }],
+        equipped: { helmet: null, armor: null, ring: null, boots: null, weapon: 'w1', drone: 'd1', mount: 'm1' },
+        skillsInventory: [],
+        equippedSkills: [null, null, null, null, null, null],
+        blueprints: {},
+        lastEnergyTime: Date.now(),
+        agencyLevel: 0,
+        talentsLevels: {},
+        seasonLevel: 1,
+        seasonXp: 0,
+        seasonClaimed: {},
+        playerGems: { ruby: { level: 1, count: 4 }, emerald: { level: 1, count: 4 }, sapphire: { level: 1, count: 4 } },
+        socketedGems: { weapon: null, armor: null, helmet: null },
+        profilePrivacy: { publicGear: true },
+        totalKillsAllTime: 0,
+        maxStageReached: 1,
+        vipActive: false, // Привязано строго к этому персонажу!
+        lastAFKTime: Date.now()
+    };
+}
+
+let accountData = JSON.parse(JSON.stringify(defaultAccount));
+let activeChar = null;
+
+try {
+    let loaded = JSON.parse(localStorage.getItem('spekterAccountSaveV2') || 'null');
+    if (loaded && loaded.characters) {
+        accountData = loaded;
+    }
+} catch(e) {}
+
 document.addEventListener('DOMContentLoaded', () => {
     let progress = 0; 
     const bar = document.getElementById('splashProgress');
     const interval = setInterval(() => { 
-        progress += 15; 
+        progress += 20; 
         if(bar) bar.style.width = progress + '%'; 
         if (progress >= 100) { 
             clearInterval(interval); 
@@ -74,84 +125,152 @@ document.addEventListener('DOMContentLoaded', () => {
                 splash.style.opacity = '0'; 
                 setTimeout(() => { 
                     splash.style.display = 'none'; 
-                    checkLoginStreakOnStart();
+                    initGameSession();
                 }, 400); 
             }
         } 
-    }, 30);
+    }, 25);
 });
 
-let gameState = 'menu';
-
-appContainer.addEventListener('touchmove', function(e) { 
-    if (gameState !== 'menu' || !e.target.closest('.screen, .modal-content')) { 
-        e.preventDefault(); 
-    } 
-}, { passive: false });
-
-let uidCounter = 0; 
-const getUid = () => Date.now().toString(36) + '_' + (uidCounter++);
-
-const defaultSave = {
-    gems: 2000, gold: 10000, energy: 30, accountLevel: 1, accountXp: 0, stage: 1, parts: 0,
-    equippedTitle: 't_rookie', unlockedTitles: ['t_rookie'],
-    inventory: [], equipped: { helmet: null, armor: null, ring: null, boots: null, weapon: null, drone: 'd1', mount: 'm1' },
-    skillsInventory: [], equippedSkills: [null, null, null, null, null, null], blueprints: {},
-    lastEnergyTime: Date.now(), agencyLevel: 0, dailyKills: 0, vipActive: false, vipLastClaim: 0, 
-    beginnerClaimed: [false, false, false], serverProgressClaimed: [], seasonLevel: 1, seasonXp: 0, 
-    missionKillsClaimed: false, lastAFKTime: Date.now(),
-    marketLimits: {}, lastMarketReset: Date.now(), playerLots: [],
-    guild: null, guildBossHp: 25000,
-    baseDefense: { towers: 2, guards: 3 },
-    talentsLevels: {}, seasonClaimed: {},
-    playerGems: { ruby: { level: 1, count: 6 }, emerald: { level: 1, count: 6 }, sapphire: { level: 1, count: 6 } },
-    socketedGems: { weapon: null, armor: null, helmet: null },
-    profilePrivacy: { publicGear: true },
-    totalKillsAllTime: 0, maxStageReached: 1,
-    loginStreakDay: 1, lastLoginDate: 0, loginClaimedToday: false
-};
-
-let savedData = JSON.parse(JSON.stringify(defaultSave));
-try { 
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal46') || 'null'); 
-    if (loaded) Object.assign(savedData, loaded); 
-} catch(e) {}
-
-if (!savedData.equipped.weapon) savedData.equipped.weapon = null; 
-if (!savedData.equipped.drone) savedData.equipped.drone = 'd1'; 
-if (!savedData.equipped.mount) savedData.equipped.mount = 'm1';
-if (!savedData.playerGems) savedData.playerGems = { ruby: { level: 1, count: 6 }, emerald: { level: 1, count: 6 }, sapphire: { level: 1, count: 6 } };
-if (!savedData.socketedGems) savedData.socketedGems = { weapon: null, armor: null, helmet: null };
-if (!savedData.profilePrivacy) savedData.profilePrivacy = { publicGear: true };
-if (savedData.loginStreakDay === undefined) { savedData.loginStreakDay = 1; savedData.lastLoginDate = 0; savedData.loginClaimedToday = false; }
-
-function saveData() { 
-    localStorage.setItem('spekterSaveFinal46', JSON.stringify(savedData)); 
-    updateTopBar(); 
+function saveAccount() {
+    if (activeChar) {
+        let idx = accountData.characters.findIndex(c => c.id === activeChar.id);
+        if (idx !== -1) accountData.characters[idx] = activeChar;
+    }
+    localStorage.setItem('spekterAccountSaveV2', JSON.stringify(accountData));
+    updateTopBar();
 }
 
+function initGameSession() {
+    if (!accountData.characters || accountData.characters.length === 0) {
+        // Создаем первого персонажа автоматически или открываем модалку создания
+        openCharacterSelectModal(true);
+    } else {
+        if (!accountData.activeCharacterId) {
+            accountData.activeCharacterId = accountData.characters[0].id;
+        }
+        activeChar = accountData.characters.find(c => c.id === accountData.activeCharacterId) || accountData.characters[0];
+        openCharacterSelectModal(false);
+    }
+}
+
+window.openCharacterSelectModal = function(forceCreate = false) {
+    let modal = document.getElementById('characterSelectModal');
+    let container = document.getElementById('characterSlotsContainer');
+    let createSec = document.getElementById('createCharacterSection');
+    if (!modal || !container) return;
+
+    container.innerHTML = '';
+    accountData.characters.forEach((char, idx) => {
+        let cls = characterClassesConfig[char.classKey] || characterClassesConfig.assault;
+        let isActive = activeChar && activeChar.id === char.id;
+        container.innerHTML += `
+            <div style="background: ${isActive ? '#253530' : '#16161d'}; border: 2px solid ${isActive ? '#00ffcc' : '#444'}; border-radius: 10px; padding: 10px; width: 140px; text-align: center; cursor: pointer;" onclick="selectCharacter('${char.id}')">
+                <div style="font-size: 28px;">${char.icon}</div>
+                <div style="color: #ffaa00; font-weight: bold; font-size: 11px; margin-top: 4px;">${char.name}</div>
+                <div style="color: #00ffcc; font-size: 9px;">${cls.name} (${char.gender === 'female' ? 'Жен' : 'Муж'})</div>
+                <div style="color: #aaa; font-size: 9px; margin-top: 2px;">Ур. ${char.accountLevel} | Глава ${char.stage}</div>
+                ${char.vipActive ? '<div style="color: #ffd700; font-size: 8px; margin-top:2px;">👑 VIP АКТИВЕН</div>' : ''}
+                <button onclick="event.stopPropagation(); deleteCharacter('${char.id}')" style="background: #dc3545; color: white; border: none; padding: 2px 6px; border-radius: 4px; font-size: 8px; margin-top: 6px; cursor: pointer;">Удалить</button>
+            </div>
+        `;
+    });
+
+    // Кнопка создания нового, если меньше 2 персонажей
+    if (accountData.characters.length < 2) {
+        if (forceCreate || accountData.characters.length === 0) {
+            createSec.style.display = 'block';
+            renderClassSelector();
+        } else {
+            container.innerHTML += `
+                <div style="background: #16161d; border: 2px dashed #ffaa00; border-radius: 10px; padding: 10px; width: 140px; text-align: center; cursor: pointer; display: flex; flex-direction: column; justify-content: center; align-items: center;" onclick="document.getElementById('createCharacterSection').style.display='block'; renderClassSelector();">
+                    <div style="font-size: 24px; color: #ffaa00;">➕</div>
+                    <div style="color: #ffaa00; font-weight: bold; font-size: 10px; margin-top: 4px;">Создать слот 2</div>
+                </div>
+            `;
+            createSec.style.display = 'none';
+        }
+    } else {
+        createSec.style.display = 'none';
+    }
+
+    modal.style.display = 'flex';
+};
+
+function renderClassSelector() {
+    let grid = document.getElementById('classSelectorGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    Object.values(characterClassesConfig).forEach((cls, idx) => {
+        let isChecked = idx === 0 ? 'checked' : '';
+        grid.innerHTML += `
+            <label style="background: #1c1c24; border: 1px solid #444; border-radius: 6px; padding: 6px; display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 10px;">
+                <input type="radio" name="charClass" value="${cls.id}" ${isChecked}>
+                <div><div>${cls.icon} <b>${cls.name}</b></div><div style="font-size:8px; color:#888;">${cls.desc}</div></div>
+            </label>
+        `;
+    });
+}
+
+window.selectCharacter = function(charId) {
+    let char = accountData.characters.find(c => c.id === charId);
+    if (!char) return;
+    activeChar = char;
+    accountData.activeCharacterId = char.id;
+    saveAccount();
+    document.getElementById('characterSelectModal').style.display = 'none';
+    updateTopBar();
+    checkLoginStreakOnStart();
+};
+
+window.deleteCharacter = function(charId) {
+    if (confirm("Вы уверены, что хотите безвозвратно удалить этого персонажа?")) {
+        accountData.characters = accountData.characters.filter(c => c.id !== charId);
+        if (activeChar && activeChar.id === charId) {
+            activeChar = accountData.characters[0] || null;
+            accountData.activeCharacterId = activeChar ? activeChar.id : null;
+        }
+        saveAccount();
+        openCharacterSelectModal(accountData.characters.length === 0);
+    }
+};
+
+window.confirmCreateCharacter = function() {
+    let nameInput = document.getElementById('newCharName');
+    let name = nameInput ? nameInput.value.trim() : 'Сталкер';
+    let classRadio = document.querySelector('input[name="charClass"]:checked');
+    let classKey = classRadio ? classRadio.value : 'assault';
+    let genderRadio = document.querySelector('input[name="charGender"]:checked');
+    let gender = genderRadio ? genderRadio.value : 'male';
+
+    let newChar = createNewCharacterObject(name, classKey, gender);
+    accountData.characters.push(newChar);
+    selectCharacter(newChar.id);
+};
+
 function checkLoginStreakOnStart() {
+    if (!activeChar) return;
     let now = Date.now();
     let oneDay = 86400000;
-    let lastDate = savedData.lastLoginDate || 0;
+    let lastDate = activeChar.lastLoginDate || 0;
 
     if (now - lastDate > oneDay) {
         if (now - lastDate > oneDay * 2) {
-            savedData.loginStreakDay = 1;
+            activeChar.loginStreakDay = 1;
         }
-        savedData.loginClaimedToday = false;
+        activeChar.loginClaimedToday = false;
         openLoginStreakModal();
     }
 }
 
 function openLoginStreakModal() {
     let grid = document.getElementById('loginStreakGrid');
-    if (!grid) return;
+    if (!grid || !activeChar) return;
     grid.innerHTML = '';
 
     dailyLoginRewards.forEach(r => {
-        let isPassed = r.day < savedData.loginStreakDay || (r.day === savedData.loginStreakDay && savedData.loginClaimedToday);
-        let isCurrent = r.day === savedData.loginStreakDay && !savedData.loginClaimedToday;
+        let isPassed = r.day < activeChar.loginStreakDay || (r.day === activeChar.loginStreakDay && activeChar.loginClaimedToday);
+        let isCurrent = r.day === activeChar.loginStreakDay && !activeChar.loginClaimedToday;
 
         grid.innerHTML += `
             <div style="background: ${isCurrent ? '#252535' : '#16161d'}; border: 2px solid ${isCurrent ? '#00ff66' : (isPassed ? '#555' : '#444')}; border-radius: 8px; padding: 6px; text-align: center;">
@@ -165,9 +284,9 @@ function openLoginStreakModal() {
 
     let btn = document.getElementById('btnClaimLogin');
     if (btn) {
-        btn.disabled = savedData.loginClaimedToday;
-        btn.style.background = savedData.loginClaimedToday ? '#555' : '#28a745';
-        btn.innerText = savedData.loginClaimedToday ? 'Уже получено сегодня' : 'ЗАБРАТЬ НАГРАДУ СЕГОДНЯ';
+        btn.disabled = activeChar.loginClaimedToday;
+        btn.style.background = activeChar.loginClaimedToday ? '#555' : '#28a745';
+        btn.innerText = activeChar.loginClaimedToday ? 'Уже получено сегодня' : 'ЗАБРАТЬ НАГРАДУ СЕГОДНЯ';
     }
 
     let m = document.getElementById('dailyLoginModal');
@@ -175,19 +294,19 @@ function openLoginStreakModal() {
 }
 
 window.claimDailyLogin = function() {
-    if (savedData.loginClaimedToday) return;
-    let reward = dailyLoginRewards.find(x => x.day === savedData.loginStreakDay) || dailyLoginRewards[0];
+    if (!activeChar || activeChar.loginClaimedToday) return;
+    let reward = dailyLoginRewards.find(x => x.day === activeChar.loginStreakDay) || dailyLoginRewards[0];
 
-    savedData.gold += reward.gold;
-    savedData.gems += reward.gems;
-    savedData.loginClaimedToday = true;
-    savedData.lastLoginDate = Date.now();
-    if (savedData.loginStreakDay < 7) {
-        savedData.loginStreakDay++;
+    activeChar.gold += reward.gold;
+    activeChar.gems += reward.gems;
+    activeChar.loginClaimedToday = true;
+    activeChar.lastLoginDate = Date.now();
+    if (activeChar.loginStreakDay < 7) {
+        activeChar.loginStreakDay++;
     } else {
-        savedData.loginStreakDay = 1;
+        activeChar.loginStreakDay = 1;
     }
-    saveData();
+    saveAccount();
 
     let m = document.getElementById('dailyLoginModal');
     if(m) m.style.display = 'none';
@@ -195,22 +314,24 @@ window.claimDailyLogin = function() {
 };
 
 function checkEnergyRegen() { 
-    let diff = Date.now() - savedData.lastEnergyTime; 
+    if (!activeChar) return;
+    let diff = Date.now() - activeChar.lastEnergyTime; 
     let regenAmount = Math.floor(diff / (5 * 60 * 1000)); 
-    if (regenAmount > 0 && savedData.energy < 30) { 
-        savedData.energy = Math.min(30, savedData.energy + regenAmount); 
-        savedData.lastEnergyTime += regenAmount * (5 * 60 * 1000); 
-        saveData(); 
-    } else if (savedData.energy >= 30) { 
-        savedData.lastEnergyTime = Date.now(); 
+    if (regenAmount > 0 && activeChar.energy < 30) { 
+        activeChar.energy = Math.min(30, activeChar.energy + regenAmount); 
+        activeChar.lastEnergyTime += regenAmount * (5 * 60 * 1000); 
+        saveAccount(); 
+    } else if (activeChar.energy >= 30) { 
+        activeChar.lastEnergyTime = Date.now(); 
     } 
 }
 
 function updateEnergyTimerUI() { 
-    if (savedData.energy >= 30) { 
+    if (!activeChar) return;
+    if (activeChar.energy >= 30) { 
         let t = document.getElementById('energyTimer'); if(t) t.innerText = '(МАКС)'; 
     } else { 
-        let diff = Date.now() - savedData.lastEnergyTime; 
+        let diff = Date.now() - activeChar.lastEnergyTime; 
         let timeLeft = (5 * 60 * 1000) - diff; 
         if (timeLeft <= 0) checkEnergyRegen(); 
         else { 
@@ -222,45 +343,51 @@ function updateEnergyTimerUI() {
 }
 
 window.openEnergyShop = function() { 
-    if (savedData.energy >= 30) { showAlert("У вас уже максимум энергии!"); return; } 
+    if (!activeChar) return;
+    if (activeChar.energy >= 30) { showAlert("У вас уже максимум энергии!"); return; } 
     if (confirm("Купить 10 Энергии за 50 💎?")) { 
-        if (savedData.gems >= 50) { 
-            savedData.gems -= 50; 
-            savedData.energy = Math.min(30, savedData.energy + 10); 
-            saveData(); 
+        if (activeChar.gems >= 50) { 
+            activeChar.gems -= 50; 
+            activeChar.energy = Math.min(30, activeChar.energy + 10); 
+            saveAccount(); 
             showAlert("Энергия восстановлена!"); 
         } else { showAlert("Недостаточно алмазов!"); } 
     } 
 };
 
 let previousBm = 100;
-
 function updateTopBar() { 
+    if (!activeChar) return;
     checkEnergyRegen(); 
     let el;
-    el = document.getElementById('gemDisplay'); if(el) el.innerText = savedData.gems; 
-    el = document.getElementById('goldDisplay'); if(el) el.innerText = (savedData.gold > 1000) ? (savedData.gold / 1000).toFixed(1) + 'K' : savedData.gold; 
-    el = document.getElementById('partsDisplay'); if(el) el.innerText = savedData.parts; 
-    el = document.getElementById('energyDisplay'); if(el) el.innerText = savedData.energy; 
-    el = document.getElementById('accountLevelDisplay'); if(el) el.innerText = savedData.accountLevel; 
-    el = document.getElementById('stageDisplay'); if(el) el.innerText = savedData.stage; 
+    el = document.getElementById('gemDisplay'); if(el) el.innerText = activeChar.gems; 
+    el = document.getElementById('goldDisplay'); if(el) el.innerText = (activeChar.gold > 1000) ? (activeChar.gold / 1000).toFixed(1) + 'K' : activeChar.gold; 
+    el = document.getElementById('partsDisplay'); if(el) el.innerText = activeChar.parts; 
+    el = document.getElementById('energyDisplay'); if(el) el.innerText = activeChar.energy; 
+    el = document.getElementById('accountLevelDisplay'); if(el) el.innerText = activeChar.accountLevel; 
+    el = document.getElementById('stageDisplay'); if(el) el.innerText = activeChar.stage; 
+
+    let cls = characterClassesConfig[activeChar.classKey] || characterClassesConfig.assault;
+    let cNameEl = document.getElementById('charNameDisplay'); if(cNameEl) cNameEl.innerText = activeChar.name;
+    let cClassEl = document.getElementById('charClassName'); if(cClassEl) cClassEl.innerText = cls.name;
+    let cAvatarEl = document.getElementById('charAvatarIcon'); if(cAvatarEl) cAvatarEl.innerText = cls.icon;
 
     titlesConfig.forEach(t => {
-        if (savedData.accountLevel >= t.reqLevel && !savedData.unlockedTitles.includes(t.id)) {
-            savedData.unlockedTitles.push(t.id);
+        if (activeChar.accountLevel >= t.reqLevel && !activeChar.unlockedTitles.includes(t.id)) {
+            activeChar.unlockedTitles.push(t.id);
             showBmPopup(`🏆 НОВЫЙ ТИТУЛ: [${t.name}]!`);
         }
     });
 
-    let curTitleObj = titlesConfig.find(t => t.id === savedData.equippedTitle) || titlesConfig[0];
+    let curTitleObj = titlesConfig.find(t => t.id === activeChar.equippedTitle) || titlesConfig[0];
     let tDisp = document.getElementById('equippedTitleDisplay');
     if(tDisp) tDisp.innerText = curTitleObj.name;
 
-    let maxXp = savedData.accountLevel * 500;
+    let maxXp = activeChar.accountLevel * 500;
     let xpBar = document.getElementById('accountXpBar');
-    if (xpBar) xpBar.style.width = Math.min(100, (savedData.accountXp / maxXp) * 100) + '%';
+    if (xpBar) xpBar.style.width = Math.min(100, (activeChar.accountXp / maxXp) * 100) + '%';
 
-    let loc = locationsConfig.find(l => l.id == savedData.stage) || locationsConfig[0];
+    let loc = locationsConfig.find(l => l.id == activeChar.stage) || locationsConfig[0];
     let locDisp = document.getElementById('locationNameDisplay');
     if(locDisp) locDisp.innerText = loc.name;
 
@@ -279,9 +406,10 @@ function updateTopBar() {
 }
 
 window.changeStage = function(dir) {
-    savedData.stage = Math.max(1, Math.min(locationsConfig.length, savedData.stage + dir));
-    if (savedData.stage > (savedData.maxStageReached || 1)) savedData.maxStageReached = savedData.stage;
-    saveData();
+    if (!activeChar) return;
+    activeChar.stage = Math.max(1, Math.min(locationsConfig.length, activeChar.stage + dir));
+    if (activeChar.stage > (activeChar.maxStageReached || 1)) activeChar.maxStageReached = activeChar.stage;
+    saveAccount();
     updateTopBar();
 };
 
@@ -311,16 +439,19 @@ window.switchTab = function(screenId, btnElement) {
 function getItemData(itemId) { return itemDatabase.find(i => i.id === itemId) || itemDatabase[0]; }
 
 function getCalculatedStats() { 
-    let baseAtk = 100 + (savedData.accountLevel * 15); 
-    let baseHp = 500 + (savedData.accountLevel * 80); 
+    if (!activeChar) return { atk: 100, hp: 500 };
+    let cls = characterClassesConfig[activeChar.classKey] || characterClassesConfig.assault;
+    let baseAtk = cls.baseAtk + (activeChar.accountLevel * 12); 
+    let baseHp = cls.baseHp + (activeChar.accountLevel * 70); 
     let flatAtk = 0; let flatHp = 0; 
-    Object.values(savedData.equipped).forEach(itemId => { 
+
+    Object.values(activeChar.equipped).forEach(itemId => { 
         if (itemId) { let data = getItemData(itemId); flatAtk += data.atk; flatHp += data.hp; } 
     }); 
     
-    if (savedData.socketedGems) {
-        Object.keys(savedData.socketedGems).forEach(slotKey => {
-            let socket = savedData.socketedGems[slotKey];
+    if (activeChar.socketedGems) {
+        Object.keys(activeChar.socketedGems).forEach(slotKey => {
+            let socket = activeChar.socketedGems[slotKey];
             if (socket) {
                 let cfg = gemsConfig.find(x => x.id === socket.gemId);
                 if (cfg) {
@@ -332,17 +463,15 @@ function getCalculatedStats() {
         });
     }
 
-    let currentTitle = titlesConfig.find(t => t.id === savedData.equippedTitle);
+    let currentTitle = titlesConfig.find(t => t.id === activeChar.equippedTitle);
     if (currentTitle) {
         flatAtk += currentTitle.bonusAtk;
         flatHp += currentTitle.bonusHp;
     }
 
-    let percentBonus = (savedData.agencyLevel * 2) / 100; 
-    if (savedData.guild) percentBonus += 0.05; 
-    
-    let tAtkLvl = savedData.talentsLevels['t_atk'] || 0;
-    let tHpLvl = savedData.talentsLevels['t_hp'] || 0;
+    let percentBonus = (activeChar.agencyLevel * 2) / 100; 
+    let tAtkLvl = activeChar.talentsLevels['t_atk'] || 0;
+    let tHpLvl = activeChar.talentsLevels['t_hp'] || 0;
     percentBonus += (tAtkLvl * 0.10);
     
     let finalAtk = Math.floor((baseAtk + flatAtk) * (1 + percentBonus)); 
@@ -351,13 +480,14 @@ function getCalculatedStats() {
 }
 
 window.openTitlesModal = function() {
+    if (!activeChar) return;
     let container = document.getElementById('titlesListContainer');
     if(!container) return;
     container.innerHTML = '';
 
     titlesConfig.forEach(t => {
-        let isUnlocked = savedData.unlockedTitles.includes(t.id);
-        let isEquipped = savedData.equippedTitle === t.id;
+        let isUnlocked = activeChar.unlockedTitles.includes(t.id);
+        let isEquipped = activeChar.equippedTitle === t.id;
 
         container.innerHTML += `
             <div style="background: #181820; border: 1px solid ${isEquipped ? '#ffaa00' : '#444'}; border-radius: 8px; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
@@ -366,7 +496,7 @@ window.openTitlesModal = function() {
                     <div style="color: #888; font-size: 9px; margin-top: 2px;">Бонусы: +${t.bonusAtk} АТК, +${t.bonusHp} HP</div>
                     <div style="color: #555; font-size: 9px;">Требуется ур. Сталкера: ${t.reqLevel}</div>
                 </div>
-                <button onclick="equipTitle('${t.id}'); playSound('click');" ${!isUnlocked || isEquipped ? 'disabled' : ''} style="background: ${isEquipped ? '#28a745' : (isUnlocked ? '#ffaa00' : '#444')}; color: ${isUnlocked ? '#000' : '#fff'}; border: none; padding: 5px 10px; border-radius: 6px; font-weight: bold; font-size: 10px; cursor: pointer;">
+                <button onclick="equipTitle('${t.id}')" ${!isUnlocked || isEquipped ? 'disabled' : ''} style="background: ${isEquipped ? '#28a745' : (isUnlocked ? '#ffaa00' : '#444')}; color: ${isUnlocked ? '#000' : '#fff'}; border: none; padding: 5px 10px; border-radius: 6px; font-weight: bold; font-size: 10px; cursor: pointer;">
                     ${isEquipped ? 'Надето' : (isUnlocked ? 'Надеть' : 'Заблокировано')}
                 </button>
             </div>
@@ -378,30 +508,32 @@ window.openTitlesModal = function() {
 };
 
 window.openProfileModal = function() {
-    let pId = document.getElementById('profId');
+    if (!activeChar) return;
+    let pName = document.getElementById('profName');
+    let pClass = document.getElementById('profClass');
     let pTitle = document.getElementById('profTitle');
     let pLevel = document.getElementById('profLevel');
     let pKills = document.getElementById('profKills');
-    let pStage = document.getElementById('profStage');
     let pGear = document.getElementById('profGearList');
     let chk = document.getElementById('chkPublicGear');
 
-    if(pId) pId.innerText = 'STK-' + (savedData.accountLevel * 334 + 1000);
-    let curTitleObj = titlesConfig.find(t => t.id === savedData.equippedTitle) || titlesConfig[0];
+    let cls = characterClassesConfig[activeChar.classKey] || characterClassesConfig.assault;
+    if(pName) pName.innerText = activeChar.name;
+    if(pClass) pClass.innerText = cls.name;
+    let curTitleObj = titlesConfig.find(t => t.id === activeChar.equippedTitle) || titlesConfig[0];
     if(pTitle) pTitle.innerText = curTitleObj.name;
-    if(pLevel) pLevel.innerText = savedData.accountLevel;
-    if(pKills) pKills.innerText = savedData.totalKillsAllTime || 0;
-    if(pStage) pStage.innerText = savedData.maxStageReached || savedData.stage;
-    if(chk) chk.checked = savedData.profilePrivacy.publicGear;
+    if(pLevel) pLevel.innerText = activeChar.accountLevel;
+    if(pKills) pKills.innerText = activeChar.totalKillsAllTime || 0;
+    if(chk) chk.checked = activeChar.profilePrivacy.publicGear;
 
     if(pGear) {
-        if (!savedData.profilePrivacy.publicGear) {
+        if (!activeChar.profilePrivacy.publicGear) {
             pGear.innerText = 'Снаряжение скрыто настройками приватности.';
         } else {
             let gearStr = [];
             ['helmet', 'armor', 'ring', 'weapon', 'boots', 'drone', 'mount'].forEach(slot => {
-                if (savedData.equipped[slot]) {
-                    let d = getItemData(savedData.equipped[slot]);
+                if (activeChar.equipped[slot]) {
+                    let d = getItemData(activeChar.equipped[slot]);
                     gearStr.push(`${d.icon} ${d.id.toUpperCase()}`);
                 }
             });
@@ -414,18 +546,19 @@ window.openProfileModal = function() {
 };
 
 window.toggleProfilePrivacy = function() {
+    if (!activeChar) return;
     let chk = document.getElementById('chkPublicGear');
     if(chk) {
-        savedData.profilePrivacy.publicGear = chk.checked;
-        saveData();
+        activeChar.profilePrivacy.publicGear = chk.checked;
+        saveAccount();
         openProfileModal();
     }
 };
 
 window.equipTitle = function(titleId) {
-    if (!savedData.unlockedTitles.includes(titleId)) return;
-    savedData.equippedTitle = titleId;
-    saveData();
+    if (!activeChar || !activeChar.unlockedTitles.includes(titleId)) return;
+    activeChar.equippedTitle = titleId;
+    saveAccount();
     openTitlesModal();
     updateTopBar();
     showBmPopup("Титул успешно изменен!");
@@ -443,12 +576,12 @@ window.switchHubTab = function(tabName, btnEl) {
     if(btnEl) btnEl.classList.add('active');
 
     const content = document.getElementById('hubTabContent');
-    if(!content) return;
+    if(!content || !activeChar) return;
 
     if (tabName === 'raid') {
         let basesHTML = '';
         enemyBasesConfig.forEach(b => {
-            let bpLabel = b.lootBp === 'bp_w2' ? 'Плазма' : (b.lootBp === 'bp_w3' ? 'Рельсотрон' : 'Ракетница');
+            let bpLabel = 'Плазма';
             basesHTML += `
                 <div style="background: #1e1e2c; border: 1px solid #e43f5a; border-radius: 8px; padding: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
                     <div>
@@ -456,36 +589,22 @@ window.switchHubTab = function(tabName, btnEl) {
                         <div style="color: #00ff00; font-size: 9px;">Защита БМ: ${b.defenseBm} | Турелей: ${b.towersCount}</div>
                         <div style="color: #ffd700; font-size: 9px;">💰 ${b.lootGold} | ⚙️ ${b.lootParts} | 📜 ${bpLabel}</div>
                     </div>
-                    <button onclick="startBaseRaid('${b.id}'); playSound('click');" style="background: #e43f5a; color: white; border: none; padding: 5px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Штурм</button>
+                    <button onclick="startBaseRaid('${b.id}')" style="background: #e43f5a; color: white; border: none; padding: 5px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Штурм</button>
                 </div>
             `;
         });
         content.innerHTML = `
-            <div style="background: #2a2a35; border: 1px solid #555; border-radius: 8px; padding: 8px; margin-bottom: 8px;">
-                <div style="color: #ffd700; font-weight: bold; font-size: 10px;">🛡️ Защита вашей базы: Турелей: ${savedData.baseDefense.towers} | Охрана: ${savedData.baseDefense.guards}</div>
-                <button onclick="upgradeBaseDefense(); playSound('click');" style="background: #28a745; color: white; border: none; padding: 4px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 9px; cursor: pointer; margin-top: 4px;">Улучшить защиту (1000 💰)</button>
-            </div>
-            <div style="font-weight: bold; font-size: 11px; color: #ffea00; margin-bottom: 4px;">🎯 Доступные базы:</div>
+            <div style="font-weight: bold; font-size: 11px; color: #ffea00; margin-bottom: 4px;">🎯 Доступные базы рейдов:</div>
             ${basesHTML}
         `;
     } else if (tabName === 'guild') {
-        if (!savedData.guild) {
-            content.innerHTML = `
-                <p style="color: #ccc; font-size: 11px; margin-top: 0;">Вы не состоите в гильдии.</p>
-                <button onclick="joinGuild('g1'); playSound('click');" style="background: #da70d6; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 10px; cursor: pointer;">Вступить в "Стальные Тени"</button>
-            `;
-        } else {
-            content.innerHTML = `
-                <div style="background: #1e1e2c; border: 1px solid #da70d6; border-radius: 8px; padding: 8px; text-align: center; margin-bottom: 8px;">
-                    <div style="color: #da70d6; font-weight: bold; font-size: 12px;">🛡️ ${savedData.guild.name} (ур. ${savedData.guild.level})</div>
-                    <div style="color: #00ff00; font-size: 10px; margin-top: 2px;">🪙 Жетоны гильдии: ${savedData.guild.tokens || 0}</div>
-                    <div style="color: #ffd700; font-size: 10px; margin-top: 2px;">📦 Казна: ${savedData.guild.treasuryGold || 0} золота</div>
-                    <button onclick="donateToGuildTreasury(); playSound('click');" style="background: #ffd700; color: #000; border: none; padding: 4px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 9px; cursor: pointer; margin-top: 6px;">Внести 500 💰 в казну</button>
-                    <button onclick="startGuildRaidBattle(); playSound('click');" style="background: #ff4a4a; color: white; border: none; padding: 5px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 10px; cursor: pointer; margin-top: 6px;">Атаковать рейд-босса (${savedData.guildBossHp}/${guildRaidBoss.hp} HP)</button>
-                </div>
-                <button onclick="leaveGuild(); playSound('click');" style="background: #dc3545; color: white; border: none; padding: 5px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 9px; cursor: pointer;">Покинуть гильдию</button>
-            `;
-        }
+        content.innerHTML = `
+            <div style="background: #1e1e2c; border: 1px solid #da70d6; border-radius: 8px; padding: 8px; text-align: center; margin-bottom: 8px;">
+                <div style="color: #da70d6; font-weight: bold; font-size: 12px;">🛡️ Секторный Рейд Босса</div>
+                <div style="color: #ff4a4a; font-size: 10px; margin-top: 2px;">${guildRaidBoss.name}</div>
+                <button onclick="startGuildRaidBattle()" style="background: #ff4a4a; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 10px; cursor: pointer; margin-top: 8px;">Атаковать рейд-босса</button>
+            </div>
+        `;
     } else if (tabName === 'arena') {
         let arenaHTML = '';
         simulationBots.forEach(bot => {
@@ -495,7 +614,7 @@ window.switchHubTab = function(tabName, btnEl) {
                         <div style="color: #fff; font-weight: bold; font-size: 11px;">${bot.icon} ${bot.name}</div>
                         <div style="color: #00ff00; font-size: 9px;">⚔️ БМ: ${bot.bm} | ❤️ HP: ${bot.hp}</div>
                     </div>
-                    <button onclick="startArenaBattle('${bot.name}'); playSound('click');" style="background: #ff4a4a; color: white; border: none; padding: 5px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Бой</button>
+                    <button onclick="startArenaBattle('${bot.name}')" style="background: #ff4a4a; color: white; border: none; padding: 5px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Бой</button>
                 </div>
             `;
         });
@@ -503,15 +622,13 @@ window.switchHubTab = function(tabName, btnEl) {
     } else if (tabName === 'market') {
         let marketHTML = '';
         marketSystemConfig.forEach(item => {
-            let boughtToday = savedData.marketLimits[item.id] || 0;
-            let leftToday = Math.max(0, item.maxDaily - boughtToday);
             marketHTML += `
                 <div style="background: #1e1e2c; border: 1px solid #444; border-radius: 8px; padding: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <div style="font-size: 12px;">${item.icon} <strong style="color:#fff; font-size:11px;">${item.name}</strong></div>
-                        <div style="color: #aaa; font-size: 9px;">Лимит: ${leftToday}/${item.maxDaily} | ${item.pricePerUnitGem} 💎</div>
+                        <div style="color: #aaa; font-size: 9px;">Цена: ${item.pricePerUnitGem} 💎</div>
                     </div>
-                    <button onclick="buyMarketItem('${item.id}', 1); playSound('click');" ${leftToday <= 0 ? 'disabled' : ''} style="background: ${leftToday > 0 ? '#28a745' : '#555'}; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Купить</button>
+                    <button onclick="buyMarketItem('${item.id}', 1)" style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Купить</button>
                 </div>
             `;
         });
@@ -519,19 +636,18 @@ window.switchHubTab = function(tabName, btnEl) {
     } else if (tabName === 'leaderboard') {
         let stats = getCalculatedStats();
         let myBm = Math.floor(stats.atk * 2 + stats.hp / 10);
-        let curTitleObj = titlesConfig.find(t => t.id === savedData.equippedTitle) || titlesConfig[0];
+        let curTitleObj = titlesConfig.find(t => t.id === activeChar.equippedTitle) || titlesConfig[0];
 
-        let allRivals = [...leaderboardRivals, { name: 'Вы (Сталкер)', bm: myBm, level: savedData.accountLevel, title: curTitleObj.name, isMe: true }];
+        let allRivals = [...leaderboardRivals, { name: activeChar.name, bm: myBm, level: activeChar.accountLevel, title: curTitleObj.name, isMe: true }];
         allRivals.sort((a, b) => b.bm - a.bm);
 
         let listHtml = '';
         allRivals.forEach((r, idx) => {
             let rank = idx + 1;
-            let rankColor = rank === 1 ? '#ffd700' : (rank === 2 ? '#c0c0c0' : (rank === 3 ? '#cd7f32' : '#888'));
             listHtml += `
                 <div style="background: ${r.isMe ? '#252535' : '#1e1e2c'}; border: 1px solid ${r.isMe ? '#ffaa00' : '#444'}; border-radius: 8px; padding: 7px 10px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="color: ${rankColor}; font-weight: bold; font-size: 13px; width: 18px;">#${rank}</span>
+                        <span style="color: #ffd700; font-weight: bold; font-size: 13px; width: 18px;">#${rank}</span>
                         <div>
                             <div style="color: ${r.isMe ? '#ffaa00' : '#fff'}; font-weight: bold; font-size: 11px;">${r.name}</div>
                             <div style="color: #aaa; font-size: 9px;">[${r.title}] • Ур. ${r.level}</div>
@@ -545,7 +661,7 @@ window.switchHubTab = function(tabName, btnEl) {
     } else if (tabName === 'gems') {
         let gemsHtml = '';
         gemsConfig.forEach(g => {
-            let gData = savedData.playerGems[g.id] || { level: 1, count: 0 };
+            let gData = activeChar.playerGems[g.id] || { level: 1, count: 0 };
             gemsHtml += `
                 <div style="background: #1e1e2c; border: 1px solid #444; border-radius: 8px; padding: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
                     <div>
@@ -553,139 +669,95 @@ window.switchHubTab = function(tabName, btnEl) {
                         <div style="color: #aaa; font-size: 9px; margin: 2px 0;">В наличии: ${gData.count} шт.</div>
                     </div>
                     <div style="display:flex; gap:3px;">
-                        <button onclick="upgradeGem('${g.id}', 1); playSound('click');" style="background: #28a745; color: white; border: none; padding: 4px 6px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer;">Синтез</button>
-                        <button onclick="upgradeGem('${g.id}', 'mass'); playSound('click');" style="background: #ffaa00; color: #000; border: none; padding: 4px 6px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer;">Массово</button>
-                        <button onclick="socketGem('${g.id}', 'weapon'); playSound('click');" style="background: #00aaff; color: white; border: none; padding: 4px 6px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer;">В пушку</button>
+                        <button onclick="upgradeGem('${g.id}', 1)" style="background: #28a745; color: white; border: none; padding: 4px 6px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer;">Синтез</button>
+                        <button onclick="socketGem('${g.id}', 'weapon')" style="background: #00aaff; color: white; border: none; padding: 4px 6px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer;">В пушку</button>
                     </div>
                 </div>
             `;
         });
-        content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #00ffcc; margin-bottom: 4px;">💎 Управление рунами:</div>${gemsHtml} <div id="gemLog" style="color:#aaa; font-size:9px; margin-top:6px; max-height:50px; overflow-y:auto;"></div>`;
+        content.innerHTML = `<div style="font-weight: bold; font-size: 11px; color: #00ffcc; margin-bottom: 4px;">💎 Руны:</div>${gemsHtml} <div id="gemLog" style="color:#aaa; font-size:9px; margin-top:6px;"></div>`;
     }
 };
 
 window.socketGem = function(gId, targetSlot) {
-    let gData = savedData.playerGems[gId];
-    if (!gData || gData.count <= 0) { showAlert("У вас нет таких рун в инвентаре!"); return; }
-    
-    savedData.socketedGems[targetSlot] = { gemId: gId, level: gData.level };
-    saveData();
+    if (!activeChar) return;
+    let gData = activeChar.playerGems[gId];
+    if (!gData || gData.count <= 0) { showAlert("У вас нет таких рун!"); return; }
+    activeChar.socketedGems[targetSlot] = { gemId: gId, level: gData.level };
+    saveAccount();
     switchHubTab('gems', document.querySelectorAll('.hub-tab-btn')[5]);
     renderInventory();
-    showBmPopup("Руна успешно вставлена в оружие! ⚔️");
+    showBmPopup("Руна вставлена в оружие! ⚔️");
 };
 
 window.upgradeGem = function(gId, mode) {
-    let gData = savedData.playerGems[gId];
+    if (!activeChar) return;
+    let gData = activeChar.playerGems[gId];
     let logEl = document.getElementById('gemLog');
-    if (!gData) return;
+    if (!gData || gData.count < 3) { showAlert("Нужно минимум 3 руны для синтеза!"); return; }
 
-    if (mode === 1) {
-        if (gData.count < 3) { showAlert("Нужно минимум 3 руны для синтеза!"); return; }
-        gData.count -= 3;
-        let successChance = Math.max(30, 90 - (gData.level * 2));
-        let isSuccess = Math.random() * 100 < successChance;
-        if (isSuccess) {
-            gData.level++;
-            if(logEl) logEl.innerHTML = `<div>✨ Успешный синтез! Руна поднята до ур. ${gData.level}</div>` + logEl.innerHTML;
-            showBmPopup("Руна улучшена!");
-        } else {
-            if(logEl) logEl.innerHTML = `<div>💥 Неудача! 3 руны сгорели при синтезе.</div>` + logEl.innerHTML;
-            showBmPopup("Руна разрушена при синтезе!");
-        }
-    } else if (mode === 'mass') {
-        if (gData.count < 3) { showAlert("Недостаточно рун для массового синтеза!"); return; }
-        let attempts = Math.floor(gData.count / 3);
-        let successCount = 0;
-        let breakCount = 0;
-
-        for (let i = 0; i < attempts; i++) {
-            gData.count -= 3;
-            let successChance = Math.max(30, 90 - (gData.level * 2));
-            if (Math.random() * 100 < successChance) {
-                gData.level++;
-                successCount++;
-            } else {
-                breakCount++;
-            }
-        }
-        if(logEl) logEl.innerHTML = `<div>📦 Массовый синтез: Успешно: ${successCount}, Сломано: ${breakCount}</div>` + logEl.innerHTML;
-        showBmPopup(`Синтез завершен: +${successCount} уровней!`);
+    gData.count -= 3;
+    let successChance = Math.max(30, 90 - (gData.level * 2));
+    if (Math.random() * 100 < successChance) {
+        gData.level++;
+        if(logEl) logEl.innerHTML = `✨ Успешный синтез до ур. ${gData.level}!`;
+        showBmPopup("Руна улучшена!");
+    } else {
+        if(logEl) logEl.innerHTML = `💥 Руны сгорели при синтезе!`;
+        showBmPopup("Синтез не удался.");
     }
-    saveData();
+    saveAccount();
     switchHubTab('gems', document.querySelectorAll('.hub-tab-btn')[5]);
 };
 
-window.joinGuild = function(gId) {
-    let g = sampleGuilds.find(x => x.id === gId) || sampleGuilds[0];
-    savedData.guild = { id: g.id, name: g.name, level: g.level, tokens: 100, treasuryGold: 1000 };
-    saveData();
-    switchHubTab('guild', document.querySelectorAll('.hub-tab-btn')[1]);
-    showBmPopup(`Вступили в гильдию "${g.name}"!`);
-};
+window.buyMarketItem = function(itemId, qty) {
+    if (!activeChar) return;
+    let cfg = marketSystemConfig.find(x => x.id === itemId);
+    if (!cfg) return;
+    let totalCost = cfg.pricePerUnitGem * qty;
+    if (activeChar.gems < totalCost) { showAlert("Недостаточно алмазов!"); return; }
 
-window.leaveGuild = function() {
-    savedData.guild = null;
-    saveData();
-    switchHubTab('guild', document.querySelectorAll('.hub-tab-btn')[1]);
-    showBmPopup("Вы покинули гильдию.");
-};
-
-window.donateToGuildTreasury = function() {
-    if (!savedData.guild) return;
-    if (savedData.gold < 500) { showAlert("Недостаточно золота!"); return; }
-    savedData.gold -= 500;
-    if (!savedData.guild.treasuryGold) savedData.guild.treasuryGold = 0;
-    savedData.guild.treasuryGold += 500;
-    if (!savedData.guild.tokens) savedData.guild.tokens = 0;
-    savedData.guild.tokens += 20; 
-    saveData();
-    switchHubTab('guild', document.querySelectorAll('.hub-tab-btn')[1]);
-    showBmPopup("+20 Жетонов гильдии!");
+    activeChar.gems -= totalCost;
+    activeChar.parts += 10 * qty; 
+    saveAccount(); 
+    switchHubTab('market', document.querySelectorAll('.hub-tab-btn')[3]);
+    showBmPopup(`Успешно куплено!`);
 };
 
 window.renderCrafting = function() { 
+    if (!activeChar) return;
     const list = document.getElementById('craftingList'); 
     if(!list) return;
     list.innerHTML = ''; 
     craftingRecipes.forEach(recipe => { 
-        let hasBp = !recipe.reqBp || (savedData.blueprints[recipe.reqBp] || 0) > 0; 
-        let craftDiscount = (savedData.talentsLevels['t_craft'] || 0) * 0.05;
-        let finalGold = Math.floor(recipe.costGold * (1 - craftDiscount));
-        let finalParts = Math.floor(recipe.costParts * (1 - craftDiscount));
-
-        let canCraft = savedData.stage >= recipe.reqStage && savedData.gold >= finalGold && savedData.parts >= finalParts && hasBp; 
-        let bpText = recipe.reqBp ? `<br><span style="color:${hasBp?'#00ff00':'#ff4a4a'}">📜 ${recipe.bpName}: ${(savedData.blueprints[recipe.reqBp]||0)}/1</span>` : ''; 
-        list.innerHTML += `<div class="craft-card"><div><div style="font-size: 18px; float: left; margin-right: 6px;">${recipe.icon}</div><div style="font-weight: bold; color: #fff; font-size: 11px;">${recipe.name}</div><div style="color: #aaa; font-size: 9px;">💰 ${finalGold} | ⚙️ ${finalParts} ${bpText}</div></div><button onclick="craftWeapon('${recipe.id}'); playSound('click');" ${canCraft ? '' : 'disabled'} style="background: ${canCraft ? '#28a745' : '#555'}; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; cursor:pointer; font-size:10px;">Создать</button></div>`; 
+        let hasBp = !recipe.reqBp || (activeChar.blueprints[recipe.reqBp] || 0) > 0; 
+        let canCraft = activeChar.stage >= recipe.reqStage && activeChar.gold >= recipe.costGold && activeChar.parts >= recipe.costParts && hasBp; 
+        list.innerHTML += `<div class="craft-card"><div><div style="font-size: 18px; float: left; margin-right: 6px;">${recipe.icon}</div><div style="font-weight: bold; color: #fff; font-size: 11px;">${recipe.name}</div><div style="color: #aaa; font-size: 9px;">💰 ${recipe.costGold} | ⚙️ ${recipe.costParts}</div></div><button onclick="craftWeapon('${recipe.id}')" ${canCraft ? '' : 'disabled'} style="background: ${canCraft ? '#28a745' : '#555'}; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; cursor:pointer; font-size:10px;">Создать</button></div>`; 
     }); 
 };
 
 window.craftWeapon = function(recipeId) { 
+    if (!activeChar) return;
     const recipe = craftingRecipes.find(r => r.id === recipeId); 
     if (!recipe) return; 
-    let craftDiscount = (savedData.talentsLevels['t_craft'] || 0) * 0.05;
-    let finalGold = Math.floor(recipe.costGold * (1 - craftDiscount));
-    let finalParts = Math.floor(recipe.costParts * (1 - craftDiscount));
-
-    let hasBp = !recipe.reqBp || (savedData.blueprints[recipe.reqBp] || 0) > 0; 
-    if (savedData.stage >= recipe.reqStage && savedData.gold >= finalGold && savedData.parts >= finalParts && hasBp) { 
-        savedData.gold -= finalGold; 
-        savedData.parts -= finalParts; 
-        if (recipe.reqBp) savedData.blueprints[recipe.reqBp] -= 1; 
-        savedData.inventory.push({ uid: getUid(), id: recipe.id }); 
-        saveData(); 
+    if (activeChar.stage >= recipe.reqStage && activeChar.gold >= recipe.costGold && activeChar.parts >= recipe.costParts) { 
+        activeChar.gold -= recipe.costGold; 
+        activeChar.parts -= recipe.costParts; 
+        activeChar.inventory.push({ uid: getUid(), id: recipe.id }); 
+        saveAccount(); 
         renderCrafting(); 
         showBmPopup(`СОЗДАНО: ${recipe.name}!`); 
-    } else { showAlert("Не хватает ресурсов или чертежа!"); } 
+    } else { showAlert("Не хватает ресурсов или главы!"); } 
 };
 
 window.renderTalentsUI = function() {
+    if (!activeChar) return;
     const container = document.getElementById('talentsContainer');
     if (!container) return;
     container.innerHTML = '';
 
     agencyTalentsConfig.forEach(t => {
-        let lvl = savedData.talentsLevels[t.id] || 0;
+        let lvl = activeChar.talentsLevels[t.id] || 0;
         let cost = Math.floor(t.baseCostParts * Math.pow(t.costScale, lvl));
         let maxed = lvl >= t.maxLevel;
 
@@ -696,42 +768,44 @@ window.renderTalentsUI = function() {
                     <div style="font-size:9px; color:#aaa; margin-top:2px;">${t.desc}</div>
                     <div style="font-size:9px; color:#da70d6; margin-top:2px;">Цена: ${maxed ? 'МАКС' : cost + ' ⚙️'}</div>
                 </div>
-                <button onclick="upgradeTalent('${t.id}'); playSound('click');" ${maxed ? 'disabled' : ''} style="background: ${maxed ? '#555' : '#28a745'}; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; font-size:10px; cursor:pointer;">${maxed ? 'Макс' : 'Улучшить'}</button>
+                <button onclick="upgradeTalent('${t.id}')" ${maxed ? 'disabled' : ''} style="background: ${maxed ? '#555' : '#28a745'}; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; font-size:10px; cursor:pointer;">${maxed ? 'Макс' : 'Улучшить'}</button>
             </div>
         `;
     });
 };
 
 window.upgradeTalent = function(tId) {
+    if (!activeChar) return;
     let t = agencyTalentsConfig.find(x => x.id === tId);
     if (!t) return;
-    let lvl = savedData.talentsLevels[tId] || 0;
+    let lvl = activeChar.talentsLevels[tId] || 0;
     if (lvl >= t.maxLevel) return;
     let cost = Math.floor(t.baseCostParts * Math.pow(t.costScale, lvl));
 
-    if (savedData.parts < cost) { showAlert("Недостаточно деталей (⚙️)!"); return; }
+    if (activeChar.parts < cost) { showAlert("Недостаточно деталей (⚙️)!"); return; }
 
-    savedData.parts -= cost;
-    savedData.talentsLevels[tId] = lvl + 1;
-    saveData();
+    activeChar.parts -= cost;
+    activeChar.talentsLevels[tId] = lvl + 1;
+    saveAccount();
     renderTalentsUI();
     showBmPopup(`Талант улучшен!`);
 };
 
 window.renderSeasonUI = function() {
+    if (!activeChar) return;
     let lvlDisplay = document.getElementById('seasonLevelDisplay');
     let xpBar = document.getElementById('seasonXpBar');
     let container = document.getElementById('seasonRewardsContainer');
     if (!container) return;
 
-    if(lvlDisplay) lvlDisplay.innerText = savedData.seasonLevel;
-    let maxXpForLevel = savedData.seasonLevel * 100;
-    if(xpBar) xpBar.style.width = Math.min(100, (savedData.seasonXp / maxXpForLevel) * 100) + '%';
+    if(lvlDisplay) lvlDisplay.innerText = activeChar.seasonLevel;
+    let maxXpForLevel = activeChar.seasonLevel * 100;
+    if(xpBar) xpBar.style.width = Math.min(100, (activeChar.seasonXp / maxXpForLevel) * 100) + '%';
 
     container.innerHTML = '';
     seasonPassRewardsConfig.forEach(r => {
-        let isClaimed = savedData.seasonClaimed[r.level] || false;
-        let canClaim = savedData.seasonLevel >= r.level && !isClaimed;
+        let isClaimed = activeChar.seasonClaimed[r.level] || false;
+        let canClaim = activeChar.seasonLevel >= r.level && !isClaimed;
 
         container.innerHTML += `
             <div style="background: #1e1e2c; border: 1px solid #444; border-radius: 8px; padding: 10px; display:flex; justify-content:space-between; align-items:center;">
@@ -739,20 +813,21 @@ window.renderSeasonUI = function() {
                     <div style="font-size:12px; color:#ffd700; font-weight:bold;">Уровень ${r.level}: ${r.desc}</div>
                     <div style="font-size:10px; color:#00ff00; margin-top:2px;">🎁 Награда: +${r.rewardGold} 💰, +${r.rewardGems} 💎</div>
                 </div>
-                <button onclick="claimSeasonReward(${r.level}); playSound('click');" ${canClaim ? '' : 'disabled'} style="background: ${isClaimed ? '#555' : (canClaim ? '#28a745' : '#444')}; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; font-size:10px; cursor:pointer;">${isClaimed ? 'Получено' : 'Забрать'}</button>
+                <button onclick="claimSeasonReward(${r.level})" ${canClaim ? '' : 'disabled'} style="background: ${isClaimed ? '#555' : (canClaim ? '#28a745' : '#444')}; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; font-size:10px; cursor:pointer;">${isClaimed ? 'Получено' : 'Забрать'}</button>
             </div>
         `;
     });
 };
 
 window.claimSeasonReward = function(lvl) {
+    if (!activeChar) return;
     let r = seasonPassRewardsConfig.find(x => x.level === lvl);
-    if (!r || savedData.seasonClaimed[lvl] || savedData.seasonLevel < lvl) return;
+    if (!r || activeChar.seasonClaimed[lvl] || activeChar.seasonLevel < lvl) return;
 
-    savedData.seasonClaimed[lvl] = true;
-    savedData.gold += r.rewardGold;
-    savedData.gems += r.rewardGems;
-    saveData();
+    activeChar.seasonClaimed[lvl] = true;
+    activeChar.gold += r.rewardGold;
+    activeChar.gems += r.rewardGems;
+    saveAccount();
     renderSeasonUI();
     showBmPopup(`Награда получена!`);
 };
@@ -761,78 +836,68 @@ window.openDropRatesModal = function() {
     let m = document.getElementById('dropRatesModal'); if(m) m.style.display = 'flex';
 };
 
+// Анимированное открытие сундука
 window.openChest = function(chestType, amount) { 
+    if (!activeChar) return;
     let cost = 400 * amount; 
-    if (savedData.gems < cost) { showAlert("Недостаточно алмазов!"); return; } 
-    savedData.gems -= cost; 
+    if (activeChar.gems < cost) { showAlert("Недостаточно алмазов!"); return; } 
+    activeChar.gems -= cost; 
 
+    let modal = document.getElementById('gachaResult');
     let chestBox = document.getElementById('gachaChestBox');
-    if (chestBox) chestBox.className = 'chest-anim';
-
-    let pulled = []; 
-    for (let i = 0; i < amount; i++) { 
-        let r = Math.random(), tr = r < 0.05 ? 'legendary' : (r < 0.15 ? 'epic' : (r < 0.45 ? 'rare' : 'normal')); 
-        let pool = itemDatabase.filter(x => x.rarity === tr); if(!pool.length) pool = itemDatabase; 
-        let item = pool[Math.floor(Math.random()*pool.length)]; 
-        savedData.inventory.push({uid: getUid(), id: item.id}); 
-        pulled.push(item); 
-    } 
-    saveData(); 
+    let container = document.getElementById('gachaItemsList');
+    let titleEl = document.getElementById('gachaTitle');
+    
+    if(titleEl) titleEl.innerText = "✨ ОТКРЫТИЕ КОНТЕЙНЕРА...";
+    if(container) container.innerHTML = '';
+    if(chestBox) chestBox.className = 'chest-anim';
+    if(modal) modal.style.display = 'flex';
 
     setTimeout(() => {
-        if (chestBox) chestBox.className = '';
-        const container = document.getElementById('gachaItemsList'); 
+        if(chestBox) chestBox.className = '';
+        if(titleEl) titleEl.innerText = "✨ ДОБЫЧА ИЗ КОНТЕЙНЕРА!";
+        
+        let pulled = []; 
+        for (let i = 0; i < amount; i++) { 
+            let r = Math.random(), tr = r < 0.08 ? 'legendary' : (r < 0.2 ? 'epic' : (r < 0.5 ? 'rare' : 'normal')); 
+            let pool = itemDatabase.filter(x => x.rarity === tr); if(!pool.length) pool = itemDatabase; 
+            let item = pool[Math.floor(Math.random()*pool.length)]; 
+            activeChar.inventory.push({uid: getUid(), id: item.id}); 
+            pulled.push(item); 
+        } 
+        saveAccount(); 
+
         if(container) {
-            container.innerHTML = ''; 
             pulled.forEach(item => { 
                 let div = document.createElement('div'); 
                 div.className = `inv-item rarity-bg-${item.rarity}`; 
-                div.style.width = '55px'; div.style.height = '55px'; div.style.fontSize = '26px'; 
+                div.style.width = '60px'; div.style.height = '60px'; div.style.fontSize = '28px'; 
                 div.innerHTML = item.icon; 
                 container.appendChild(div); 
             }); 
         }
-        let modal = document.getElementById('gachaResult'); if(modal) modal.style.display = 'flex'; 
-    }, 500);
-};
-
-window.buyMarketItem = function(itemId, qty) {
-    let cfg = marketSystemConfig.find(x => x.id === itemId);
-    if (!cfg || qty <= 0) return;
-    let totalCost = cfg.pricePerUnitGem * qty;
-    if (savedData.gems < totalCost) { showAlert("Недостаточно алмазов!"); return; }
-
-    savedData.gems -= totalCost;
-    savedData.parts += 10 * qty; 
-    saveData(); 
-    switchHubTab('market', document.querySelectorAll('.hub-tab-btn')[3]);
-    showBmPopup(`Успешно куплено!`);
-};
-
-window.upgradeBaseDefense = function() {
-    if (savedData.gold < 1000) { showAlert("Недостаточно золота!"); return; }
-    savedData.gold -= 1000;
-    savedData.baseDefense.towers += 1;
-    savedData.baseDefense.guards += 1;
-    saveData();
-    switchHubTab('raid', document.querySelector('.hub-tab-btn'));
-    showBmPopup("Защита базы усилена!");
+    }, 800);
 };
 
 window.renderInventory = function() { 
+    if (!activeChar) return;
     const grid = document.getElementById('inventoryGrid'); 
     if(!grid) return;
     grid.innerHTML = ''; 
     const slotIcons = { helmet: '🧢', armor: '👕', ring: '💍', boots: '👞', weapon: '🔫', drone: '🛸', mount: '🦾' }; 
+    
     ['helmet', 'armor', 'ring', 'weapon', 'boots', 'drone', 'mount'].forEach(type => { 
         const slot = document.getElementById(`slot-${type}`); 
-        if (slot && savedData.equipped[type]) { 
-            let data = getItemData(savedData.equipped[type]); 
+        if (slot && activeChar.equipped[type]) { 
+            let data = getItemData(activeChar.equipped[type]); 
             slot.className = `eq-slot rarity-bg-${data.rarity}`; 
             slot.innerHTML = `${data.icon}`; 
+            slot.onmouseenter = (e) => showGearTooltip(e, data);
+            slot.onmouseleave = hideGearTooltip;
         } else if(slot) { 
             slot.className = 'eq-slot'; 
             slot.innerHTML = `<span style="color:#555;">${slotIcons[type]}</span>`; 
+            slot.onmouseenter = null; slot.onmouseleave = null;
         } 
     }); 
 
@@ -840,47 +905,72 @@ window.renderInventory = function() {
     if (gemsCont) {
         gemsCont.innerHTML = '';
         ['weapon', 'armor', 'helmet'].forEach(sKey => {
-            let socket = savedData.socketedGems[sKey];
+            let socket = activeChar.socketedGems[sKey];
             let cfg = socket ? gemsConfig.find(x => x.id === socket.gemId) : null;
             gemsCont.innerHTML += `<div><b>${sKey.toUpperCase()}:</b> ${cfg ? `${cfg.icon} Ур.${socket.level}` : 'Пусто'}</div>`;
         });
     }
 
-    savedData.inventory.forEach(invItem => { 
+    activeChar.inventory.forEach(invItem => { 
         let data = getItemData(invItem.id); 
         if(!data) return; 
         let div = document.createElement('div'); 
         div.className = `inv-item rarity-bg-${data.rarity}`; 
         div.innerHTML = `${data.icon}<div class="stat-badge">${data.atk > 0 ? '+'+data.atk : '+'+data.hp}</div>`; 
-        div.onclick = () => { window.equipItem(invItem.uid, data.type); playSound('click'); }; 
+        div.onclick = () => { window.equipItem(invItem.uid, data.type); }; 
+        div.onmouseenter = (e) => showGearTooltip(e, data);
+        div.onmouseleave = hideGearTooltip;
         grid.appendChild(div); 
     }); 
 };
 
+// Тултип снаряжения при наведении мыши (ПК) или клике
+function showGearTooltip(e, data) {
+    let tooltip = document.getElementById('gearTooltip');
+    if (!tooltip) return;
+    tooltip.innerHTML = `
+        <div style="font-weight: bold; color: #ffaa00; margin-bottom: 3px;">${data.icon} ${data.id.toUpperCase()}</div>
+        <div style="color: #aaa; margin-bottom: 4px; font-size: 10px;">${data.desc || ''}</div>
+        <div style="color: #00ff66;">Урон: +${data.atk || 0}</div>
+        <div style="color: #00ffcc;">Здоровье: +${data.hp || 0}</div>
+    `;
+    tooltip.style.display = 'block';
+    tooltip.style.left = (e.pageX + 10) + 'px';
+    tooltip.style.top = (e.pageY + 10) + 'px';
+}
+
+function hideGearTooltip() {
+    let tooltip = document.getElementById('gearTooltip');
+    if (tooltip) tooltip.style.display = 'none';
+}
+
 window.equipItem = function(uid, type) { 
-    let index = savedData.inventory.findIndex(i => i.uid === uid); 
+    if (!activeChar) return;
+    let index = activeChar.inventory.findIndex(i => i.uid === uid); 
     if (index === -1) return; 
-    if (savedData.equipped[type]) savedData.inventory.push({ uid: getUid(), id: savedData.equipped[type] }); 
-    savedData.equipped[type] = savedData.inventory[index].id; 
-    savedData.inventory.splice(index, 1); 
-    saveData(); 
+    if (activeChar.equipped[type]) activeChar.inventory.push({ uid: getUid(), id: activeChar.equipped[type] }); 
+    activeChar.equipped[type] = activeChar.inventory[index].id; 
+    activeChar.inventory.splice(index, 1); 
+    saveAccount(); 
     renderInventory(); 
 };
 
 window.unequip = function(type) { 
-    if (savedData.equipped[type]) { 
-        savedData.inventory.push({ uid: getUid(), id: savedData.equipped[type] }); 
-        savedData.equipped[type] = null; 
-        saveData(); 
+    if (!activeChar) return;
+    if (activeChar.equipped[type]) { 
+        activeChar.inventory.push({ uid: getUid(), id: activeChar.equipped[type] }); 
+        activeChar.equipped[type] = null; 
+        saveAccount(); 
         renderInventory(); 
     } 
 };
 
 window.renderSkills = function() { 
+    if (!activeChar) return;
     const grid = document.getElementById('skillsGrid'); 
     if(!grid) return;
     grid.innerHTML = ''; 
-    savedData.skillsInventory.forEach(invItem => { 
+    activeChar.skillsInventory.forEach(invItem => { 
         let data = skillDatabase.find(s => s.id === invItem.id); 
         if(!data) return; 
         let div = document.createElement('div'); 
@@ -893,11 +983,12 @@ window.renderSkills = function() {
 let pendingGold = 0, pendingParts = 0; 
 setInterval(() => { 
     updateEnergyTimerUI(); 
-    let afkMult = 1.0 + ((savedData.talentsLevels['t_afk'] || 0) * 0.15);
-    let diff = Math.min(Date.now() - savedData.lastAFKTime, 86400000); 
+    if (!activeChar) return;
+    let afkMult = 1.0 + ((activeChar.talentsLevels['t_afk'] || 0) * 0.15);
+    let diff = Math.min(Date.now() - activeChar.lastAFKTime, 86400000); 
     let minutesPassed = Math.floor(diff / 60000); 
-    pendingGold = Math.floor(minutesPassed * 20 * afkMult * savedData.stage); 
-    pendingParts = Math.floor(minutesPassed * 0.1 * afkMult * savedData.stage); 
+    pendingGold = Math.floor(minutesPassed * 25 * afkMult * activeChar.stage); 
+    pendingParts = Math.floor(minutesPassed * 0.12 * afkMult * activeChar.stage); 
     let totalSeconds = Math.floor(diff / 1000); 
     let std = document.getElementById('sweepTimeDisplay');
     if(std) std.innerText = `${Math.floor(totalSeconds / 3600).toString().padStart(2, '0')}:${Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0')}:${(totalSeconds % 60).toString().padStart(2, '0')}`; 
@@ -905,7 +996,6 @@ setInterval(() => {
 
 let bs = document.getElementById('btnSweep');
 if(bs) bs.addEventListener('click', () => { 
-    playSound('click');
     let sgr = document.getElementById('sweepGoldResult'); if(sgr) sgr.innerText = pendingGold; 
     let spr = document.getElementById('sweepPartsResult'); if(spr) spr.innerText = pendingParts; 
     let sm = document.getElementById('sweepModal'); if(sm) sm.style.display = 'flex'; 
@@ -913,21 +1003,20 @@ if(bs) bs.addEventListener('click', () => {
 
 let bcs = document.getElementById('btnClaimSweep');
 if(bcs) bcs.addEventListener('click', () => { 
-    playSound('click');
+    if (!activeChar) return;
     if (pendingGold > 0 || pendingParts > 0) { 
-        savedData.gold += pendingGold; 
-        savedData.parts += pendingParts; 
-        savedData.lastAFKTime = Date.now(); 
-        saveData(); 
+        activeChar.gold += pendingGold; 
+        activeChar.parts += pendingParts; 
+        activeChar.lastAFKTime = Date.now(); 
+        saveAccount(); 
         showBmPopup(`Ресурсы собраны!`); 
     } 
     let sm = document.getElementById('sweepModal'); if(sm) sm.style.display = 'none'; 
 });
 
-updateTopBar();
 
 // ==========================================================================
-// БОЕВОЙ ДВИЖОК CANVAS
+// БОЕВОЙ ДВИЖОК CANVAS (С УМНЫМ AI И СБАЛАНСИРОВАННОЙ МАТЕМАТИКОЙ)
 // ==========================================================================
 
 const canvas = document.getElementById('gameCanvas'); 
@@ -935,7 +1024,6 @@ const ctx = canvas.getContext('2d');
 const joystickZone = document.getElementById('joystickZone'); 
 const joystickBase = document.getElementById('joystickBase'); 
 const joystickStick = document.getElementById('joystickStick');
-const roomCounterUI = document.getElementById('roomCounterUI');
 
 let screenW, screenH; 
 function resize() { 
@@ -952,7 +1040,7 @@ const input = { x: 0, y: 0, isMoving: false, usingKeyboard: false };
 let joystickCenter = { x: 0, y: 0 }; 
 const MAX_JOYSTICK_RADIUS = 50; 
 
-let player = { x: 100, y: 200, radius: 15, speed: 220, hp: 1000, maxHp: 1000, atk: 150, attackRate: 1.5, aimingAngle: 0, lastAttackTime: 0 };
+let player = { x: 100, y: 200, radius: 15, speed: 220, hp: 1000, maxHp: 1000, atk: 120, attackRate: 1.3, aimingAngle: 0, lastAttackTime: 0 };
 let enemies = [];
 let projectiles = [];
 let floatingTexts = [];
@@ -974,15 +1062,13 @@ let backgroundParticles = [];
 
 function initLocationParticles() {
     backgroundParticles = [];
-    let count = 30;
-    for(let i=0; i<count; i++) {
+    for(let i=0; i<30; i++) {
         backgroundParticles.push({
             x: Math.random() * screenW,
             y: Math.random() * screenH,
             vx: (Math.random() - 0.5) * 30,
             vy: (Math.random() - 0.5) * 30,
-            radius: Math.random() * 3 + 1,
-            alpha: Math.random() * 0.7 + 0.2
+            radius: Math.random() * 3 + 1
         });
     }
 }
@@ -1004,47 +1090,40 @@ function prepareBattleUI(titleText) {
     player.maxHp = finalStats.hp; 
     player.hp = finalStats.hp; 
     player.atk = finalStats.atk; 
-    
-    player.x = 80;
-    player.y = screenH / 2;
+    player.x = 80; player.y = screenH / 2;
 
-    let baseSpeed = 220;
-    if (savedData.equipped.mount) {
-        let mountData = getItemData(savedData.equipped.mount);
-        if (mountData && mountData.speedBonus) {
-            baseSpeed *= mountData.speedBonus;
-        }
+    let cls = characterClassesConfig[activeChar.classKey] || characterClassesConfig.assault;
+    let baseSpeed = cls.speed;
+    if (activeChar.equipped.mount) {
+        let mountData = getItemData(activeChar.equipped.mount);
+        if (mountData && mountData.speedBonus) baseSpeed *= mountData.speedBonus;
     }
     player.speed = baseSpeed;
 
-    let wp = getItemData(savedData.equipped.weapon); 
+    let wp = getItemData(activeChar.equipped.weapon); 
     if (wp && wp.fireRate) { 
         currentWeaponStats = { fireRate: wp.fireRate, bullets: wp.bullets, projSpeed: wp.projSpeed, spread: wp.spread, isRocket: wp.isRocket }; 
-    } else { currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0, isRocket: false }; } 
+    } else { 
+        currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0, isRocket: false }; 
+    } 
     
     runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
     enemies = []; projectiles = []; floatingTexts = []; allyUnits = []; obstacles = []; portal = null;
 
     activePet = {
-        x: player.x - 40,
-        y: player.y,
-        radius: 10,
-        speed: 240,
-        atk: 60,
-        fireRate: 1.0,
-        lastAttack: 0,
-        icon: savedData.equipped.drone ? '🛸' : '🐕'
+        x: player.x - 40, y: player.y, radius: 10, speed: 240, atk: 50, lastAttack: 0, icon: '🛸'
     };
 
     initLocationParticles();
 }
 
 window.startBattle = function() { 
-    if (savedData.energy < 5) { showAlert("Недостаточно энергии!"); return; } 
-    savedData.energy -= 5; 
-    saveData(); 
+    if (!activeChar) return;
+    if (activeChar.energy < 5) { showAlert("Недостаточно энергии!"); return; } 
+    activeChar.energy -= 5; 
+    saveAccount(); 
 
-    prepareBattleUI(`Глава ${savedData.stage} (Комната 1/5)`);
+    prepareBattleUI(`Глава ${activeChar.stage} (Комната 1/5)`);
     let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'block'; 
     let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
 
@@ -1058,12 +1137,11 @@ window.startBattle = function() {
     requestAnimationFrame(gameLoop); 
 };
 
-let activeArenaBot = null;
 window.startArenaBattle = function(botName) {
-    activeArenaBot = simulationBots.find(b => b.name === botName);
-    if (!activeArenaBot) return;
+    let bot = simulationBots.find(b => b.name === botName);
+    if (!bot) return;
 
-    prepareBattleUI(`ДУЭЛЬ: ${activeArenaBot.name}`);
+    prepareBattleUI(`ДУЭЛЬ: ${bot.name}`);
     let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none'; 
     let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
 
@@ -1071,9 +1149,9 @@ window.startArenaBattle = function(botName) {
     player.x = 80; player.y = screenH / 2;
     enemies.push({
         x: screenW * 0.8, y: screenH / 2,
-        radius: 16, hp: activeArenaBot.hp, maxHp: activeArenaBot.hp,
-        atk: activeArenaBot.atk, speed: activeArenaBot.speed,
-        isBoss: false, isBot: true, name: activeArenaBot.name, icon: activeArenaBot.icon,
+        radius: 16, hp: bot.hp, maxHp: bot.hp,
+        atk: bot.atk, speed: bot.speed,
+        isBoss: false, isBot: true, name: bot.name, icon: bot.icon,
         angle: 0, lastAttack: 0
     });
 
@@ -1087,15 +1165,15 @@ window.startArenaBattle = function(botName) {
 window.startGuildRaidBattle = function() {
     prepareBattleUI(`РЕЙД: ${guildRaidBoss.name}`);
     let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none'; 
-    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = savedData.guild ? 'flex' : 'none';
+    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'flex';
 
     roomState = 'guild_raid_fighting'; isBossStage = true; 
     player.x = 80; player.y = screenH / 2;
     bossEntity = {
         x: screenW * 0.8, y: screenH / 2,
-        radius: guildRaidBoss.radius, hp: savedData.guildBossHp, maxHp: guildRaidBoss.hp,
+        radius: guildRaidBoss.radius, hp: guildRaidBoss.hp, maxHp: guildRaidBoss.hp,
         atk: guildRaidBoss.atk, speed: guildRaidBoss.speed,
-        isBoss: true, isBot: false, type: 'boss', lastAttack: 0, angle: 0
+        isBoss: true, isBot: false, type: 'boss', lastAttack: 0, angle: 0, patternTimer: 0
     };
     enemies.push(bossEntity);
 
@@ -1106,30 +1184,19 @@ window.startGuildRaidBattle = function() {
     requestAnimationFrame(gameLoop);
 };
 
-let activeRaidBase = null;
 window.startBaseRaid = function(baseId) {
-    activeRaidBase = enemyBasesConfig.find(x => x.id === baseId);
-    if (!activeRaidBase) return;
-
-    prepareBattleUI(`ШТУРМ: База ${activeRaidBase.owner}`);
+    prepareBattleUI(`ШТУРМ БАЗЫ`);
     let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none'; 
-    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = savedData.guild ? 'flex' : 'none';
+    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'flex';
 
     roomState = 'base_raid_fighting'; isBossStage = false; bossEntity = null;
     player.x = 80; player.y = screenH / 2;
 
-    for(let i=0; i<activeRaidBase.towersCount; i++) {
+    for(let i=0; i<2; i++) {
         enemies.push({
-            x: screenW * 0.7 + Math.random() * (screenW * 0.2), y: 100 + i * (screenH / (activeRaidBase.towersCount + 1)),
-            radius: 18, hp: 400, maxHp: 400, atk: 30, speed: 0,
+            x: screenW * 0.7, y: 150 + i * 200,
+            radius: 18, hp: 500, maxHp: 500, atk: 25, speed: 0,
             isBoss: false, isBot: false, isTower: true, type: 'tower', icon: '🗼', angle: 0, lastAttack: 0
-        });
-    }
-    for(let i=0; i<activeRaidBase.guardsCount; i++) {
-        enemies.push({
-            x: screenW * 0.7 + Math.random() * (screenW * 0.2), y: 80 + Math.random() * (screenH - 160),
-            radius: 14, hp: 200, maxHp: 200, atk: 20, speed: 120,
-            isBoss: false, isBot: false, isTower: false, type: 'zombie', icon: '🧟', angle: 0, lastAttack: 0
         });
     }
 
@@ -1148,56 +1215,35 @@ function startRoom() {
     isBossStage = (currentRoom === maxRooms);
     
     let rcu = document.getElementById('roomCounterUI');
-    if(rcu) rcu.innerText = isBossStage ? `БОСС (Глава ${savedData.stage}, Комната ${currentRoom}/5)` : `Глава ${savedData.stage} (Комната ${currentRoom}/5)`;
+    if(rcu) rcu.innerText = isBossStage ? `БОСС (Глава ${activeChar.stage}, Комната ${currentRoom}/5)` : `Глава ${activeChar.stage} (Комната ${currentRoom}/5)`;
 
     const layouts = [
         [
-            { x: screenW * 0.3, y: screenH * 0.2, w: 40, h: 90 },
-            { x: screenW * 0.6, y: screenH * 0.6, w: 90, h: 40 }
-        ],
-        [
-            { x: screenW * 0.4, y: screenH * 0.4, w: 60, h: 60 },
-            { x: screenW * 0.7, y: screenH * 0.15, w: 50, h: 100 }
-        ],
-        [
-            { x: screenW * 0.25, y: screenH * 0.65, w: 100, h: 35 },
-            { x: screenW * 0.65, y: screenH * 0.25, w: 40, h: 90 }
-        ],
-        [
-            { x: screenW * 0.5, y: screenH * 0.3, w: 50, h: 50 },
-            { x: screenW * 0.3, y: screenH * 0.6, w: 70, h: 40 }
+            { x: screenW * 0.35, y: screenH * 0.25, w: 50, h: 80 },
+            { x: screenW * 0.65, y: screenH * 0.55, w: 80, h: 50 }
         ]
     ];
     obstacles = layouts[(currentRoom - 1) % layouts.length];
-
-    player.x = 80;
-    player.y = screenH / 2;
+    player.x = 80; player.y = screenH / 2;
 
     if (!isBossStage) {
-        let count = 2 + currentRoom + (savedData.stage * 1.5);
+        let count = 3 + currentRoom + (activeChar.stage * 2);
         let keys = Object.keys(enemyTypesConfig);
         for(let i=0; i<count; i++) {
             let tKey = keys[Math.floor(Math.random() * keys.length)];
             let cfg = enemyTypesConfig[tKey];
-            
-            // Проверка на элитного врага (20% шанс)
-            let isElite = Math.random() < 0.2;
-            let eliteType = isElite ? ['berserk', 'armored', 'toxic'][Math.floor(Math.random()*3)] : null;
-            let eliteHpMult = eliteType === 'armored' ? 2.5 : 1.5;
-            let eliteAtkMult = eliteType === 'berserk' ? 1.6 : 1.2;
-            let eliteSpeedMult = eliteType === 'berserk' ? 1.3 : 1.0;
+            let stageMul = 1.0 + (activeChar.stage * 0.35);
 
             enemies.push({
                 x: screenW * 0.6 + Math.random() * (screenW * 0.35),
                 y: 80 + Math.random() * (screenH - 160),
-                radius: cfg.radius * (isElite ? 1.2 : 1.0),
-                hp: 100 * cfg.hpMultiplier * savedData.stage * eliteHpMult,
-                maxHp: 100 * cfg.hpMultiplier * savedData.stage * eliteHpMult,
-                atk: 15 * savedData.stage * eliteAtkMult,
-                speed: 100 * cfg.speedMultiplier * eliteSpeedMult,
+                radius: cfg.radius,
+                hp: Math.floor(180 * cfg.hpMultiplier * stageMul),
+                maxHp: Math.floor(180 * cfg.hpMultiplier * stageMul),
+                atk: Math.floor(20 * stageMul),
+                speed: Math.floor(110 * cfg.speedMultiplier),
                 type: tKey,
                 isBoss: false, isBot: false, isTower: false,
-                isElite: isElite, eliteType: eliteType,
                 angle: 0, lastAttack: 0
             });
         }
@@ -1207,13 +1253,14 @@ function startRoom() {
 }
 
 function spawnBoss() {
+    let stageMul = 1.0 + (activeChar.stage * 0.8);
     bossEntity = {
         x: screenW * 0.8, y: screenH / 2,
-        radius: 38,
-        hp: 1200 * savedData.stage, 
-        maxHp: 1200 * savedData.stage,
-        atk: 50 * savedData.stage,
-        speed: 75,
+        radius: 40,
+        hp: Math.floor(3500 * stageMul),
+        maxHp: Math.floor(3500 * stageMul),
+        atk: Math.floor(65 * stageMul),
+        speed: 80,
         isBoss: true, isBot: false, isTower: false, type: 'boss',
         angle: 0, lastAttack: 0, patternTimer: 0
     };
@@ -1224,14 +1271,15 @@ function spawnSpecificWaveEnemy() {
     let keys = Object.keys(enemyTypesConfig);
     let tKey = keys[Math.floor(Math.random() * keys.length)];
     let cfg = enemyTypesConfig[tKey];
+    let stageMul = 1.0 + (activeChar.stage * 0.35);
     enemies.push({
         x: screenW * 0.75 + Math.random() * (screenW * 0.2),
         y: 80 + Math.random() * (screenH - 160),
         radius: cfg.radius,
-        hp: 100 * cfg.hpMultiplier * savedData.stage,
-        maxHp: 100 * cfg.hpMultiplier * savedData.stage,
-        atk: 15 * savedData.stage,
-        speed: 100 * cfg.speedMultiplier,
+        hp: Math.floor(150 * cfg.hpMultiplier * stageMul),
+        maxHp: Math.floor(150 * cfg.hpMultiplier * stageMul),
+        atk: Math.floor(18 * stageMul),
+        speed: Math.floor(100 * cfg.speedMultiplier),
         type: tKey,
         isBoss: false, isBot: false, isTower: false,
         angle: 0, lastAttack: 0
@@ -1248,7 +1296,6 @@ function startInput(clientX, clientY) {
     joystickBase.style.display = 'block'; 
     joystickBase.style.left = `${joystickCenter.x}px`; 
     joystickBase.style.top = `${joystickCenter.y}px`; 
-    joystickStick.style.transform = `translate(-50%, -50%)`; 
 }
 
 function moveInput(clientX, clientY) { 
@@ -1268,8 +1315,7 @@ function moveInput(clientX, clientY) {
 function stopInput() { 
     if (input.usingKeyboard) return; 
     input.isMoving = false; 
-    input.x = 0; 
-    input.y = 0; 
+    input.x = 0; input.y = 0; 
     joystickBase.style.display = 'none'; 
 }
 
@@ -1316,8 +1362,7 @@ function updateKeyboardInput() {
     } else if (input.usingKeyboard) { 
         input.usingKeyboard = false; 
         input.isMoving = false; 
-        input.x = 0; 
-        input.y = 0; 
+        input.x = 0; input.y = 0; 
     } 
 }
 
@@ -1345,9 +1390,7 @@ function checkObstacleCollision(x, y, radius) {
         let closestY = Math.max(obs.y, Math.min(y, obs.y + obs.h));
         let distX = x - closestX;
         let distY = y - closestY;
-        if ((distX * distX + distY * distY) < (radius * radius)) {
-            return true;
-        }
+        if ((distX * distX + distY * distY) < (radius * radius)) return true;
     }
     return false;
 }
@@ -1371,16 +1414,16 @@ function gameLoop(timestamp) {
         if (isBossStage) { 
             if (!bossEntity && enemies.length === 0) spawnBoss(); 
         } else { 
-            let maxEnemiesOnScreen = 3 + (savedData.stage * 2);
-            let totalEnemiesToKill = 10 + (savedData.stage * 2);
-            let spawnChance = (0.5 + (savedData.stage * 0.1)) * dt;
+            let maxEnemiesOnScreen = 4 + activeChar.stage;
+            let totalEnemiesToKill = 8 + (activeChar.stage * 2);
+            let spawnChance = (0.4 + (activeChar.stage * 0.08)) * dt;
             
             if (enemies.length < maxEnemiesOnScreen && killsInRoom + enemies.length < totalEnemiesToKill && Math.random() < spawnChance) {
                 spawnSpecificWaveEnemy();
             }
         }
         
-        let targetKills = isBossStage ? 1 : (10 + (savedData.stage * 2));
+        let targetKills = isBossStage ? 1 : (8 + (activeChar.stage * 2));
         if (enemies.length === 0 && (isBossStage ? bossEntity && bossEntity.isDead : killsInRoom >= targetKills)) { 
             roomState = 'cleared'; 
             portal = { x: screenW - 100, y: screenH / 2, radius: 40 }; 
@@ -1398,16 +1441,13 @@ function gameLoop(timestamp) {
     if (input.isMoving && (input.x !== 0 || input.y !== 0)) { 
         let nextX = player.x + input.x * player.speed * dt;
         let nextY = player.y + input.y * player.speed * dt;
-        
         nextX = Math.max(player.radius, Math.min(screenW - player.radius, nextX)); 
         nextY = Math.max(player.radius, Math.min(screenH - player.radius, nextY));
 
         if (!checkObstacleCollision(nextX, nextY, player.radius)) {
-            player.x = nextX;
-            player.y = nextY;
+            player.x = nextX; player.y = nextY;
         }
-
-        if(timestamp - player.lastAttackTime > 500) { player.aimingAngle = Math.atan2(input.y, input.x); } 
+        if(timestamp - player.lastAttackTime > 500) player.aimingAngle = Math.atan2(input.y, input.x); 
     } 
     
     let actualFireRate = player.attackRate * currentWeaponStats.fireRate;
@@ -1444,109 +1484,20 @@ function gameLoop(timestamp) {
         } 
     }
 
-    if (activePet && enemies.length > 0) {
-        let target = null, minDist = Infinity;
-        for (let e of enemies) {
-            let dist = Math.hypot(e.x - activePet.x, e.y - activePet.y);
-            if (dist < minDist) { minDist = dist; target = e; }
-        }
-        if (target) {
-            let pdx = target.x - activePet.x, pdy = target.y - activePet.y;
-            let targetX = player.x + 35;
-            let targetY = player.y - 35;
-            activePet.x += (targetX - activePet.x) * 4 * dt;
-            activePet.y += (targetY - activePet.y) * 4 * dt;
-
-            if (timestamp - activePet.lastAttack > 1200) {
-                let pAngle = Math.atan2(pdy, pdx);
-                projectiles.push({
-                    x: activePet.x, y: activePet.y,
-                    vx: Math.cos(pAngle) * 550, vy: Math.sin(pAngle) * 550,
-                    radius: 4, damage: activePet.atk, isEnemy: false, angle: pAngle
-                });
-                activePet.lastAttack = timestamp;
-            }
-        }
-    }
-
-    if (isPvp && enemies.length > 0) {
-        let bot = enemies[0];
-        if (timestamp - (bot.lastShootTime || 0) > 1000) {
-            let bAngle = Math.atan2(player.y - bot.y, player.x - bot.x);
-            projectiles.push({ x: bot.x, y: bot.y, vx: Math.cos(bAngle)*300, vy: Math.sin(bAngle)*300, radius: 5, damage: bot.atk, isEnemy: true, angle: bAngle });
-            bot.lastShootTime = timestamp;
-        }
-    }
-
-    if (isBaseRaid) {
-        for (let e of enemies) {
-            if (e.isTower && timestamp - (e.lastAttack || 0) > 1500) {
-                let tAngle = Math.atan2(player.y - e.y, player.x - e.x);
-                projectiles.push({ x: e.x, y: e.y, vx: Math.cos(tAngle)*280, vy: Math.sin(tAngle)*280, radius: 5, damage: 30, isEnemy: true, angle: tAngle });
-                e.lastAttack = timestamp;
-            }
-        }
-    }
-
-    for (let ally of allyUnits) {
-        let target = null, minDist = Infinity;
-        for (let e of enemies) {
-            let dist = Math.hypot(e.x - ally.x, e.y - ally.y);
-            if (dist < minDist) { minDist = dist; target = e; }
-        }
-        if (target) {
-            let dx = target.x - ally.x, dy = target.y - ally.y;
-            ally.aimingAngle = Math.atan2(dy, dx);
-            let dist = Math.hypot(dx, dy);
-            if (dist > 120) {
-                ally.x += (dx / dist) * ally.speed * dt;
-                ally.y += (dy / dist) * ally.speed * dt;
-            }
-            if (timestamp - (ally.lastAttack || 0) > 800) {
-                projectiles.push({ x: ally.x, y: ally.y, vx: Math.cos(ally.aimingAngle)*500, vy: Math.sin(ally.aimingAngle)*500, radius: 4, damage: ally.atk, isEnemy: false, angle: ally.aimingAngle });
-                ally.lastAttack = timestamp;
-            }
-        }
-    }
-    
-    for (let i = floatingTexts.length - 1; i >= 0; i--) { 
-        floatingTexts[i].life -= dt; 
-        floatingTexts[i].y -= 25 * dt; 
-        if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1); 
-    }
-    
+    // Умный AI врагов с продвинутым обходом препятствий (Slide/Raycast simulation)
     for (let i = enemies.length - 1; i >= 0; i--) {
         let e = enemies[i]; 
         if (e.isDead) { 
-            if (isPvp) {
-                roomState = 'pvp_ended';
+            if (isPvp || isRaid || isBaseRaid) {
                 showBattleResult(true);
                 return;
-            }
-            if (isRaid) {
-                savedData.guildBossHp = guildRaidBoss.hp;
-                if (!savedData.guild.tokens) savedData.guild.tokens = 0;
-                savedData.guild.tokens += guildRaidBoss.rewardTokens;
-                saveData();
-                showBattleResult(true);
-                return;
-            }
-            if (isBaseRaid) {
-                enemies.splice(i, 1);
-                if (enemies.length === 0) {
-                    showBattleResult(true);
-                    return;
-                }
-                continue;
             }
             enemies.splice(i, 1); 
             killsInRoom++; 
             totalKillsInRun++; 
-            runXp += 15; 
-            savedData.totalKillsAllTime = (savedData.totalKillsAllTime || 0) + 1;
-            if (runMods.vamp > 0) {
-                player.hp = Math.min(player.maxHp, player.hp + runMods.vamp);
-            }
+            runXp += 20; 
+            activeChar.totalKillsAllTime = (activeChar.totalKillsAllTime || 0) + 1;
+            if (runMods.vamp > 0) player.hp = Math.min(player.maxHp, player.hp + runMods.vamp);
             checkLevelUp(); 
             continue; 
         }
@@ -1556,53 +1507,30 @@ function gameLoop(timestamp) {
         
         if (e.isBoss) {
             e.patternTimer += dt;
-            if (e.patternTimer > 3.0) {
-                for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
-                    projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a) * 260, vy: Math.sin(a) * 260, radius: 6, damage: e.atk * 0.8, isEnemy: true, angle: a });
+            if (e.patternTimer > 2.5) {
+                for (let a = 0; a < Math.PI * 2; a += Math.PI / 3) {
+                    projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a) * 280, vy: Math.sin(a) * 280, radius: 6, damage: e.atk * 0.7, isEnemy: true, angle: a });
                 }
                 e.patternTimer = 0;
             }
         }
 
-        if (e.isBot || e.isTower) {
-            if (e.isTower) continue;
-            let nx = e.x + (dx / dist) * e.speed * dt;
-            let ny = e.y + (dy / dist) * e.speed * dt;
-            if (!checkObstacleCollision(nx, ny, e.radius)) {
-                e.x = nx; e.y = ny;
-            }
-        } else if (e.type === 'shooter' && !e.isBoss) {
-            let moveFactor = dist > 200 ? 1 : -0.5;
-            let nx = e.x + (dx / dist) * e.speed * moveFactor * dt;
-            let ny = e.y + (dy / dist) * e.speed * moveFactor * dt;
-            if (!checkObstacleCollision(nx, ny, e.radius)) {
-                e.x = nx; e.y = ny;
-            }
-            if (dist < 400 && timestamp - e.lastAttack > 2000) { 
-                projectiles.push({ x: e.x, y: e.y, vx: Math.cos(e.angle)*250, vy: Math.sin(e.angle)*250, radius: 5, damage: e.atk, isEnemy: true, angle: e.angle }); 
-                e.lastAttack = timestamp; 
-            }
-        } else if (e.type === 'kamikaze') {
-            e.x += (dx / dist) * e.speed * 1.4 * dt; 
-            e.y += (dy / dist) * e.speed * 1.4 * dt;
-            if (dist < player.radius + e.radius + 10) { 
-                player.hp -= e.atk * 2.5; 
-                e.hp = 0; 
-                e.isDead = true; 
-                if (player.hp <= 0) { triggerDeath(); return; } 
-            }
-        } else {
+        if (!e.isTower) {
             let moveX = (dx / dist) * e.speed * dt;
             let moveY = (dy / dist) * e.speed * dt;
-
             let nextX = e.x + moveX;
             let nextY = e.y + moveY;
 
+            // Умный скользящий обход препятствий
             if (checkObstacleCollision(nextX, nextY, e.radius)) {
                 if (!checkObstacleCollision(e.x + moveX, e.y, e.radius)) {
                     e.x += moveX;
                 } else if (!checkObstacleCollision(e.x, e.y + moveY, e.radius)) {
                     e.y += moveY;
+                } else {
+                    // Обходной маневр по перпендикуляру
+                    e.x -= moveY * 0.5;
+                    e.y += moveX * 0.5;
                 }
             } else {
                 e.x = nextX;
@@ -1610,7 +1538,7 @@ function gameLoop(timestamp) {
             }
 
             if (dist < player.radius + e.radius) { 
-                player.hp -= e.atk * dt * 2; 
+                player.hp -= e.atk * dt * 1.5; 
                 if (player.hp <= 0) { triggerDeath(); return; } 
             }
         }
@@ -1651,7 +1579,6 @@ function gameLoop(timestamp) {
                 let e = enemies[j]; 
                 if (Math.hypot(p.x - e.x, p.y - e.y) < p.radius + e.radius) { 
                     e.hp -= p.damage; 
-                    
                     if (p.isRocket) {
                         for (let k = enemies.length - 1; k >= 0; k--) {
                             let nearby = enemies[k];
@@ -1661,42 +1588,26 @@ function gameLoop(timestamp) {
                             }
                         }
                     }
-
-                    if (isRaid) {
-                        savedData.guildBossHp = Math.max(0, Math.floor(e.hp));
-                        saveData();
-                    }
                     floatingTexts.push({ x: e.x, y: e.y - 20, text: Math.floor(p.damage), color: "#fff", life: 1.0 }); 
                     projectiles.splice(i, 1); 
-                    if (e.hp <= 0) { e.isDead = true; } 
+                    if (e.hp <= 0) e.isDead = true; 
                     break; 
                 } 
             } 
         }
     }
 
-    let locCfg = locationsConfig.find(l => l.id == savedData.stage) || locationsConfig[0];
+    let locCfg = locationsConfig.find(l => l.id == activeChar.stage) || locationsConfig[0];
     ctx.fillStyle = locCfg.bgStyle; 
     ctx.fillRect(0, 0, screenW, screenH); 
     
     for(let pt of backgroundParticles) {
-        pt.x += pt.vx * dt;
-        pt.y += pt.vy * dt;
+        pt.x += pt.vx * dt; pt.y += pt.vy * dt;
         if(pt.x < 0) pt.x = screenW; if(pt.x > screenW) pt.x = 0;
         if(pt.y < 0) pt.y = screenH; if(pt.y > screenH) pt.y = 0;
-
         ctx.fillStyle = locCfg.particleColor;
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2); ctx.fill();
     }
-
-    ctx.strokeStyle = 'rgba(0, 255, 255, 0.05)'; 
-    ctx.lineWidth = 1; 
-    ctx.beginPath(); 
-    for (let i = 0; i <= screenW; i += 50) { ctx.moveTo(i, 0); ctx.lineTo(i, screenH); } 
-    for (let i = 0; i <= screenH; i += 50) { ctx.moveTo(0, i); ctx.lineTo(screenW, i); } 
-    ctx.stroke();
 
     ctx.fillStyle = locCfg.wallColor;
     ctx.strokeStyle = '#665555';
@@ -1708,68 +1619,22 @@ function gameLoop(timestamp) {
 
     if (portal) {
         ctx.fillStyle = '#00ffcc';
-        ctx.beginPath();
-        ctx.arc(portal.x, portal.y, portal.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 3;
-        ctx.stroke();
+        ctx.beginPath(); ctx.arc(portal.x, portal.y, portal.radius, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
     }
-
-    ctx.strokeStyle = isBaseRaid ? '#e43f5a' : (isRaid ? '#ff4a4a' : (isPvp ? '#ff4a4a' : '#ffaa00')); 
-    ctx.lineWidth = 3; 
-    ctx.strokeRect(0, 0, screenW, screenH);
     
     for (let e of enemies) { 
         ctx.save(); 
         ctx.translate(e.x, e.y); 
         ctx.rotate(e.angle);
-        if (e.isTower) {
-            ctx.fillStyle = '#ff8c00'; ctx.beginPath(); ctx.arc(0, 0, e.radius, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#222'; ctx.fillRect(-6, -6, 12, 12);
-        } else if (e.isBot) {
-            ctx.fillStyle = '#ff4a4a'; ctx.beginPath(); ctx.arc(0, 0, e.radius, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(5, 0, e.radius * 0.7, -Math.PI/2, Math.PI/2); ctx.fill();
-        } else {
-            let cfg = enemyTypesConfig[e.type] || enemyTypesConfig.zombie;
-            let color = e.isBoss ? '#aa00ff' : cfg.color;
-            ctx.fillStyle = color; ctx.beginPath(); ctx.arc(0, 0, e.radius, 0, Math.PI * 2); ctx.fill();
-
-            // Рендер ауры элитного врага
-            if (e.isElite) {
-                ctx.strokeStyle = e.eliteType === 'berserk' ? '#ff0000' : (e.eliteType === 'armored' ? '#00aaff' : '#00ff66');
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.arc(0, 0, e.radius + 4, 0, Math.PI * 2);
-                ctx.stroke();
-            }
-        }
+        let cfg = enemyTypesConfig[e.type] || enemyTypesConfig.zombie;
+        ctx.fillStyle = e.isBoss ? '#aa00ff' : cfg.color; 
+        ctx.beginPath(); ctx.arc(0, 0, e.radius, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
         
-        let hpBarWidth = (e.isBoss || e.isBot || e.isTower) ? 50 : 30; 
+        let hpBarWidth = e.isBoss ? 50 : 30; 
         ctx.fillStyle = '#ff0000'; ctx.fillRect(e.x - hpBarWidth/2, e.y - e.radius - 12, hpBarWidth, 4); 
         ctx.fillStyle = '#00ff00'; ctx.fillRect(e.x - hpBarWidth/2, e.y - e.radius - 12, hpBarWidth * (Math.max(0, e.hp) / e.maxHp), 4); 
-
-        if (e.isBot) {
-            ctx.fillStyle = '#fff'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
-            ctx.fillText(e.name, e.x, e.y - e.radius - 18);
-        }
-    }
-
-    if (activePet) {
-        ctx.save();
-        ctx.translate(activePet.x, activePet.y);
-        ctx.fillStyle = '#00ffcc';
-        ctx.beginPath();
-        ctx.arc(0, 0, activePet.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.font = '12px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(activePet.icon, 0, 4);
-        ctx.restore();
     }
     
     for (let p of projectiles) { 
@@ -1777,11 +1642,7 @@ function gameLoop(timestamp) {
         ctx.translate(p.x, p.y); 
         ctx.rotate(p.angle); 
         ctx.fillStyle = p.isEnemy ? '#ff0000' : (p.isRocket ? '#ffaa00' : '#00ffcc'); 
-        if (p.isRocket) {
-            ctx.fillRect(-10, -5, 20, 10);
-        } else {
-            ctx.fillRect(-8, -p.radius, 16, p.radius*2); 
-        }
+        ctx.fillRect(-8, -p.radius, 16, p.radius*2); 
         ctx.restore(); 
     }
     
@@ -1790,31 +1651,14 @@ function gameLoop(timestamp) {
     ctx.rotate(player.aimingAngle); 
     ctx.fillStyle = '#444'; ctx.fillRect(10, -5, 20, 10); 
     ctx.fillStyle = '#ffaa00'; ctx.beginPath(); ctx.arc(0, 0, player.radius, 0, Math.PI * 2); ctx.fill(); 
-    ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(5, 0, player.radius*0.7, -Math.PI/2, Math.PI/2); ctx.fill(); 
     ctx.restore();
     
     let pBarW = 50; 
     ctx.fillStyle = '#ff0000'; ctx.fillRect(player.x - pBarW/2, player.y + player.radius + 8, pBarW, 6); 
     ctx.fillStyle = '#00ff00'; ctx.fillRect(player.x - pBarW/2, player.y + player.radius + 8, pBarW * (Math.max(0, player.hp) / player.maxHp), 6); 
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center'; 
-    ctx.fillText(`${Math.floor(player.hp)}/${player.maxHp}`, player.x, player.y + player.radius + 20);
-    
-    for (let ft of floatingTexts) { 
-        ctx.globalAlpha = ft.life; 
-        ctx.fillStyle = ft.color; 
-        ctx.font = 'bold 18px sans-serif'; 
-        ctx.textAlign = 'center'; 
-        ctx.strokeStyle = '#000'; 
-        ctx.lineWidth = 3; 
-        ctx.strokeText(ft.text, ft.x, ft.y); 
-        ctx.fillText(ft.text, ft.x, ft.y); 
-        ctx.globalAlpha = 1.0; 
-    }
 }
 
 let runLevel = 1, runXp = 0, runMaxXp = 100;
-let runLoot = { blueprints: {} };
-
 function updateCombatUI() {
     let xpBar = document.getElementById('combatXpBar');
     let lvlTxt = document.getElementById('combatLevelText');
@@ -1866,7 +1710,6 @@ function applyRunSkill(id) {
     if (id === 'regen') runMods.regen += 2;
     if (id === 'max_hp') { player.maxHp *= 1.2; player.hp = player.maxHp; }
     if (id === 'heal') player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.5);
-    
     showBmPopup("МОДИФИКАТОР АКТИВИРОВАН! 🌟");
 }
 
@@ -1881,9 +1724,10 @@ function triggerDeath() {
 }
 
 window.acceptRevive = function() {
-    if (savedData.gems >= 10) {
-        savedData.gems -= 10;
-        saveData();
+    if (!activeChar) return;
+    if (activeChar.gems >= 10) {
+        activeChar.gems -= 10;
+        saveAccount();
         revivesUsed++;
         player.hp = player.maxHp;
         let rm = document.getElementById('reviveModal'); if(rm) rm.style.display = 'none';
@@ -1913,43 +1757,41 @@ window.showBattleResult = function(isWin, isFlee = false) {
     let nb = document.getElementById('navBar'); if(nb) nb.style.display = 'flex';
     let lobby = document.getElementById('lobbyScreen'); if(lobby) lobby.style.display = 'flex';
 
-    let goldReward = isWin ? savedData.stage * 300 : 50;
-    let partsReward = isWin ? savedData.stage * 25 : 5;
+    let goldReward = isWin ? activeChar.stage * 300 : 50;
+    let partsReward = isWin ? activeChar.stage * 25 : 5;
+    let accountXpReward = isWin ? activeChar.stage * 150 : activeChar.stage * 50;
     
-    let accountXpReward = isWin ? savedData.stage * 150 : savedData.stage * 50;
-    savedData.accountXp += accountXpReward;
-    
+    activeChar.accountXp += accountXpReward;
     let levelUpMessage = "";
-    let maxXp = savedData.accountLevel * 500;
-    while (savedData.accountXp >= maxXp) {
-        savedData.accountXp -= maxXp;
-        savedData.accountLevel++;
-        maxXp = savedData.accountLevel * 500;
-        levelUpMessage = `<div style="color:#00ffcc; font-weight:bold; margin-top:8px;">УРОВЕНЬ СТАЛКЕРА ПОВЫШЕН! (Ур. ${savedData.accountLevel})</div><div style="font-size: 10px; color: #00ff66;">Характеристики убежища усилены!</div>`;
+    let maxXp = activeChar.accountLevel * 500;
+    while (activeChar.accountXp >= maxXp) {
+        activeChar.accountXp -= maxXp;
+        activeChar.accountLevel++;
+        maxXp = activeChar.accountLevel * 500;
+        levelUpMessage = `<div style="color:#00ffcc; font-weight:bold; margin-top:8px;">УРОВЕНЬ СТАЛКЕРА ПОВЫШЕН! (Ур. ${activeChar.accountLevel})</div>`;
     }
 
     if (isWin) {
-        savedData.gold += goldReward;
-        savedData.parts += partsReward;
-        savedData.seasonXp += 40;
-        if (savedData.seasonXp >= savedData.seasonLevel * 100) {
-            savedData.seasonXp -= savedData.seasonLevel * 100;
-            savedData.seasonLevel++;
+        activeChar.gold += goldReward;
+        activeChar.parts += partsReward;
+        activeChar.seasonXp += 40;
+        if (activeChar.seasonXp >= activeChar.seasonLevel * 100) {
+            activeChar.seasonXp -= activeChar.seasonLevel * 100;
+            activeChar.seasonLevel++;
             showBmPopup("Уровень пропуска повышен!");
         }
     }
-    saveData();
+    saveAccount();
 
     let content = document.getElementById('battleResultContent');
     if (content) {
         content.innerHTML = `
-            <h2 style="color:${isWin?'#00ffcc':'#ff4a4a'}; margin-top:0;">${isWin ? 'ЗАЧИСТКА ГЛАВЫ УСПЕШНА!' : (isFlee ? 'ЭВАКУАЦИЯ ИЗ ЗОНЫ' : 'СМЕРТЬ В ПУСТОШИ')}</h2>
-            <p style="color:#888; font-size:12px;">Добытые трофеи:</p>
+            <h2 style="color:${isWin?'#00ffcc':'#ff4a4a'}; margin-top:0;">${isWin ? 'ЗАЧИСТКА УСПЕШНА!' : 'ПОРАЖЕНИЕ'}</h2>
             <div style="display:flex; justify-content:center; gap:15px; margin:10px 0;">
                 <div>💰 +${goldReward}</div>
                 <div>⚙️ +${partsReward}</div>
             </div>
-            <div style="color: #00ffcc; font-size: 11px; margin-bottom: 10px;">🌟 Опыт сталкера: +${accountXpReward}</div>
+            <div style="color: #00ffcc; font-size: 11px; margin-bottom: 10px;">🌟 Опыт: +${accountXpReward}</div>
             ${levelUpMessage}
             <button onclick="document.getElementById('battleResultModal').style.display='none'; switchTab('lobbyScreen', document.getElementById('navLobby')); playSound('click');" style="background:#28a745; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; width:100%; cursor:pointer; margin-top: 15px;">В УБЕЖИЩЕ</button>
         `;
