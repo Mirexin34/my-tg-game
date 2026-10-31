@@ -1,5 +1,5 @@
 // ==========================================================================
-// БАЗЫ ДАННЫХ ИГРЫ (SPEKTER AGENCY: DATA - LOGIN STREAK)
+// БАЗЫ ДАННЫХ ИГРЫ (SPEKTER AGENCY: DATA - CRATES & REWARDS)
 // ==========================================================================
 
 const itemDatabase = [
@@ -31,9 +31,9 @@ const titlesConfig = [
 const locationsConfig = [
     { id: 1, name: 'Ржавые Пустоши', bgStyle: '#221e1e', wallColor: '#4d3e3e', particleColor: 'rgba(255, 140, 0, 0.25)', enemyMultiplier: 1.0, effect: 'dust' },
     { id: 2, name: 'Заброшенный Бункер', bgStyle: '#161c24', wallColor: '#283545', particleColor: 'rgba(0, 170, 255, 0.2)', enemyMultiplier: 1.4, effect: 'sparks' },
-    { id: 3, name: 'Токсичный Город', bgStyle: '#16241a', wallColor: '#284d32', particleColor: 'rgba(0, 255, 100, 0.2)', enemyMultiplier: 1.8, effect: 'poison' },
-    { id: 4, name: 'Ядро Корпорации', bgStyle: '#241620', wallColor: '#4d283c', particleColor: 'rgba(255, 0, 150, 0.2)', enemyMultiplier: 2.3, effect: 'cyber' },
-    { id: 5, name: 'Цитадель Омега', bgStyle: '#1f160a', wallColor: '#4d3916', particleColor: 'rgba(255, 215, 0, 0.3)', enemyMultiplier: 3.0, effect: 'storm' }
+    { id: '3', name: 'Токсичный Город', bgStyle: '#16241a', wallColor: '#284d32', particleColor: 'rgba(0, 255, 100, 0.2)', enemyMultiplier: 1.8, effect: 'poison' },
+    { id: '4', name: 'Ядро Корпорации', bgStyle: '#241620', wallColor: '#4d283c', particleColor: 'rgba(255, 0, 150, 0.2)', enemyMultiplier: 2.3, effect: 'cyber' },
+    { id: '5', name: 'Цитадель Омега', bgStyle: '#1f160a', wallColor: '#4d3916', particleColor: 'rgba(255, 215, 0, 0.3)', enemyMultiplier: 3.0, effect: 'storm' }
 ];
 
 const skillDatabase = [
@@ -104,7 +104,10 @@ const enemyBasesConfig = [
 const agencyTalentsConfig = [
     { id: 't_atk', name: 'Боевые протоколы', icon: '⚔️', desc: '+10% к урону за уровень', baseCostParts: 20, costScale: 1.5, maxLevel: 10 },
     { id: 't_hp', name: 'Титановый экзоскелет', icon: '🛡️', desc: '+10% к здоровью за уровень', baseCostParts: 20, costScale: 1.5, maxLevel: 10 },
-    { id: 't_afk', name: 'Авто-сканеры добычи', icon: '🎁', desc: '+15% к АФК наградам за уровень', baseCostParts: 30, costScale: 1.6, maxLevel: 5 }
+    { id: 't_afk', name: 'Авто-сканеры добычи', icon: '🎁', desc: '+15% к АФК наградам за уровень', baseCostParts: 30, costScale: 1.6, maxLevel: 5 },
+    { id: 't_crit', name: 'Критический калибр', icon: '🎯', desc: '+5% к силе крита за уровень', baseCostParts: 25, costScale: 1.5, maxLevel: 8 },
+    { id: 't_regen', name: 'Нано-регенерация', icon: '❤️', desc: '+1 HP/сек регенерации за уровень', baseCostParts: 35, costScale: 1.7, maxLevel: 5 },
+    { id: 't_craft', name: 'Оптимизация чертежей', icon: '🛠️', desc: '-5% к стоимости крафта за уровень', baseCostParts: 40, costScale: 1.8, maxLevel: 5 }
 ];
 
 const seasonPassRewardsConfig = [
