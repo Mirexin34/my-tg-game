@@ -1,5 +1,5 @@
 // ==========================================================================
-// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - INTERACTIVE CRATES)
+// ОСНОВНОЙ ИГРОВОЙ ДВИЖОК (SPEKTER AGENCY: GAME - WEB AUDIO API)
 // ==========================================================================
 
 const tg = window.Telegram?.WebApp;
@@ -9,6 +9,51 @@ if (tg) {
 }
 
 const appContainer = document.getElementById('appContainer');
+
+// Генерация звуков через Web Audio API
+let audioCtx = null;
+function playSound(type) {
+    try {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        let now = audioCtx.currentTime;
+
+        if (type === 'click') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.exponentialRampToValueAtTime(300, now + 0.05);
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+            osc.start(now);
+            osc.stop(now + 0.05);
+        } else if (type === 'shoot') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(450, now);
+            osc.frequency.exponentialRampToValueAtTime(120, now + 0.08);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+            osc.start(now);
+            osc.stop(now + 0.08);
+        } else if (type === 'hit') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.linearRampToValueAtTime(60, now + 0.06);
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+            osc.start(now);
+            osc.stop(now + 0.06);
+        }
+    } catch(e) {}
+}
 
 window.showAlert = function(msg) { 
     if (tg && tg.showPopup) { 
@@ -68,7 +113,7 @@ const defaultSave = {
 
 let savedData = JSON.parse(JSON.stringify(defaultSave));
 try { 
-    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal44') || 'null'); 
+    let loaded = JSON.parse(localStorage.getItem('spekterSaveFinal46') || 'null'); 
     if (loaded) Object.assign(savedData, loaded); 
 } catch(e) {}
 
@@ -81,7 +126,7 @@ if (!savedData.profilePrivacy) savedData.profilePrivacy = { publicGear: true };
 if (savedData.loginStreakDay === undefined) { savedData.loginStreakDay = 1; savedData.lastLoginDate = 0; savedData.loginClaimedToday = false; }
 
 function saveData() { 
-    localStorage.setItem('spekterSaveFinal44', JSON.stringify(savedData)); 
+    localStorage.setItem('spekterSaveFinal46', JSON.stringify(savedData)); 
     updateTopBar(); 
 }
 
@@ -321,7 +366,7 @@ window.openTitlesModal = function() {
                     <div style="color: #888; font-size: 9px; margin-top: 2px;">Бонусы: +${t.bonusAtk} АТК, +${t.bonusHp} HP</div>
                     <div style="color: #555; font-size: 9px;">Требуется ур. Сталкера: ${t.reqLevel}</div>
                 </div>
-                <button onclick="equipTitle('${t.id}')" ${!isUnlocked || isEquipped ? 'disabled' : ''} style="background: ${isEquipped ? '#28a745' : (isUnlocked ? '#ffaa00' : '#444')}; color: ${isUnlocked ? '#000' : '#fff'}; border: none; padding: 5px 10px; border-radius: 6px; font-weight: bold; font-size: 10px; cursor: pointer;">
+                <button onclick="equipTitle('${t.id}'); playSound('click');" ${!isUnlocked || isEquipped ? 'disabled' : ''} style="background: ${isEquipped ? '#28a745' : (isUnlocked ? '#ffaa00' : '#444')}; color: ${isUnlocked ? '#000' : '#fff'}; border: none; padding: 5px 10px; border-radius: 6px; font-weight: bold; font-size: 10px; cursor: pointer;">
                     ${isEquipped ? 'Надето' : (isUnlocked ? 'Надеть' : 'Заблокировано')}
                 </button>
             </div>
@@ -411,14 +456,14 @@ window.switchHubTab = function(tabName, btnEl) {
                         <div style="color: #00ff00; font-size: 9px;">Защита БМ: ${b.defenseBm} | Турелей: ${b.towersCount}</div>
                         <div style="color: #ffd700; font-size: 9px;">💰 ${b.lootGold} | ⚙️ ${b.lootParts} | 📜 ${bpLabel}</div>
                     </div>
-                    <button onclick="startBaseRaid('${b.id}')" style="background: #e43f5a; color: white; border: none; padding: 5px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Штурм</button>
+                    <button onclick="startBaseRaid('${b.id}'); playSound('click');" style="background: #e43f5a; color: white; border: none; padding: 5px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Штурм</button>
                 </div>
             `;
         });
         content.innerHTML = `
             <div style="background: #2a2a35; border: 1px solid #555; border-radius: 8px; padding: 8px; margin-bottom: 8px;">
                 <div style="color: #ffd700; font-weight: bold; font-size: 10px;">🛡️ Защита вашей базы: Турелей: ${savedData.baseDefense.towers} | Охрана: ${savedData.baseDefense.guards}</div>
-                <button onclick="upgradeBaseDefense()" style="background: #28a745; color: white; border: none; padding: 4px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 9px; cursor: pointer; margin-top: 4px;">Улучшить защиту (1000 💰)</button>
+                <button onclick="upgradeBaseDefense(); playSound('click');" style="background: #28a745; color: white; border: none; padding: 4px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 9px; cursor: pointer; margin-top: 4px;">Улучшить защиту (1000 💰)</button>
             </div>
             <div style="font-weight: bold; font-size: 11px; color: #ffea00; margin-bottom: 4px;">🎯 Доступные базы:</div>
             ${basesHTML}
@@ -427,7 +472,7 @@ window.switchHubTab = function(tabName, btnEl) {
         if (!savedData.guild) {
             content.innerHTML = `
                 <p style="color: #ccc; font-size: 11px; margin-top: 0;">Вы не состоите в гильдии.</p>
-                <button onclick="joinGuild('g1')" style="background: #da70d6; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 10px; cursor: pointer;">Вступить в "Стальные Тени"</button>
+                <button onclick="joinGuild('g1'); playSound('click');" style="background: #da70d6; color: white; border: none; padding: 6px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 10px; cursor: pointer;">Вступить в "Стальные Тени"</button>
             `;
         } else {
             content.innerHTML = `
@@ -435,10 +480,10 @@ window.switchHubTab = function(tabName, btnEl) {
                     <div style="color: #da70d6; font-weight: bold; font-size: 12px;">🛡️ ${savedData.guild.name} (ур. ${savedData.guild.level})</div>
                     <div style="color: #00ff00; font-size: 10px; margin-top: 2px;">🪙 Жетоны гильдии: ${savedData.guild.tokens || 0}</div>
                     <div style="color: #ffd700; font-size: 10px; margin-top: 2px;">📦 Казна: ${savedData.guild.treasuryGold || 0} золота</div>
-                    <button onclick="donateToGuildTreasury()" style="background: #ffd700; color: #000; border: none; padding: 4px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 9px; cursor: pointer; margin-top: 6px;">Внести 500 💰 в казну</button>
-                    <button onclick="startGuildRaidBattle()" style="background: #ff4a4a; color: white; border: none; padding: 5px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 10px; cursor: pointer; margin-top: 6px;">Атаковать рейд-босса (${savedData.guildBossHp}/${guildRaidBoss.hp} HP)</button>
+                    <button onclick="donateToGuildTreasury(); playSound('click');" style="background: #ffd700; color: #000; border: none; padding: 4px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 9px; cursor: pointer; margin-top: 6px;">Внести 500 💰 в казну</button>
+                    <button onclick="startGuildRaidBattle(); playSound('click');" style="background: #ff4a4a; color: white; border: none; padding: 5px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 10px; cursor: pointer; margin-top: 6px;">Атаковать рейд-босса (${savedData.guildBossHp}/${guildRaidBoss.hp} HP)</button>
                 </div>
-                <button onclick="leaveGuild()" style="background: #dc3545; color: white; border: none; padding: 5px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 9px; cursor: pointer;">Покинуть гильдию</button>
+                <button onclick="leaveGuild(); playSound('click');" style="background: #dc3545; color: white; border: none; padding: 5px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 9px; cursor: pointer;">Покинуть гильдию</button>
             `;
         }
     } else if (tabName === 'arena') {
@@ -450,7 +495,7 @@ window.switchHubTab = function(tabName, btnEl) {
                         <div style="color: #fff; font-weight: bold; font-size: 11px;">${bot.icon} ${bot.name}</div>
                         <div style="color: #00ff00; font-size: 9px;">⚔️ БМ: ${bot.bm} | ❤️ HP: ${bot.hp}</div>
                     </div>
-                    <button onclick="startArenaBattle('${bot.name}')" style="background: #ff4a4a; color: white; border: none; padding: 5px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Бой</button>
+                    <button onclick="startArenaBattle('${bot.name}'); playSound('click');" style="background: #ff4a4a; color: white; border: none; padding: 5px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Бой</button>
                 </div>
             `;
         });
@@ -466,7 +511,7 @@ window.switchHubTab = function(tabName, btnEl) {
                         <div style="font-size: 12px;">${item.icon} <strong style="color:#fff; font-size:11px;">${item.name}</strong></div>
                         <div style="color: #aaa; font-size: 9px;">Лимит: ${leftToday}/${item.maxDaily} | ${item.pricePerUnitGem} 💎</div>
                     </div>
-                    <button onclick="buyMarketItem('${item.id}', 1)" ${leftToday <= 0 ? 'disabled' : ''} style="background: ${leftToday > 0 ? '#28a745' : '#555'}; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Купить</button>
+                    <button onclick="buyMarketItem('${item.id}', 1); playSound('click');" ${leftToday <= 0 ? 'disabled' : ''} style="background: ${leftToday > 0 ? '#28a745' : '#555'}; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Купить</button>
                 </div>
             `;
         });
@@ -508,9 +553,9 @@ window.switchHubTab = function(tabName, btnEl) {
                         <div style="color: #aaa; font-size: 9px; margin: 2px 0;">В наличии: ${gData.count} шт.</div>
                     </div>
                     <div style="display:flex; gap:3px;">
-                        <button onclick="upgradeGem('${g.id}', 1)" style="background: #28a745; color: white; border: none; padding: 4px 6px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer;">Синтез</button>
-                        <button onclick="upgradeGem('${g.id}', 'mass')" style="background: #ffaa00; color: #000; border: none; padding: 4px 6px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer;">Массово</button>
-                        <button onclick="socketGem('${g.id}', 'weapon')" style="background: #00aaff; color: white; border: none; padding: 4px 6px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer;">В пушку</button>
+                        <button onclick="upgradeGem('${g.id}', 1); playSound('click');" style="background: #28a745; color: white; border: none; padding: 4px 6px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer;">Синтез</button>
+                        <button onclick="upgradeGem('${g.id}', 'mass'); playSound('click');" style="background: #ffaa00; color: #000; border: none; padding: 4px 6px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer;">Массово</button>
+                        <button onclick="socketGem('${g.id}', 'weapon'); playSound('click');" style="background: #00aaff; color: white; border: none; padding: 4px 6px; border-radius: 4px; font-weight: bold; font-size: 9px; cursor: pointer;">В пушку</button>
                     </div>
                 </div>
             `;
@@ -611,7 +656,7 @@ window.renderCrafting = function() {
 
         let canCraft = savedData.stage >= recipe.reqStage && savedData.gold >= finalGold && savedData.parts >= finalParts && hasBp; 
         let bpText = recipe.reqBp ? `<br><span style="color:${hasBp?'#00ff00':'#ff4a4a'}">📜 ${recipe.bpName}: ${(savedData.blueprints[recipe.reqBp]||0)}/1</span>` : ''; 
-        list.innerHTML += `<div class="craft-card"><div><div style="font-size: 18px; float: left; margin-right: 6px;">${recipe.icon}</div><div style="font-weight: bold; color: #fff; font-size: 11px;">${recipe.name}</div><div style="color: #aaa; font-size: 9px;">💰 ${finalGold} | ⚙️ ${finalParts} ${bpText}</div></div><button onclick="craftWeapon('${recipe.id}')" ${canCraft ? '' : 'disabled'} style="background: ${canCraft ? '#28a745' : '#555'}; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; cursor:pointer; font-size:10px;">Создать</button></div>`; 
+        list.innerHTML += `<div class="craft-card"><div><div style="font-size: 18px; float: left; margin-right: 6px;">${recipe.icon}</div><div style="font-weight: bold; color: #fff; font-size: 11px;">${recipe.name}</div><div style="color: #aaa; font-size: 9px;">💰 ${finalGold} | ⚙️ ${finalParts} ${bpText}</div></div><button onclick="craftWeapon('${recipe.id}'); playSound('click');" ${canCraft ? '' : 'disabled'} style="background: ${canCraft ? '#28a745' : '#555'}; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; cursor:pointer; font-size:10px;">Создать</button></div>`; 
     }); 
 };
 
@@ -651,7 +696,7 @@ window.renderTalentsUI = function() {
                     <div style="font-size:9px; color:#aaa; margin-top:2px;">${t.desc}</div>
                     <div style="font-size:9px; color:#da70d6; margin-top:2px;">Цена: ${maxed ? 'МАКС' : cost + ' ⚙️'}</div>
                 </div>
-                <button onclick="upgradeTalent('${t.id}')" ${maxed ? 'disabled' : ''} style="background: ${maxed ? '#555' : '#28a745'}; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; font-size:10px; cursor:pointer;">${maxed ? 'Макс' : 'Улучшить'}</button>
+                <button onclick="upgradeTalent('${t.id}'); playSound('click');" ${maxed ? 'disabled' : ''} style="background: ${maxed ? '#555' : '#28a745'}; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; font-size:10px; cursor:pointer;">${maxed ? 'Макс' : 'Улучшить'}</button>
             </div>
         `;
     });
@@ -694,7 +739,7 @@ window.renderSeasonUI = function() {
                     <div style="font-size:12px; color:#ffd700; font-weight:bold;">Уровень ${r.level}: ${r.desc}</div>
                     <div style="font-size:10px; color:#00ff00; margin-top:2px;">🎁 Награда: +${r.rewardGold} 💰, +${r.rewardGems} 💎</div>
                 </div>
-                <button onclick="claimSeasonReward(${r.level})" ${canClaim ? '' : 'disabled'} style="background: ${isClaimed ? '#555' : (canClaim ? '#28a745' : '#444')}; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; font-size:10px; cursor:pointer;">${isClaimed ? 'Получено' : 'Забрать'}</button>
+                <button onclick="claimSeasonReward(${r.level}); playSound('click');" ${canClaim ? '' : 'disabled'} style="background: ${isClaimed ? '#555' : (canClaim ? '#28a745' : '#444')}; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; font-size:10px; cursor:pointer;">${isClaimed ? 'Получено' : 'Забрать'}</button>
             </div>
         `;
     });
@@ -807,7 +852,7 @@ window.renderInventory = function() {
         let div = document.createElement('div'); 
         div.className = `inv-item rarity-bg-${data.rarity}`; 
         div.innerHTML = `${data.icon}<div class="stat-badge">${data.atk > 0 ? '+'+data.atk : '+'+data.hp}</div>`; 
-        div.onclick = () => { window.equipItem(invItem.uid, data.type); }; 
+        div.onclick = () => { window.equipItem(invItem.uid, data.type); playSound('click'); }; 
         grid.appendChild(div); 
     }); 
 };
@@ -860,6 +905,7 @@ setInterval(() => {
 
 let bs = document.getElementById('btnSweep');
 if(bs) bs.addEventListener('click', () => { 
+    playSound('click');
     let sgr = document.getElementById('sweepGoldResult'); if(sgr) sgr.innerText = pendingGold; 
     let spr = document.getElementById('sweepPartsResult'); if(spr) spr.innerText = pendingParts; 
     let sm = document.getElementById('sweepModal'); if(sm) sm.style.display = 'flex'; 
@@ -867,6 +913,7 @@ if(bs) bs.addEventListener('click', () => {
 
 let bcs = document.getElementById('btnClaimSweep');
 if(bcs) bcs.addEventListener('click', () => { 
+    playSound('click');
     if (pendingGold > 0 || pendingParts > 0) { 
         savedData.gold += pendingGold; 
         savedData.parts += pendingParts; 
@@ -878,3 +925,1035 @@ if(bcs) bcs.addEventListener('click', () => {
 });
 
 updateTopBar();
+
+// ==========================================================================
+// БОЕВОЙ ДВИЖОК CANVAS
+// ==========================================================================
+
+const canvas = document.getElementById('gameCanvas'); 
+const ctx = canvas.getContext('2d');
+const joystickZone = document.getElementById('joystickZone'); 
+const joystickBase = document.getElementById('joystickBase'); 
+const joystickStick = document.getElementById('joystickStick');
+const roomCounterUI = document.getElementById('roomCounterUI');
+
+let screenW, screenH; 
+function resize() { 
+    screenW = appContainer.clientWidth; 
+    screenH = appContainer.clientHeight; 
+    canvas.width = screenW; 
+    canvas.height = screenH; 
+} 
+window.addEventListener('resize', resize); 
+resize();
+
+const world = { width: 0, height: 0 }; 
+const input = { x: 0, y: 0, isMoving: false, usingKeyboard: false }; 
+let joystickCenter = { x: 0, y: 0 }; 
+const MAX_JOYSTICK_RADIUS = 50; 
+
+let player = { x: 100, y: 200, radius: 15, speed: 220, hp: 1000, maxHp: 1000, atk: 150, attackRate: 1.5, aimingAngle: 0, lastAttackTime: 0 };
+let enemies = [];
+let projectiles = [];
+let floatingTexts = [];
+let allyUnits = [];
+let obstacles = [];
+let roomState = 'fighting';
+let currentRoom = 1;
+const maxRooms = 5;
+let isBossStage = false;
+let bossEntity = null;
+let killsInRoom = 0;
+let totalKillsInRun = 0;
+let revivesUsed = 0;
+let currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0, isRocket: false };
+let runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 };
+let portal = null;
+let activePet = null;
+let backgroundParticles = [];
+
+function initLocationParticles() {
+    backgroundParticles = [];
+    let count = 30;
+    for(let i=0; i<count; i++) {
+        backgroundParticles.push({
+            x: Math.random() * screenW,
+            y: Math.random() * screenH,
+            vx: (Math.random() - 0.5) * 30,
+            vy: (Math.random() - 0.5) * 30,
+            radius: Math.random() * 3 + 1,
+            alpha: Math.random() * 0.7 + 0.2
+        });
+    }
+}
+
+function prepareBattleUI(titleText) {
+    let hm = document.getElementById('hubModal'); if(hm) hm.style.display = 'none';
+    document.querySelectorAll('.screen').forEach(s => s.style.display = 'none'); 
+    let tb = document.getElementById('topBar'); if(tb) tb.style.display = 'none'; 
+    let nb = document.getElementById('navBar'); if(nb) nb.style.display = 'none'; 
+    let brm = document.getElementById('battleResultModal'); if(brm) brm.style.display = 'none'; 
+    let bp = document.getElementById('btnPause'); if(bp) bp.style.display = 'flex'; 
+    let rcu = document.getElementById('roomCounterUI'); if(rcu) { rcu.style.display = 'block'; rcu.innerText = titleText; }
+
+    resize(); 
+    world.width = screenW; 
+    world.height = screenH;
+
+    let finalStats = getCalculatedStats(); 
+    player.maxHp = finalStats.hp; 
+    player.hp = finalStats.hp; 
+    player.atk = finalStats.atk; 
+    
+    player.x = 80;
+    player.y = screenH / 2;
+
+    let baseSpeed = 220;
+    if (savedData.equipped.mount) {
+        let mountData = getItemData(savedData.equipped.mount);
+        if (mountData && mountData.speedBonus) {
+            baseSpeed *= mountData.speedBonus;
+        }
+    }
+    player.speed = baseSpeed;
+
+    let wp = getItemData(savedData.equipped.weapon); 
+    if (wp && wp.fireRate) { 
+        currentWeaponStats = { fireRate: wp.fireRate, bullets: wp.bullets, projSpeed: wp.projSpeed, spread: wp.spread, isRocket: wp.isRocket }; 
+    } else { currentWeaponStats = { fireRate: 1.0, bullets: 1, projSpeed: 500, spread: 0, isRocket: false }; } 
+    
+    runMods = { atkMult: 1.0, spdMult: 1.0, vamp: 0, regen: 0 }; 
+    enemies = []; projectiles = []; floatingTexts = []; allyUnits = []; obstacles = []; portal = null;
+
+    activePet = {
+        x: player.x - 40,
+        y: player.y,
+        radius: 10,
+        speed: 240,
+        atk: 60,
+        fireRate: 1.0,
+        lastAttack: 0,
+        icon: savedData.equipped.drone ? '🛸' : '🐕'
+    };
+
+    initLocationParticles();
+}
+
+window.startBattle = function() { 
+    if (savedData.energy < 5) { showAlert("Недостаточно энергии!"); return; } 
+    savedData.energy -= 5; 
+    saveData(); 
+
+    prepareBattleUI(`Глава ${savedData.stage} (Комната 1/5)`);
+    let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'block'; 
+    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
+
+    totalKillsInRun = 0; revivesUsed = 0; currentRoom = 1; 
+    startRoom(); 
+    
+    gameState = 'playing'; 
+    let cv = document.getElementById('gameCanvas'); if(cv) cv.style.display = 'block'; 
+    let jz = document.getElementById('joystickZone'); if(jz) jz.style.display = 'block'; 
+    lastTime = performance.now(); 
+    requestAnimationFrame(gameLoop); 
+};
+
+let activeArenaBot = null;
+window.startArenaBattle = function(botName) {
+    activeArenaBot = simulationBots.find(b => b.name === botName);
+    if (!activeArenaBot) return;
+
+    prepareBattleUI(`ДУЭЛЬ: ${activeArenaBot.name}`);
+    let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none'; 
+    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
+
+    roomState = 'pvp_fighting'; isBossStage = false; bossEntity = null;
+    player.x = 80; player.y = screenH / 2;
+    enemies.push({
+        x: screenW * 0.8, y: screenH / 2,
+        radius: 16, hp: activeArenaBot.hp, maxHp: activeArenaBot.hp,
+        atk: activeArenaBot.atk, speed: activeArenaBot.speed,
+        isBoss: false, isBot: true, name: activeArenaBot.name, icon: activeArenaBot.icon,
+        angle: 0, lastAttack: 0
+    });
+
+    gameState = 'playing'; 
+    let cv = document.getElementById('gameCanvas'); if(cv) cv.style.display = 'block'; 
+    let jz = document.getElementById('joystickZone'); if(jz) jz.style.display = 'block'; 
+    lastTime = performance.now(); 
+    requestAnimationFrame(gameLoop);
+};
+
+window.startGuildRaidBattle = function() {
+    prepareBattleUI(`РЕЙД: ${guildRaidBoss.name}`);
+    let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none'; 
+    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = savedData.guild ? 'flex' : 'none';
+
+    roomState = 'guild_raid_fighting'; isBossStage = true; 
+    player.x = 80; player.y = screenH / 2;
+    bossEntity = {
+        x: screenW * 0.8, y: screenH / 2,
+        radius: guildRaidBoss.radius, hp: savedData.guildBossHp, maxHp: guildRaidBoss.hp,
+        atk: guildRaidBoss.atk, speed: guildRaidBoss.speed,
+        isBoss: true, isBot: false, type: 'boss', lastAttack: 0, angle: 0
+    };
+    enemies.push(bossEntity);
+
+    gameState = 'playing'; 
+    let cv = document.getElementById('gameCanvas'); if(cv) cv.style.display = 'block'; 
+    let jz = document.getElementById('joystickZone'); if(jz) jz.style.display = 'block'; 
+    lastTime = performance.now(); 
+    requestAnimationFrame(gameLoop);
+};
+
+let activeRaidBase = null;
+window.startBaseRaid = function(baseId) {
+    activeRaidBase = enemyBasesConfig.find(x => x.id === baseId);
+    if (!activeRaidBase) return;
+
+    prepareBattleUI(`ШТУРМ: База ${activeRaidBase.owner}`);
+    let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none'; 
+    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = savedData.guild ? 'flex' : 'none';
+
+    roomState = 'base_raid_fighting'; isBossStage = false; bossEntity = null;
+    player.x = 80; player.y = screenH / 2;
+
+    for(let i=0; i<activeRaidBase.towersCount; i++) {
+        enemies.push({
+            x: screenW * 0.7 + Math.random() * (screenW * 0.2), y: 100 + i * (screenH / (activeRaidBase.towersCount + 1)),
+            radius: 18, hp: 400, maxHp: 400, atk: 30, speed: 0,
+            isBoss: false, isBot: false, isTower: true, type: 'tower', icon: '🗼', angle: 0, lastAttack: 0
+        });
+    }
+    for(let i=0; i<activeRaidBase.guardsCount; i++) {
+        enemies.push({
+            x: screenW * 0.7 + Math.random() * (screenW * 0.2), y: 80 + Math.random() * (screenH - 160),
+            radius: 14, hp: 200, maxHp: 200, atk: 20, speed: 120,
+            isBoss: false, isBot: false, isTower: false, type: 'zombie', icon: '🧟', angle: 0, lastAttack: 0
+        });
+    }
+
+    gameState = 'playing'; 
+    let cv = document.getElementById('gameCanvas'); if(cv) cv.style.display = 'block'; 
+    let jz = document.getElementById('joystickZone'); if(jz) jz.style.display = 'block'; 
+    lastTime = performance.now(); 
+    requestAnimationFrame(gameLoop);
+};
+
+function startRoom() {
+    roomState = 'fighting';
+    killsInRoom = 0;
+    enemies = [];
+    portal = null;
+    isBossStage = (currentRoom === maxRooms);
+    
+    let rcu = document.getElementById('roomCounterUI');
+    if(rcu) rcu.innerText = isBossStage ? `БОСС (Глава ${savedData.stage}, Комната ${currentRoom}/5)` : `Глава ${savedData.stage} (Комната ${currentRoom}/5)`;
+
+    const layouts = [
+        [
+            { x: screenW * 0.3, y: screenH * 0.2, w: 40, h: 90 },
+            { x: screenW * 0.6, y: screenH * 0.6, w: 90, h: 40 }
+        ],
+        [
+            { x: screenW * 0.4, y: screenH * 0.4, w: 60, h: 60 },
+            { x: screenW * 0.7, y: screenH * 0.15, w: 50, h: 100 }
+        ],
+        [
+            { x: screenW * 0.25, y: screenH * 0.65, w: 100, h: 35 },
+            { x: screenW * 0.65, y: screenH * 0.25, w: 40, h: 90 }
+        ],
+        [
+            { x: screenW * 0.5, y: screenH * 0.3, w: 50, h: 50 },
+            { x: screenW * 0.3, y: screenH * 0.6, w: 70, h: 40 }
+        ]
+    ];
+    obstacles = layouts[(currentRoom - 1) % layouts.length];
+
+    player.x = 80;
+    player.y = screenH / 2;
+
+    if (!isBossStage) {
+        let count = 2 + currentRoom + (savedData.stage * 1.5);
+        let keys = Object.keys(enemyTypesConfig);
+        for(let i=0; i<count; i++) {
+            let tKey = keys[Math.floor(Math.random() * keys.length)];
+            let cfg = enemyTypesConfig[tKey];
+            
+            // Проверка на элитного врага (20% шанс)
+            let isElite = Math.random() < 0.2;
+            let eliteType = isElite ? ['berserk', 'armored', 'toxic'][Math.floor(Math.random()*3)] : null;
+            let eliteHpMult = eliteType === 'armored' ? 2.5 : 1.5;
+            let eliteAtkMult = eliteType === 'berserk' ? 1.6 : 1.2;
+            let eliteSpeedMult = eliteType === 'berserk' ? 1.3 : 1.0;
+
+            enemies.push({
+                x: screenW * 0.6 + Math.random() * (screenW * 0.35),
+                y: 80 + Math.random() * (screenH - 160),
+                radius: cfg.radius * (isElite ? 1.2 : 1.0),
+                hp: 100 * cfg.hpMultiplier * savedData.stage * eliteHpMult,
+                maxHp: 100 * cfg.hpMultiplier * savedData.stage * eliteHpMult,
+                atk: 15 * savedData.stage * eliteAtkMult,
+                speed: 100 * cfg.speedMultiplier * eliteSpeedMult,
+                type: tKey,
+                isBoss: false, isBot: false, isTower: false,
+                isElite: isElite, eliteType: eliteType,
+                angle: 0, lastAttack: 0
+            });
+        }
+    } else {
+        spawnBoss();
+    }
+}
+
+function spawnBoss() {
+    bossEntity = {
+        x: screenW * 0.8, y: screenH / 2,
+        radius: 38,
+        hp: 1200 * savedData.stage, 
+        maxHp: 1200 * savedData.stage,
+        atk: 50 * savedData.stage,
+        speed: 75,
+        isBoss: true, isBot: false, isTower: false, type: 'boss',
+        angle: 0, lastAttack: 0, patternTimer: 0
+    };
+    enemies.push(bossEntity);
+}
+
+function spawnSpecificWaveEnemy() {
+    let keys = Object.keys(enemyTypesConfig);
+    let tKey = keys[Math.floor(Math.random() * keys.length)];
+    let cfg = enemyTypesConfig[tKey];
+    enemies.push({
+        x: screenW * 0.75 + Math.random() * (screenW * 0.2),
+        y: 80 + Math.random() * (screenH - 160),
+        radius: cfg.radius,
+        hp: 100 * cfg.hpMultiplier * savedData.stage,
+        maxHp: 100 * cfg.hpMultiplier * savedData.stage,
+        atk: 15 * savedData.stage,
+        speed: 100 * cfg.speedMultiplier,
+        type: tKey,
+        isBoss: false, isBot: false, isTower: false,
+        angle: 0, lastAttack: 0
+    });
+}
+
+function startInput(clientX, clientY) { 
+    if (gameState !== 'playing') return; 
+    input.usingKeyboard = false; 
+    input.isMoving = true; 
+    let rect = joystickZone.getBoundingClientRect(); 
+    joystickCenter.x = clientX - rect.left; 
+    joystickCenter.y = clientY - rect.top; 
+    joystickBase.style.display = 'block'; 
+    joystickBase.style.left = `${joystickCenter.x}px`; 
+    joystickBase.style.top = `${joystickCenter.y}px`; 
+    joystickStick.style.transform = `translate(-50%, -50%)`; 
+}
+
+function moveInput(clientX, clientY) { 
+    if (!input.isMoving || input.usingKeyboard || gameState !== 'playing') return; 
+    let rect = joystickZone.getBoundingClientRect(); 
+    let dx = (clientX - rect.left) - joystickCenter.x, dy = (clientY - rect.top) - joystickCenter.y; 
+    let dist = Math.hypot(dx, dy) || 0.001; 
+    if (dist > MAX_JOYSTICK_RADIUS) { 
+        dx = (dx / dist) * MAX_JOYSTICK_RADIUS; 
+        dy = (dy / dist) * MAX_JOYSTICK_RADIUS; 
+    } 
+    joystickStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`; 
+    input.x = dx / MAX_JOYSTICK_RADIUS; 
+    input.y = dy / MAX_JOYSTICK_RADIUS; 
+}
+
+function stopInput() { 
+    if (input.usingKeyboard) return; 
+    input.isMoving = false; 
+    input.x = 0; 
+    input.y = 0; 
+    joystickBase.style.display = 'none'; 
+}
+
+joystickZone.addEventListener('touchstart', (e) => startInput(e.changedTouches[0].clientX, e.changedTouches[0].clientY)); 
+joystickZone.addEventListener('touchmove', (e) => moveInput(e.changedTouches[0].clientX, e.changedTouches[0].clientY)); 
+joystickZone.addEventListener('touchend', stopInput); 
+joystickZone.addEventListener('mousedown', (e) => startInput(e.clientX, e.clientY)); 
+joystickZone.addEventListener('mousemove', (e) => moveInput(e.clientX, e.clientY)); 
+window.addEventListener('mouseup', stopInput);
+
+const keys = { up: false, down: false, left: false, right: false }; 
+window.addEventListener('keydown', (e) => { 
+    let code = e.code; 
+    if(code === 'KeyW' || code === 'ArrowUp') keys.up = true; 
+    if(code === 'KeyS' || code === 'ArrowDown') keys.down = true; 
+    if(code === 'KeyA' || code === 'ArrowLeft') keys.left = true; 
+    if(code === 'KeyD' || code === 'ArrowRight') keys.right = true; 
+    updateKeyboardInput(); 
+}); 
+
+window.addEventListener('keyup', (e) => { 
+    let code = e.code; 
+    if(code === 'KeyW' || code === 'ArrowUp') keys.up = false; 
+    if(code === 'KeyS' || code === 'ArrowDown') keys.down = false; 
+    if(code === 'KeyA' || code === 'ArrowLeft') keys.left = false; 
+    if(code === 'KeyD' || code === 'ArrowRight') keys.right = false; 
+    updateKeyboardInput(); 
+});
+
+function updateKeyboardInput() { 
+    if (gameState !== 'playing') return; 
+    let dx = 0, dy = 0; 
+    if (keys.up) dy -= 1; 
+    if (keys.down) dy += 1; 
+    if (keys.left) dx -= 1; 
+    if (keys.right) dx += 1; 
+    if (dx !== 0 || dy !== 0) { 
+        input.usingKeyboard = true; 
+        input.isMoving = true; 
+        let dist = Math.hypot(dx, dy); 
+        input.x = dx / dist; 
+        input.y = dy / dist; 
+        joystickBase.style.display = 'none'; 
+    } else if (input.usingKeyboard) { 
+        input.usingKeyboard = false; 
+        input.isMoving = false; 
+        input.x = 0; 
+        input.y = 0; 
+    } 
+}
+
+window.togglePause = function() { 
+    if (gameState === 'playing') { 
+        gameState = 'paused'; 
+        let pm = document.getElementById('pauseModal'); if(pm) pm.style.display = 'flex'; 
+    } else if (gameState === 'paused') { 
+        gameState = 'playing'; 
+        let pm = document.getElementById('pauseModal'); if(pm) pm.style.display = 'none'; 
+        lastTime = performance.now(); 
+        requestAnimationFrame(gameLoop); 
+    } 
+};
+
+window.fleeBattle = function() { 
+    let pm = document.getElementById('pauseModal'); if(pm) pm.style.display = 'none'; 
+    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none'; 
+    showBattleResult(false, true); 
+};
+
+function checkObstacleCollision(x, y, radius) {
+    for (let obs of obstacles) {
+        let closestX = Math.max(obs.x, Math.min(x, obs.x + obs.w));
+        let closestY = Math.max(obs.y, Math.min(y, obs.y + obs.h));
+        let distX = x - closestX;
+        let distY = y - closestY;
+        if ((distX * distX + distY * distY) < (radius * radius)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+let lastTime = performance.now(); 
+function gameLoop(timestamp) {
+    if (gameState !== 'playing') return; 
+    requestAnimationFrame(gameLoop);
+    let dt = (timestamp - lastTime) / 1000; 
+    lastTime = timestamp; 
+    if (dt > 0.1) dt = 0.016; 
+    
+    let isPvp = (roomState === 'pvp_fighting');
+    let isRaid = (roomState === 'guild_raid_fighting');
+    let isBaseRaid = (roomState === 'base_raid_fighting');
+
+    if (!isPvp && !isRaid && !isBaseRaid && roomState === 'fighting') {
+        if (runMods.regen > 0 && player.hp < player.maxHp) { 
+            player.hp = Math.min(player.maxHp, player.hp + (runMods.regen * dt)); 
+        }
+        if (isBossStage) { 
+            if (!bossEntity && enemies.length === 0) spawnBoss(); 
+        } else { 
+            let maxEnemiesOnScreen = 3 + (savedData.stage * 2);
+            let totalEnemiesToKill = 10 + (savedData.stage * 2);
+            let spawnChance = (0.5 + (savedData.stage * 0.1)) * dt;
+            
+            if (enemies.length < maxEnemiesOnScreen && killsInRoom + enemies.length < totalEnemiesToKill && Math.random() < spawnChance) {
+                spawnSpecificWaveEnemy();
+            }
+        }
+        
+        let targetKills = isBossStage ? 1 : (10 + (savedData.stage * 2));
+        if (enemies.length === 0 && (isBossStage ? bossEntity && bossEntity.isDead : killsInRoom >= targetKills)) { 
+            roomState = 'cleared'; 
+            portal = { x: screenW - 100, y: screenH / 2, radius: 40 }; 
+        }
+    }
+    
+    if (roomState === 'cleared' && portal) { 
+        if (Math.hypot(player.x - portal.x, player.y - portal.y) < player.radius + portal.radius) { 
+            if (currentRoom < maxRooms) { currentRoom++; startRoom(); } 
+            else { showBattleResult(true); } 
+            return; 
+        } 
+    }
+    
+    if (input.isMoving && (input.x !== 0 || input.y !== 0)) { 
+        let nextX = player.x + input.x * player.speed * dt;
+        let nextY = player.y + input.y * player.speed * dt;
+        
+        nextX = Math.max(player.radius, Math.min(screenW - player.radius, nextX)); 
+        nextY = Math.max(player.radius, Math.min(screenH - player.radius, nextY));
+
+        if (!checkObstacleCollision(nextX, nextY, player.radius)) {
+            player.x = nextX;
+            player.y = nextY;
+        }
+
+        if(timestamp - player.lastAttackTime > 500) { player.aimingAngle = Math.atan2(input.y, input.x); } 
+    } 
+    
+    let actualFireRate = player.attackRate * currentWeaponStats.fireRate;
+    if (enemies.length > 0 && (timestamp - player.lastAttackTime)/1000 >= 1 / actualFireRate) { 
+        let target = null, minDist = Infinity; 
+        for (let e of enemies) { 
+            const dist = Math.hypot(e.x - player.x, e.y - player.y); 
+            if (dist < minDist) { minDist = dist; target = e; } 
+        } 
+        if (target) { 
+            const dx = target.x - player.x, dy = target.y - player.y; 
+            player.aimingAngle = Math.atan2(dy, dx); 
+            let finalDamage = player.atk * runMods.atkMult; 
+            let bullets = currentWeaponStats.bullets; 
+            let spread = currentWeaponStats.spread;
+            let isRocket = currentWeaponStats.isRocket;
+            
+            playSound('shoot');
+            for (let b = 0; b < bullets; b++) { 
+                let angleOffset = spread === 0 ? 0 : (b * spread) - (spread * (bullets - 1) / 2); 
+                let finalAngle = player.aimingAngle + angleOffset; 
+                projectiles.push({ 
+                    x: player.x, y: player.y, 
+                    vx: Math.cos(finalAngle) * currentWeaponStats.projSpeed, 
+                    vy: Math.sin(finalAngle) * currentWeaponStats.projSpeed, 
+                    radius: isRocket ? 8 : 4, 
+                    damage: finalDamage, 
+                    isEnemy: false, 
+                    angle: finalAngle, 
+                    isRocket: isRocket 
+                }); 
+            }
+            player.lastAttackTime = timestamp; 
+        } 
+    }
+
+    if (activePet && enemies.length > 0) {
+        let target = null, minDist = Infinity;
+        for (let e of enemies) {
+            let dist = Math.hypot(e.x - activePet.x, e.y - activePet.y);
+            if (dist < minDist) { minDist = dist; target = e; }
+        }
+        if (target) {
+            let pdx = target.x - activePet.x, pdy = target.y - activePet.y;
+            let targetX = player.x + 35;
+            let targetY = player.y - 35;
+            activePet.x += (targetX - activePet.x) * 4 * dt;
+            activePet.y += (targetY - activePet.y) * 4 * dt;
+
+            if (timestamp - activePet.lastAttack > 1200) {
+                let pAngle = Math.atan2(pdy, pdx);
+                projectiles.push({
+                    x: activePet.x, y: activePet.y,
+                    vx: Math.cos(pAngle) * 550, vy: Math.sin(pAngle) * 550,
+                    radius: 4, damage: activePet.atk, isEnemy: false, angle: pAngle
+                });
+                activePet.lastAttack = timestamp;
+            }
+        }
+    }
+
+    if (isPvp && enemies.length > 0) {
+        let bot = enemies[0];
+        if (timestamp - (bot.lastShootTime || 0) > 1000) {
+            let bAngle = Math.atan2(player.y - bot.y, player.x - bot.x);
+            projectiles.push({ x: bot.x, y: bot.y, vx: Math.cos(bAngle)*300, vy: Math.sin(bAngle)*300, radius: 5, damage: bot.atk, isEnemy: true, angle: bAngle });
+            bot.lastShootTime = timestamp;
+        }
+    }
+
+    if (isBaseRaid) {
+        for (let e of enemies) {
+            if (e.isTower && timestamp - (e.lastAttack || 0) > 1500) {
+                let tAngle = Math.atan2(player.y - e.y, player.x - e.x);
+                projectiles.push({ x: e.x, y: e.y, vx: Math.cos(tAngle)*280, vy: Math.sin(tAngle)*280, radius: 5, damage: 30, isEnemy: true, angle: tAngle });
+                e.lastAttack = timestamp;
+            }
+        }
+    }
+
+    for (let ally of allyUnits) {
+        let target = null, minDist = Infinity;
+        for (let e of enemies) {
+            let dist = Math.hypot(e.x - ally.x, e.y - ally.y);
+            if (dist < minDist) { minDist = dist; target = e; }
+        }
+        if (target) {
+            let dx = target.x - ally.x, dy = target.y - ally.y;
+            ally.aimingAngle = Math.atan2(dy, dx);
+            let dist = Math.hypot(dx, dy);
+            if (dist > 120) {
+                ally.x += (dx / dist) * ally.speed * dt;
+                ally.y += (dy / dist) * ally.speed * dt;
+            }
+            if (timestamp - (ally.lastAttack || 0) > 800) {
+                projectiles.push({ x: ally.x, y: ally.y, vx: Math.cos(ally.aimingAngle)*500, vy: Math.sin(ally.aimingAngle)*500, radius: 4, damage: ally.atk, isEnemy: false, angle: ally.aimingAngle });
+                ally.lastAttack = timestamp;
+            }
+        }
+    }
+    
+    for (let i = floatingTexts.length - 1; i >= 0; i--) { 
+        floatingTexts[i].life -= dt; 
+        floatingTexts[i].y -= 25 * dt; 
+        if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1); 
+    }
+    
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        let e = enemies[i]; 
+        if (e.isDead) { 
+            if (isPvp) {
+                roomState = 'pvp_ended';
+                showBattleResult(true);
+                return;
+            }
+            if (isRaid) {
+                savedData.guildBossHp = guildRaidBoss.hp;
+                if (!savedData.guild.tokens) savedData.guild.tokens = 0;
+                savedData.guild.tokens += guildRaidBoss.rewardTokens;
+                saveData();
+                showBattleResult(true);
+                return;
+            }
+            if (isBaseRaid) {
+                enemies.splice(i, 1);
+                if (enemies.length === 0) {
+                    showBattleResult(true);
+                    return;
+                }
+                continue;
+            }
+            enemies.splice(i, 1); 
+            killsInRoom++; 
+            totalKillsInRun++; 
+            runXp += 15; 
+            savedData.totalKillsAllTime = (savedData.totalKillsAllTime || 0) + 1;
+            if (runMods.vamp > 0) {
+                player.hp = Math.min(player.maxHp, player.hp + runMods.vamp);
+            }
+            checkLevelUp(); 
+            continue; 
+        }
+        
+        const dx = player.x - e.x, dy = player.y - e.y, dist = Math.hypot(dx, dy) || 0.001; 
+        e.angle = Math.atan2(dy, dx);
+        
+        if (e.isBoss) {
+            e.patternTimer += dt;
+            if (e.patternTimer > 3.0) {
+                for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+                    projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a) * 260, vy: Math.sin(a) * 260, radius: 6, damage: e.atk * 0.8, isEnemy: true, angle: a });
+                }
+                e.patternTimer = 0;
+            }
+        }
+
+        if (e.isBot || e.isTower) {
+            if (e.isTower) continue;
+            let nx = e.x + (dx / dist) * e.speed * dt;
+            let ny = e.y + (dy / dist) * e.speed * dt;
+            if (!checkObstacleCollision(nx, ny, e.radius)) {
+                e.x = nx; e.y = ny;
+            }
+        } else if (e.type === 'shooter' && !e.isBoss) {
+            let moveFactor = dist > 200 ? 1 : -0.5;
+            let nx = e.x + (dx / dist) * e.speed * moveFactor * dt;
+            let ny = e.y + (dy / dist) * e.speed * moveFactor * dt;
+            if (!checkObstacleCollision(nx, ny, e.radius)) {
+                e.x = nx; e.y = ny;
+            }
+            if (dist < 400 && timestamp - e.lastAttack > 2000) { 
+                projectiles.push({ x: e.x, y: e.y, vx: Math.cos(e.angle)*250, vy: Math.sin(e.angle)*250, radius: 5, damage: e.atk, isEnemy: true, angle: e.angle }); 
+                e.lastAttack = timestamp; 
+            }
+        } else if (e.type === 'kamikaze') {
+            e.x += (dx / dist) * e.speed * 1.4 * dt; 
+            e.y += (dy / dist) * e.speed * 1.4 * dt;
+            if (dist < player.radius + e.radius + 10) { 
+                player.hp -= e.atk * 2.5; 
+                e.hp = 0; 
+                e.isDead = true; 
+                if (player.hp <= 0) { triggerDeath(); return; } 
+            }
+        } else {
+            let moveX = (dx / dist) * e.speed * dt;
+            let moveY = (dy / dist) * e.speed * dt;
+
+            let nextX = e.x + moveX;
+            let nextY = e.y + moveY;
+
+            if (checkObstacleCollision(nextX, nextY, e.radius)) {
+                if (!checkObstacleCollision(e.x + moveX, e.y, e.radius)) {
+                    e.x += moveX;
+                } else if (!checkObstacleCollision(e.x, e.y + moveY, e.radius)) {
+                    e.y += moveY;
+                }
+            } else {
+                e.x = nextX;
+                e.y = nextY;
+            }
+
+            if (dist < player.radius + e.radius) { 
+                player.hp -= e.atk * dt * 2; 
+                if (player.hp <= 0) { triggerDeath(); return; } 
+            }
+        }
+        e.x = Math.max(e.radius, Math.min(screenW - e.radius, e.x)); 
+        e.y = Math.max(e.radius, Math.min(screenH - e.radius, e.y));
+    }
+    
+    for (let i = projectiles.length - 1; i >= 0; i--) {
+        let p = projectiles[i]; 
+        p.x += p.vx * dt; 
+        p.y += p.vy * dt; 
+        if (p.x < 0 || p.x > screenW || p.y < 0 || p.y > screenH) { projectiles.splice(i, 1); continue; }
+
+        if (checkObstacleCollision(p.x, p.y, p.radius)) {
+            if (p.isRocket) {
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    let e = enemies[j];
+                    if (Math.hypot(p.x - e.x, p.y - e.y) < 70) {
+                        e.hp -= p.damage * 1.5;
+                        if (e.hp <= 0) e.isDead = true;
+                    }
+                }
+            }
+            projectiles.splice(i, 1);
+            continue;
+        }
+        
+        if (p.isEnemy) { 
+            if (Math.hypot(p.x - player.x, p.y - player.y) < p.radius + player.radius) { 
+                player.hp -= p.damage; 
+                playSound('hit');
+                floatingTexts.push({ x: player.x, y: player.y - 20, text: `-${Math.floor(p.damage)}`, color: "#ff0000", life: 1.0 }); 
+                projectiles.splice(i, 1); 
+                if (player.hp <= 0) { triggerDeath(); return; } 
+            } 
+        } else { 
+            for (let j = enemies.length - 1; j >= 0; j--) { 
+                let e = enemies[j]; 
+                if (Math.hypot(p.x - e.x, p.y - e.y) < p.radius + e.radius) { 
+                    e.hp -= p.damage; 
+                    
+                    if (p.isRocket) {
+                        for (let k = enemies.length - 1; k >= 0; k--) {
+                            let nearby = enemies[k];
+                            if (Math.hypot(p.x - nearby.x, p.y - nearby.y) < 80) {
+                                nearby.hp -= p.damage * 0.75;
+                                if (nearby.hp <= 0) nearby.isDead = true;
+                            }
+                        }
+                    }
+
+                    if (isRaid) {
+                        savedData.guildBossHp = Math.max(0, Math.floor(e.hp));
+                        saveData();
+                    }
+                    floatingTexts.push({ x: e.x, y: e.y - 20, text: Math.floor(p.damage), color: "#fff", life: 1.0 }); 
+                    projectiles.splice(i, 1); 
+                    if (e.hp <= 0) { e.isDead = true; } 
+                    break; 
+                } 
+            } 
+        }
+    }
+
+    let locCfg = locationsConfig.find(l => l.id == savedData.stage) || locationsConfig[0];
+    ctx.fillStyle = locCfg.bgStyle; 
+    ctx.fillRect(0, 0, screenW, screenH); 
+    
+    for(let pt of backgroundParticles) {
+        pt.x += pt.vx * dt;
+        pt.y += pt.vy * dt;
+        if(pt.x < 0) pt.x = screenW; if(pt.x > screenW) pt.x = 0;
+        if(pt.y < 0) pt.y = screenH; if(pt.y > screenH) pt.y = 0;
+
+        ctx.fillStyle = locCfg.particleColor;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.05)'; 
+    ctx.lineWidth = 1; 
+    ctx.beginPath(); 
+    for (let i = 0; i <= screenW; i += 50) { ctx.moveTo(i, 0); ctx.lineTo(i, screenH); } 
+    for (let i = 0; i <= screenH; i += 50) { ctx.moveTo(0, i); ctx.lineTo(screenW, i); } 
+    ctx.stroke();
+
+    ctx.fillStyle = locCfg.wallColor;
+    ctx.strokeStyle = '#665555';
+    ctx.lineWidth = 2;
+    for (let obs of obstacles) {
+        ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+        ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+    }
+
+    if (portal) {
+        ctx.fillStyle = '#00ffcc';
+        ctx.beginPath();
+        ctx.arc(portal.x, portal.y, portal.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+    }
+
+    ctx.strokeStyle = isBaseRaid ? '#e43f5a' : (isRaid ? '#ff4a4a' : (isPvp ? '#ff4a4a' : '#ffaa00')); 
+    ctx.lineWidth = 3; 
+    ctx.strokeRect(0, 0, screenW, screenH);
+    
+    for (let e of enemies) { 
+        ctx.save(); 
+        ctx.translate(e.x, e.y); 
+        ctx.rotate(e.angle);
+        if (e.isTower) {
+            ctx.fillStyle = '#ff8c00'; ctx.beginPath(); ctx.arc(0, 0, e.radius, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#222'; ctx.fillRect(-6, -6, 12, 12);
+        } else if (e.isBot) {
+            ctx.fillStyle = '#ff4a4a'; ctx.beginPath(); ctx.arc(0, 0, e.radius, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(5, 0, e.radius * 0.7, -Math.PI/2, Math.PI/2); ctx.fill();
+        } else {
+            let cfg = enemyTypesConfig[e.type] || enemyTypesConfig.zombie;
+            let color = e.isBoss ? '#aa00ff' : cfg.color;
+            ctx.fillStyle = color; ctx.beginPath(); ctx.arc(0, 0, e.radius, 0, Math.PI * 2); ctx.fill();
+
+            // Рендер ауры элитного врага
+            if (e.isElite) {
+                ctx.strokeStyle = e.eliteType === 'berserk' ? '#ff0000' : (e.eliteType === 'armored' ? '#00aaff' : '#00ff66');
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(0, 0, e.radius + 4, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+        ctx.restore();
+        
+        let hpBarWidth = (e.isBoss || e.isBot || e.isTower) ? 50 : 30; 
+        ctx.fillStyle = '#ff0000'; ctx.fillRect(e.x - hpBarWidth/2, e.y - e.radius - 12, hpBarWidth, 4); 
+        ctx.fillStyle = '#00ff00'; ctx.fillRect(e.x - hpBarWidth/2, e.y - e.radius - 12, hpBarWidth * (Math.max(0, e.hp) / e.maxHp), 4); 
+
+        if (e.isBot) {
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText(e.name, e.x, e.y - e.radius - 18);
+        }
+    }
+
+    if (activePet) {
+        ctx.save();
+        ctx.translate(activePet.x, activePet.y);
+        ctx.fillStyle = '#00ffcc';
+        ctx.beginPath();
+        ctx.arc(0, 0, activePet.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(activePet.icon, 0, 4);
+        ctx.restore();
+    }
+    
+    for (let p of projectiles) { 
+        ctx.save(); 
+        ctx.translate(p.x, p.y); 
+        ctx.rotate(p.angle); 
+        ctx.fillStyle = p.isEnemy ? '#ff0000' : (p.isRocket ? '#ffaa00' : '#00ffcc'); 
+        if (p.isRocket) {
+            ctx.fillRect(-10, -5, 20, 10);
+        } else {
+            ctx.fillRect(-8, -p.radius, 16, p.radius*2); 
+        }
+        ctx.restore(); 
+    }
+    
+    ctx.save(); 
+    ctx.translate(player.x, player.y); 
+    ctx.rotate(player.aimingAngle); 
+    ctx.fillStyle = '#444'; ctx.fillRect(10, -5, 20, 10); 
+    ctx.fillStyle = '#ffaa00'; ctx.beginPath(); ctx.arc(0, 0, player.radius, 0, Math.PI * 2); ctx.fill(); 
+    ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(5, 0, player.radius*0.7, -Math.PI/2, Math.PI/2); ctx.fill(); 
+    ctx.restore();
+    
+    let pBarW = 50; 
+    ctx.fillStyle = '#ff0000'; ctx.fillRect(player.x - pBarW/2, player.y + player.radius + 8, pBarW, 6); 
+    ctx.fillStyle = '#00ff00'; ctx.fillRect(player.x - pBarW/2, player.y + player.radius + 8, pBarW * (Math.max(0, player.hp) / player.maxHp), 6); 
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center'; 
+    ctx.fillText(`${Math.floor(player.hp)}/${player.maxHp}`, player.x, player.y + player.radius + 20);
+    
+    for (let ft of floatingTexts) { 
+        ctx.globalAlpha = ft.life; 
+        ctx.fillStyle = ft.color; 
+        ctx.font = 'bold 18px sans-serif'; 
+        ctx.textAlign = 'center'; 
+        ctx.strokeStyle = '#000'; 
+        ctx.lineWidth = 3; 
+        ctx.strokeText(ft.text, ft.x, ft.y); 
+        ctx.fillText(ft.text, ft.x, ft.y); 
+        ctx.globalAlpha = 1.0; 
+    }
+}
+
+let runLevel = 1, runXp = 0, runMaxXp = 100;
+let runLoot = { blueprints: {} };
+
+function updateCombatUI() {
+    let xpBar = document.getElementById('combatXpBar');
+    let lvlTxt = document.getElementById('combatLevelText');
+    if(xpBar) xpBar.style.width = Math.min(100, (runXp / runMaxXp) * 100) + '%';
+    if(lvlTxt) lvlTxt.innerText = `УР. ${runLevel}`;
+}
+
+function checkLevelUp() {
+    if (runXp >= runMaxXp) {
+        runXp -= runMaxXp;
+        runLevel++;
+        runMaxXp = Math.floor(runMaxXp * 1.3);
+        updateCombatUI();
+        triggerLevelUpChoice();
+    } else {
+        updateCombatUI();
+    }
+}
+
+function triggerLevelUpChoice() {
+    gameState = 'paused';
+    let container = document.getElementById('skillCardsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    let shuffled = [...runSkillsPool].sort(() => 0.5 - Math.random()).slice(0, 3);
+    shuffled.forEach(skill => {
+        let btn = document.createElement('button');
+        btn.className = 'skill-card-btn';
+        btn.innerHTML = `<span style="font-size:24px;">${skill.icon}</span><div><div style="font-weight:bold; font-size:12px;">${skill.name}</div><div style="font-size:10px; color:#aaa;">${skill.desc}</div></div>`;
+        btn.onclick = () => {
+            applyRunSkill(skill.id);
+            document.getElementById('levelUpModal').style.display = 'none';
+            gameState = 'playing';
+            lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        };
+        container.appendChild(btn);
+    });
+
+    let lm = document.getElementById('levelUpModal');
+    if(lm) lm.style.display = 'flex';
+}
+
+function applyRunSkill(id) {
+    if (id === 'atk_up') runMods.atkMult += 0.15;
+    if (id === 'spd_up') player.speed *= 1.1;
+    if (id === 'vamp') runMods.vamp += 2;
+    if (id === 'regen') runMods.regen += 2;
+    if (id === 'max_hp') { player.maxHp *= 1.2; player.hp = player.maxHp; }
+    if (id === 'heal') player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.5);
+    
+    showBmPopup("МОДИФИКАТОР АКТИВИРОВАН! 🌟");
+}
+
+function triggerDeath() {
+    gameState = 'paused';
+    if (revivesUsed === 0) {
+        let rm = document.getElementById('reviveModal');
+        if(rm) rm.style.display = 'flex';
+    } else {
+        showBattleResult(false);
+    }
+}
+
+window.acceptRevive = function() {
+    if (savedData.gems >= 10) {
+        savedData.gems -= 10;
+        saveData();
+        revivesUsed++;
+        player.hp = player.maxHp;
+        let rm = document.getElementById('reviveModal'); if(rm) rm.style.display = 'none';
+        gameState = 'playing';
+        lastTime = performance.now();
+        requestAnimationFrame(gameLoop);
+    } else {
+        showAlert("Недостаточно алмазов!");
+    }
+};
+
+window.declineRevive = function() {
+    let rm = document.getElementById('reviveModal'); if(rm) rm.style.display = 'none';
+    showBattleResult(false);
+};
+
+window.showBattleResult = function(isWin, isFlee = false) {
+    gameState = 'menu';
+    let cv = document.getElementById('gameCanvas'); if(cv) cv.style.display = 'none';
+    let jz = document.getElementById('joystickZone'); if(jz) jz.style.display = 'none';
+    let bp = document.getElementById('btnPause'); if(bp) bp.style.display = 'none';
+    let rcu = document.getElementById('roomCounterUI'); if(rcu) rcu.style.display = 'none';
+    let cxc = document.getElementById('combatXpContainer'); if(cxc) cxc.style.display = 'none';
+    let bcg = document.getElementById('btnCallGuild'); if(bcg) bcg.style.display = 'none';
+
+    let tb = document.getElementById('topBar'); if(tb) tb.style.display = 'flex';
+    let nb = document.getElementById('navBar'); if(nb) nb.style.display = 'flex';
+    let lobby = document.getElementById('lobbyScreen'); if(lobby) lobby.style.display = 'flex';
+
+    let goldReward = isWin ? savedData.stage * 300 : 50;
+    let partsReward = isWin ? savedData.stage * 25 : 5;
+    
+    let accountXpReward = isWin ? savedData.stage * 150 : savedData.stage * 50;
+    savedData.accountXp += accountXpReward;
+    
+    let levelUpMessage = "";
+    let maxXp = savedData.accountLevel * 500;
+    while (savedData.accountXp >= maxXp) {
+        savedData.accountXp -= maxXp;
+        savedData.accountLevel++;
+        maxXp = savedData.accountLevel * 500;
+        levelUpMessage = `<div style="color:#00ffcc; font-weight:bold; margin-top:8px;">УРОВЕНЬ СТАЛКЕРА ПОВЫШЕН! (Ур. ${savedData.accountLevel})</div><div style="font-size: 10px; color: #00ff66;">Характеристики убежища усилены!</div>`;
+    }
+
+    if (isWin) {
+        savedData.gold += goldReward;
+        savedData.parts += partsReward;
+        savedData.seasonXp += 40;
+        if (savedData.seasonXp >= savedData.seasonLevel * 100) {
+            savedData.seasonXp -= savedData.seasonLevel * 100;
+            savedData.seasonLevel++;
+            showBmPopup("Уровень пропуска повышен!");
+        }
+    }
+    saveData();
+
+    let content = document.getElementById('battleResultContent');
+    if (content) {
+        content.innerHTML = `
+            <h2 style="color:${isWin?'#00ffcc':'#ff4a4a'}; margin-top:0;">${isWin ? 'ЗАЧИСТКА ГЛАВЫ УСПЕШНА!' : (isFlee ? 'ЭВАКУАЦИЯ ИЗ ЗОНЫ' : 'СМЕРТЬ В ПУСТОШИ')}</h2>
+            <p style="color:#888; font-size:12px;">Добытые трофеи:</p>
+            <div style="display:flex; justify-content:center; gap:15px; margin:10px 0;">
+                <div>💰 +${goldReward}</div>
+                <div>⚙️ +${partsReward}</div>
+            </div>
+            <div style="color: #00ffcc; font-size: 11px; margin-bottom: 10px;">🌟 Опыт сталкера: +${accountXpReward}</div>
+            ${levelUpMessage}
+            <button onclick="document.getElementById('battleResultModal').style.display='none'; switchTab('lobbyScreen', document.getElementById('navLobby')); playSound('click');" style="background:#28a745; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; width:100%; cursor:pointer; margin-top: 15px;">В УБЕЖИЩЕ</button>
+        `;
+    }
+    let brm = document.getElementById('battleResultModal');
+    if(brm) brm.style.display = 'flex';
+};
